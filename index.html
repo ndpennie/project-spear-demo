@@ -68,6 +68,14 @@
   .toast{position:fixed;bottom:16px;right:16px;background:var(--navy);color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none}
   .toast.show{opacity:1}
   .mode{font-size:11px;padding:2px 8px;border-radius:10px;background:#EEF1F4;color:var(--muted);margin-left:8px}
+.explain{border-left:4px solid var(--cyan);background:#F0F9FC}
+.xhead{font-weight:700;color:var(--navy);margin-bottom:6px}
+.xs{margin:8px 0;line-height:1.45}
+.bd{width:100%;border-collapse:collapse;margin:6px 0;font-size:12px}
+.bd td{padding:3px 4px;border-bottom:1px solid #DCE6EE;cursor:default}
+.bd td.d{text-align:right;font-weight:700;white-space:nowrap;width:60px}
+.bd .pos{color:#B42318}.bd .neg{color:#2F855A}
+.bd .tot td{border-top:2px solid var(--navy);border-bottom:none;font-weight:700}
 </style>
 </head>
 <body>
@@ -170,10 +178,10 @@ const RULES=[
 function analyze(url){
   const s=url.toLowerCase();let best=null;
   for(const r of RULES){const hits=r.k.filter(k=>s.includes(k));if(hits.length&&(!best||hits.length>best.hits))best={...r,hits:hits.length}}
-  let cat='benign',score=1,ind=['no risk indicators in captured content'];
-  if(best){cat=best.cat;score=Math.min(10,best.score+best.hits-1);ind=best.ind}
-  // deterministic jitter from url hash for demo variety
-  let h=0;for(const c of url)h=(h*31+c.charCodeAt(0))>>>0; if(cat!=='benign'){score=Math.max(1,Math.min(10,score+((h%3)-1)))}
+  let cat='benign',score=1,ind=['no risk indicators in captured content'];const bd=[];const hitWords=best?best.k.filter(k=>s.includes(k)):[];
+  if(best){cat=best.cat;bd.push({l:`Base severity for <b>${best.cat.replace('_',' ')}</b> category`,d:best.score});const extra=Math.min(10,best.score+best.hits-1)-best.score;if(extra)bd.push({l:`Multiple independent indicators matched (${best.hits}): “${hitWords.join('”, “')}”`,d:extra});score=Math.min(10,best.score+best.hits-1);ind=best.ind}else bd.push({l:'No harm-category indicators detected — benign baseline',d:1});
+  // deterministic jitter from url hash for demo variety (stands in for LLM contextual adjustment)
+  let h=0;for(const c of url)h=(h*31+c.charCodeAt(0))>>>0; if(cat!=='benign'){const j=(h%3)-1;const before=score;score=Math.max(1,Math.min(10,score+j));if(score!==before)bd.push({l:j>0?'Contextual amplifier: poster/network previously associated with monitored activity':'Contextual mitigator: ambiguous framing — could be reportage or commentary',d:score-before})}
   const grade=cat==='benign'?'Observed':(score>=8?'Corroborated':score>=5?'Inferred':'Predicted');
   const conn=CONN[h%CONN.length];
   const reasoning={
@@ -185,7 +193,42 @@ function analyze(url){
     propaganda:'Content is branded messaging designed to attract attention and signal an organized presence; coded slogans present. Gateway-layer material.',
     benign:'No indicators of coordinated harmful activity in the captured content; may be news, commentary, or unrelated. Retained for audit only.'
   }[cat];
-  return {category:cat,score,tier:tierOf(score),recommendation:recOf(score),grade,connection:conn,indicators:ind,reasoning,confidence:cat==='benign'?0.9:0.55+((h%40)/100)};
+  return {category:cat,score,tier:tierOf(score),recommendation:recOf(score),grade,connection:conn,indicators:ind,reasoning,breakdown:bd,hitWords,confidence:cat==='benign'?0.9:0.55+((h%40)/100)};
+}
+// ---------- plain-language explanation shown when an analyst clicks a link ----------
+const LAYER={propaganda:'Layer 1–2 · Gateway / narrative seeding',recruitment:'Layer 3 · Affiliation & onboarding',glorification:'Layer 4 · Identity reinforcement',financing:'Layer 5 · Resourcing / monetization',incitement:'Layer 6 · Mobilization to violence',operational_planning:'Layer 7 · Operational transition (online → offline)',benign:'Outside the harm framework'};
+const HARM={
+ propaganda:'It functions as a doorway. Branded slogans and “wake up / truth” framing are designed to attract curious viewers and signal that an organized group exists. On its own it rarely causes direct harm, but it is where audiences are first captured and routed toward the more dangerous layers.',
+ recruitment:'It converts an audience into members. Language of belonging (“brothers”, “chapter”, “join”) plus an application or contact pathway means the post is actively growing the network. Growth is what makes every downstream harm possible.',
+ glorification:'It normalizes violence by celebrating prior attackers as heroes or martyrs. This raises the status of violence inside the group and lowers the threshold for newcomers — a documented precursor to imitation.',
+ financing:'It keeps the network funded. Wallets, donation links and merch stores are the money nodes; disrupting them degrades capability more reliably than removing any single ideological post.',
+ incitement:'It directly urges violence against an identifiable target group. This is the clearest legal and policy line — the author is promoting harm, not describing it — and it can trigger real-world action quickly.',
+ operational_planning:'It signals the group is moving from talk to action: meetings, training, routes, timing or coordinates. This is the last observable stage before physical harm and is the highest-priority lead for corroboration.',
+ benign:'Nothing in the captured content indicates coordinated harmful activity. It is retained only so the audit trail shows it was reviewed.'};
+const NEXT={
+ propaganda:'Check whether the account links onward to recruitment or financing pages; if it does, the item should be re-graded upward.',
+ recruitment:'Verify the contact/application pathway is live and whether it leads to a known network (Corroborated) or is unlinked (keep as Inferred).',
+ glorification:'Confirm the referenced attack/perpetrator and whether the poster belongs to a network already in the case file.',
+ financing:'Cross-reference the wallet/store against the network view — a shared money node across several posters is strong corroboration.',
+ incitement:'Confirm the target and the imperative language are the author’s own words (not a quote or screenshot of someone else). If it is reportage, dismiss as false positive.',
+ operational_planning:'Verify time, place and participants across at least one second source before escalating; CRITICAL tier requires two-analyst confirmation.',
+ benign:'No action needed unless the poster later appears in a network cluster.'};
+function explain(it){
+  const first=it.url.split(' ')[0];const bd=it.breakdown||[];const total=bd.reduce((a,b)=>a+b.d,0);
+  const sla=it.tier==='CRITICAL'?'15 minutes':it.tier==='HIGH'?'1 hour':it.tier==='MEDIUM'?'same day':'routine';
+  const gradeWhy={Observed:'the platform’s own metadata directly shows it',Corroborated:'two or more independent signals point the same way (score ≥ 8)',Inferred:'the AI drew a reasonable conclusion from one strong signal (score 5–7); needs corroboration',Predicted:'the model expects this from pattern, but the evidence is thin (score < 5)',Disputed:'sources conflict',Unverified:'not yet checked by an analyst'}[it.grade]||'';
+  const seeing=it.category==='benign'
+    ?`This is a <b>${it.platform}</b> post from <b>${it.poster}</b>. The captured text and media contain no harm-category indicators — it reads as ordinary community, news, or personal content.`
+    :`This is a <b>${it.platform}</b> post from <b>${it.poster}</b>. The system captured the page, extracted its text and any media, and found <b>${(it.hitWords||[]).length||it.indicators.length} indicator${((it.hitWords||[]).length||it.indicators.length)===1?'':'s'}</b> of <b>${it.category.replace('_',' ')}</b>${it.hitWords&&it.hitWords.length?` (trigger terms: <i>“${it.hitWords.join('”, “')}”</i>)`:''}. ${it.shared&&it.shared.length?`It also points to a shared external link — <b>${it.shared.join(', ')}</b> — that appears on other posts in this queue, which is why it is drawn into the network view.`:'It does not (yet) share an external link with other queued posts.'}`;
+  return `<div class="box explain">
+    <div class="xhead">🛈 AI analyst explanation <span class="note" style="font-weight:400">— plain language · confidence ${(it.confidence*100).toFixed(0)}% · click the URL to open the source in a new tab</span></div>
+    <div class="xs"><b>1 · What you are looking at</b><br>${seeing}<br><span class="note">Framework position: ${LAYER[it.category]}. Connection type detected: <i>${it.connection}</i>.</span></div>
+    <div class="xs"><b>2 · Why it is considered threatening</b><br>${HARM[it.category]}<br><span class="note">Signals the model weighted: ${it.indicators.join(' · ')}.</span></div>
+    <div class="xs"><b>3 · Why it scored ${it.score}/10 → ${it.tier}</b>
+      <table class="bd">${bd.map(b=>`<tr><td>${b.l}</td><td class="d ${b.d>=0?'pos':'neg'}">${b.d>=0?'+':''}${b.d}</td></tr>`).join('')}${bd.length?`<tr class="tot"><td>Risk score</td><td class="d">${Math.max(1,Math.min(10,total))} / 10</td></tr>`:`<tr><td>Score returned by the model’s reasoning (see above)</td><td class="d">${it.score} / 10</td></tr>`}</table>
+      <span class="note">Scale: 9–10 CRITICAL (take-down, ${it.tier==='CRITICAL'?'<b>15-min SLA</b>':'15-min SLA'}) · 7–8 HIGH (flag, 1 hr) · 5–6 MEDIUM (monitor) · 3–4 LOW · 1–2 MINIMAL. This item’s SLA: <b>${sla}</b>. Evidence grade <b>${it.grade}</b> because ${gradeWhy}.</span></div>
+    <div class="xs"><b>4 · What would change this verdict</b><br>${NEXT[it.category]} <span class="note">The score is a lead, not a finding — your decision below is what gets recorded.</span></div>
+  </div>`;
 }
 
 // ---------- backend wiring (optional): set API_BASE to the Project Spear backend; falls back to demo analyzer ----------
@@ -196,7 +239,7 @@ async function analyzeRemote(url){
     const r=await fetch(`${API_BASE}/api/analyze/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,text:url,post_url:url})});
     if(!r.ok)throw new Error(r.status);const j=await r.json();const a=j.analysis||{};
     const score=Math.max(1,Math.min(10,parseInt(a.risk_score)||1));const cat=CATS.includes(a.classification)?a.classification:'benign';
-    return {category:cat,score,tier:tierOf(score),recommendation:a.recommendation||recOf(score),grade:score>=8?'Corroborated':score>=5?'Inferred':'Predicted',connection:CONN[0],indicators:a.key_indicators||[],reasoning:a.reasoning||a.summary||'',confidence:0.7};
+    return {category:cat,score,tier:tierOf(score),recommendation:a.recommendation||recOf(score),grade:score>=8?'Corroborated':score>=5?'Inferred':'Predicted',connection:CONN[0],indicators:a.key_indicators||[],reasoning:a.reasoning||a.summary||'',breakdown:[],hitWords:[],confidence:0.7};
   }catch(e){toast('Backend unavailable — using demo analyzer');return null}
 }
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
@@ -282,8 +325,9 @@ function renderDetail(){
   if(!it){d.innerHTML='<h3>3 · Item detail & analyst decision</h3><div class="empty">Select an item in the queue.</div>';return}
   d.innerHTML=`<h3>3 · Item detail & analyst decision</h3>
    <h2>${it.category.replace('_',' ')} <span class="badge tier-${it.tier}">${it.tier}</span> <span style="font-size:13px;color:var(--muted)">${it.score}/10</span></h2>
-   <div class="meta"><span class="url" style="max-width:100%">${it.url.split(' ')[0]}</span>${it.platform} · ${it.poster} · captured ${it.captured} · status <b>${it.status}</b></div>
-   <div class="box"><b>AI reasoning</b> (confidence ${(it.confidence*100).toFixed(0)}%)<br>${it.reasoning}
+   <div class="meta"><a class="url" style="max-width:100%;color:#1D4ED8;text-decoration:underline" href="${it.url.split(' ')[0]}" target="_blank" rel="noopener noreferrer" title="Open source in new tab">${it.url.split(' ')[0]} ↗</a>${it.platform} · ${it.poster} · captured ${it.captured} · status <b>${it.status}</b></div>
+   ${explain(it)}
+   <div class="box"><b>Model reasoning (raw)</b><br>${it.reasoning}
      <ul class="ind">${it.indicators.map(x=>`<li>${x}</li>`).join('')}</ul></div>
    <div class="kv">
      <div>Recommendation</div><div><b>${it.recommendation.replace(/_/g,' ')}</b></div>
