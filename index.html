@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Spear — Threat Categorization Dashboard</title>
+<style>
+  :root{--navy:#152A4E;--cyan:#2FA8CC;--bg:#F4F7FA;--card:#FFFFFF;--ink:#1F2933;--muted:#6B7785;--line:#E1E7EE;
+    --crit:#B42318;--high:#D9480F;--med:#B7791F;--low:#2F855A;--min:#5A6472;--critbg:#FDECEA;--highbg:#FFF1E6;--medbg:#FFF8E1;--lowbg:#EAF7EF;--minbg:#EEF1F4;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Segoe UI,Inter,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+  header{background:var(--navy);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
+  header .brand{font-weight:700;font-size:18px;letter-spacing:.3px}
+  header .brand span{color:var(--cyan)}
+  header .sub{font-size:12px;opacity:.85}
+  header .right{margin-left:auto;font-size:12px;opacity:.9;text-align:right}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;letter-spacing:.2px}
+  .tier-CRITICAL{background:var(--critbg);color:var(--crit)} .tier-HIGH{background:var(--highbg);color:var(--high)}
+  .tier-MEDIUM{background:var(--medbg);color:var(--med)} .tier-LOW{background:var(--lowbg);color:var(--low)} .tier-MINIMAL{background:var(--minbg);color:var(--min)}
+  .grade{background:#EAF3FB;color:var(--navy);border:1px solid #CFE0EE}
+  .wrap{display:grid;grid-template-columns:300px 1fr 380px;gap:16px;padding:16px 24px;align-items:start}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:16px 24px 0}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .kpi .n{font-size:26px;font-weight:700;color:var(--navy)} .kpi .l{font-size:12px;color:var(--muted)}
+  .kpi.c .n{color:var(--crit)} .kpi.h .n{color:var(--high)}
+  textarea,input,select,button{font:inherit}
+  textarea{width:100%;min-height:96px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
+  .btn{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:600}
+  .btn.sec{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+  .btn.warn{background:var(--crit)} .btn.ok{background:var(--low)} .btn.mute{background:#fff;color:var(--muted);border:1px solid var(--line)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .filters select,.filters input{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+  td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr.sel td{background:#EEF6FB}
+  tr:hover td{background:#F7FAFC;cursor:pointer}
+  .url{font-family:Consolas,Menlo,monospace;font-size:12px;color:var(--navy);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+  .plat{font-size:11px;color:var(--muted)}
+  .score{font-weight:700}
+  .cat{font-size:12px;text-transform:capitalize}
+  .status{font-size:11px;color:var(--muted)}
+  .detail h2{margin:0 0 4px;font-size:16px}
+  .detail .meta{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:13px;margin:10px 0}
+  .kv div:nth-child(odd){color:var(--muted)}
+  .box{background:#F7FAFC;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;line-height:1.45}
+  ul.ind{margin:6px 0 0 18px;padding:0} ul.ind li{margin:2px 0}
+  .actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+  .audit{max-height:160px;overflow:auto;font-size:12px}
+  .audit div{padding:5px 0;border-bottom:1px dashed var(--line)}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .legend{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+  .empty{color:var(--muted);font-size:13px;padding:24px;text-align:center}
+  .note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4}
+  .pill{display:inline-block;border:1px solid var(--line);border-radius:12px;padding:2px 8px;font-size:11px;margin:2px 2px 0 0;background:#fff}
+  .twoman{font-size:11px;color:var(--crit);margin-top:6px}
+  footer{padding:10px 24px 20px;font-size:11px;color:var(--muted)}
+  .tabs{display:flex;gap:6px;margin-bottom:10px}
+  .tab{padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-weight:600;color:var(--muted)}
+  .tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  #netSvg{width:100%;height:520px;background:#FBFCFE;border:1px solid var(--line);border-radius:8px}
+  .netlegend{font-size:11px;color:var(--muted);margin-top:6px}
+  .toast{position:fixed;bottom:16px;right:16px;background:var(--navy);color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none}
+  .toast.show{opacity:1}
+  .mode{font-size:11px;padding:2px 8px;border-radius:10px;background:#EEF1F4;color:var(--muted);margin-left:8px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="brand">PROJECT <span>SPEAR</span> · Threat Categorization Dashboard</div>
+    <div class="sub">GIPEC AI² · Anticipatory, human-in-the-loop detection · Patent pending (U.S. Prov. App. 64/135,028)</div>
+  </div>
+  <div class="right">Analyst: <b>D. Pennie</b> · Role: Owner/Reviewer<br>Session: Aug 17, 2026 · <span style="color:#9FE0F2">SAMPLE DATA — demonstration mode</span></div>
+</header>
+
+<div class="kpis">
+  <div class="kpi"><div class="n" id="k-queue">0</div><div class="l">In queue (pending review)</div></div>
+  <div class="kpi c"><div class="n" id="k-crit">0</div><div class="l">Critical (≤15 min SLA)</div></div>
+  <div class="kpi h"><div class="n" id="k-high">0</div><div class="l">High (≤1 hr SLA)</div></div>
+  <div class="kpi"><div class="n" id="k-rev">0</div><div class="l">Reviewed today</div></div>
+  <div class="kpi"><div class="n" id="k-esc">0</div><div class="l">Escalated to platform</div></div>
+</div>
+
+<div class="wrap">
+  <!-- LEFT: intake + charts -->
+  <div>
+    <div class="card">
+      <h3>1 · Intake — submit URL links</h3>
+      <textarea id="urls" placeholder="Paste one or more post / profile / group / video URLs, one per line…"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" onclick="ingest()">Analyze URLs</button>
+        <button class="btn mute" onclick="loadSamples()">Load sample batch</button>
+      </div>
+      <div class="note">Pipeline per URL: capture → normalize → multi-modal signals → LLM contextual reasoning → risk score & category → evidence grade → <b>human review</b>. Predictions are leads, never verdicts.</div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Category distribution</h3>
+      <svg id="catChart" width="100%" height="190" viewBox="0 0 270 190"></svg>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Risk tiers</h3>
+      <svg id="tierChart" width="100%" height="120" viewBox="0 0 270 120"></svg>
+      <div class="legend" id="tierLegend"></div>
+    </div>
+  </div>
+
+  <!-- CENTER: queue -->
+  <div class="card">
+    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><span class="mode" id="modeTag">demo analyzer</span></div>
+    <div id="netPane" style="display:none">
+      <h3>2b · Network — URLs, posters, and shared links connected</h3>
+      <svg id="netSvg" viewBox="0 0 760 520"></svg>
+      <div class="netlegend">● squares = posters/accounts · ● circles = URLs (colored by category, sized by risk) · ◆ diamonds = shared links/wallets/merch · lines = same poster, shared link, or reposted content. Click a node to open it in the detail panel. This is the Relationship layer (AI² layer 2): categorizing URLs is step one; connecting them is what reveals coordination.</div>
+    </div>
+    <div id="queuePane">
+    <h3>2 · Review queue — categorized by URL</h3>
+    <div class="row filters" style="margin-bottom:10px">
+      <input id="q" placeholder="Search URL / poster…" oninput="render()" style="flex:1;min-width:160px">
+      <select id="fTier" onchange="render()"><option value="">All tiers</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option><option>MINIMAL</option></select>
+      <select id="fCat" onchange="render()"><option value="">All categories</option></select>
+      <select id="fPlat" onchange="render()"><option value="">All platforms</option></select>
+      <select id="fStatus" onchange="render()"><option value="">All statuses</option><option>Pending</option><option>Confirmed</option><option>Escalated</option><option>Dismissed</option></select>
+    </div>
+    <table>
+      <thead><tr>
+        <th onclick="sortBy('url')">URL / Platform</th><th onclick="sortBy('category')">Category</th><th onclick="sortBy('score')">Risk</th><th onclick="sortBy('tier')">Tier</th><th onclick="sortBy('grade')">Evidence</th><th onclick="sortBy('status')">Status</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div id="empty" class="empty" style="display:none">No items match. Submit URLs above or load the sample batch.</div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <!-- RIGHT: detail -->
+  <div class="card detail" id="detail">
+    <h3>3 · Item detail & analyst decision</h3>
+    <div class="empty">Select an item in the queue.</div>
+  </div>
+</div>
+<footer>Project Spear · Proprietary & confidential · Categories: propaganda · recruitment · glorification · incitement · financing · operational planning · benign. Evidence grades: Observed · Corroborated · Inferred · Predicted · Disputed · Unverified. Every action is written to the immutable audit log; CRITICAL escalations require two-analyst confirmation.</footer>
+
+<script>
+// ---------- taxonomy ----------
+const CATS=['propaganda','recruitment','glorification','incitement','financing','operational_planning','benign'];
+const CATCOLOR={propaganda:'#7C3AED',recruitment:'#D9480F',glorification:'#B7791F',incitement:'#B42318',financing:'#0F766E',operational_planning:'#1D4ED8',benign:'#5A6472'};
+const GRADES=['Observed','Corroborated','Inferred','Predicted','Disputed','Unverified'];
+const CONN=['linguistic resemblance','narrative similarity','audience overlap','commercial/social interaction','operational coordination'];
+const TIERS=['CRITICAL','HIGH','MEDIUM','LOW','MINIMAL'];
+const TIERCOLOR={CRITICAL:'#B42318',HIGH:'#D9480F',MEDIUM:'#B7791F',LOW:'#2F855A',MINIMAL:'#5A6472'};
+function tierOf(s){return s>=9?'CRITICAL':s>=7?'HIGH':s>=5?'MEDIUM':s>=3?'LOW':'MINIMAL'}
+function recOf(s){return s>=9?'take_down':s>=6?'flag_for_review':s>=3?'monitor':'no_action'}
+function platformOf(u){try{const h=new URL(u).hostname.replace(/^www\./,'');if(h.includes('facebook'))return'Facebook';if(h.includes('instagram'))return'Instagram';if(h.includes('t.me')||h.includes('telegram'))return'Telegram';if(h.includes('x.com')||h.includes('twitter'))return'X';if(h.includes('tiktok'))return'TikTok';if(h.includes('youtube')||h.includes('youtu.be'))return'YouTube';if(h.includes('reddit'))return'Reddit';return h}catch(e){return'unknown'}}
+
+// ---------- demo analyzer (deterministic, keyword-driven; stands in for the LLM stage) ----------
+const RULES=[
+ {k:['recruit','join','brother','chapter','apply','enlist'],cat:'recruitment',score:8,ind:['recruitment call-to-action','in-group belonging language','application/contact pathway']},
+ {k:['attack','strike','kill','target','eliminate'],cat:'incitement',score:9,ind:['explicit call to violence','named target group','imperative mood']},
+ {k:['donate','crypto','wallet','btc','fund','merch','store'],cat:'financing',score:6,ind:['solicitation of funds','payment/wallet reference','merchandise link']},
+ {k:['martyr','hero','glory','honor','fallen'],cat:'glorification',score:7,ind:['martyrdom framing','celebration of prior attack','hero narrative']},
+ {k:['plan','meet','coordinates','map','route','training','drill'],cat:'operational_planning',score:9,ind:['logistics/coordination language','location or timing reference','physical mobilization']},
+ {k:['flyer','poster','reclaim','manifesto','truth','wake up'],cat:'propaganda',score:6,ind:['branded propaganda material','coded slogan','institutional-distrust frame']},
+];
+function analyze(url){
+  const s=url.toLowerCase();let best=null;
+  for(const r of RULES){const hits=r.k.filter(k=>s.includes(k));if(hits.length&&(!best||hits.length>best.hits))best={...r,hits:hits.length}}
+  let cat='benign',score=1,ind=['no risk indicators in captured content'];
+  if(best){cat=best.cat;score=Math.min(10,best.score+best.hits-1);ind=best.ind}
+  // deterministic jitter from url hash for demo variety
+  let h=0;for(const c of url)h=(h*31+c.charCodeAt(0))>>>0; if(cat!=='benign'){score=Math.max(1,Math.min(10,score+((h%3)-1)))}
+  const grade=cat==='benign'?'Observed':(score>=8?'Corroborated':score>=5?'Inferred':'Predicted');
+  const conn=CONN[h%CONN.length];
+  const reasoning={
+    recruitment:'Content invites the reader to affiliate and provides an entry pathway; language emphasizes belonging and shared identity rather than argument. Consistent with a recruitment gateway post.',
+    incitement:'Content contains an explicit or thinly coded call to violence directed at an identifiable group; imperative phrasing and absence of reportorial framing indicate the author is promoting, not describing.',
+    financing:'Content solicits funds or directs to merchandise/wallets tied to a monitored network; monetization node rather than ideological content per se.',
+    glorification:'Content celebrates a prior attack or perpetrator using martyrdom/hero framing; functions as status reinforcement for members and normalization for newcomers.',
+    operational_planning:'Content references logistics — meeting, movement, timing, or training — suggesting transition from digital community to physical organization. Highest-priority lead for corroboration.',
+    propaganda:'Content is branded messaging designed to attract attention and signal an organized presence; coded slogans present. Gateway-layer material.',
+    benign:'No indicators of coordinated harmful activity in the captured content; may be news, commentary, or unrelated. Retained for audit only.'
+  }[cat];
+  return {category:cat,score,tier:tierOf(score),recommendation:recOf(score),grade,connection:conn,indicators:ind,reasoning,confidence:cat==='benign'?0.9:0.55+((h%40)/100)};
+}
+
+// ---------- backend wiring (optional): set API_BASE to the Project Spear backend; falls back to demo analyzer ----------
+const API_BASE=(new URLSearchParams(location.search).get('api')||'').replace(/\/$/,'');
+async function analyzeRemote(url){
+  if(!API_BASE)return null;
+  try{const id='url_'+btoa(url).replace(/[^a-z0-9]/gi,'').slice(0,24);
+    const r=await fetch(`${API_BASE}/api/analyze/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,text:url,post_url:url})});
+    if(!r.ok)throw new Error(r.status);const j=await r.json();const a=j.analysis||{};
+    const score=Math.max(1,Math.min(10,parseInt(a.risk_score)||1));const cat=CATS.includes(a.classification)?a.classification:'benign';
+    return {category:cat,score,tier:tierOf(score),recommendation:a.recommendation||recOf(score),grade:score>=8?'Corroborated':score>=5?'Inferred':'Predicted',connection:CONN[0],indicators:a.key_indicators||[],reasoning:a.reasoning||a.summary||'',confidence:0.7};
+  }catch(e){toast('Backend unavailable — using demo analyzer');return null}
+}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+// shared "links" a post points to (wallets, merch stores, redirect domains) — demo extraction
+const SHARED=['iron-front-supply.store','btc:1A1zP…f9x','freedom-signal.link','reclaim-flyers.pdf'];
+function sharedOf(u){let h=0;for(const c of u)h=(h*13+c.charCodeAt(0))>>>0;const s=u.toLowerCase();const out=[];
+  if(/merch|store|supply/.test(s))out.push(SHARED[0]);if(/btc|wallet|donate|crypto/.test(s))out.push(SHARED[1]);if(/signal|truth|manifesto|wake/.test(s))out.push(SHARED[2]);if(/flyer|poster|reclaim/.test(s))out.push(SHARED[3]);
+  return out}
+function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');if(t==='net')drawNet()}
+function drawNet(){
+  const svg=document.getElementById('netSvg');const W=760,H=520;const nodes=[],edges=[];const idx={};
+  const add=(key,n)=>{if(idx[key]===undefined){idx[key]=nodes.length;nodes.push(n)}return idx[key]};
+  items.forEach(i=>{const u=add('u'+i.id,{t:'url',it:i,label:i.platform,c:CATCOLOR[i.category],r:6+i.score});
+    const p=add('p'+i.poster,{t:'poster',label:i.poster,c:'#152A4E',r:9});edges.push([u,p,'same poster']);
+    (i.shared||[]).forEach(sh=>{const l=add('l'+sh,{t:'link',label:sh,c:'#0F766E',r:8});edges.push([u,l,'shared link'])})});
+  // simple deterministic radial layout: posters on outer ring, urls mid, links inner
+  const groups={poster:[],url:[],link:[]};nodes.forEach((n,k)=>groups[n.t].push(k));
+  const place=(arr,R)=>arr.forEach((k,j)=>{const a=(j/arr.length)*Math.PI*2-Math.PI/2;nodes[k].x=W/2+R*Math.cos(a);nodes[k].y=H/2+R*Math.sin(a)});
+  place(groups.poster,215);place(groups.url,135);place(groups.link,50);
+  let out=edges.map(([a,b,l])=>`<line x1="${nodes[a].x}" y1="${nodes[a].y}" x2="${nodes[b].x}" y2="${nodes[b].y}" stroke="${l==='shared link'?'#0F766E':'#B9C6D2'}" stroke-width="${l==='shared link'?1.6:1}" stroke-dasharray="${l==='shared link'?'4 3':''}"><title>${l}</title></line>`).join('');
+  nodes.forEach((n,k)=>{const click=n.it?`onclick="select(${n.it.id});showTab('queue')" style="cursor:pointer"`:'';
+    if(n.t==='url')out+=`<circle ${click} cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.c}" fill-opacity=".85" stroke="#fff" stroke-width="1.5"><title>${n.it.url.split(' ')[0]} · ${n.it.category} ${n.it.score}/10</title></circle>`;
+    else if(n.t==='poster')out+=`<rect x="${n.x-n.r}" y="${n.y-n.r}" width="${n.r*2}" height="${n.r*2}" rx="2" fill="${n.c}"><title>${n.label}</title></rect><text x="${n.x}" y="${n.y+n.r+11}" font-size="9.5" text-anchor="middle" fill="#1F2933">${n.label}</text>`;
+    else out+=`<polygon points="${n.x},${n.y-n.r} ${n.x+n.r},${n.y} ${n.x},${n.y+n.r} ${n.x-n.r},${n.y}" fill="${n.c}"><title>${n.label}</title></polygon><text x="${n.x}" y="${n.y+n.r+10}" font-size="9" text-anchor="middle" fill="#0F766E">${n.label}</text>`});
+  svg.innerHTML=out||'<text x="20" y="30" fill="#6B7785">No items yet.</text>';
+}
+// ---------- state (in memory only) ----------
+let items=[],selId=null,sortKey='score',sortDir=-1,audit=[],idc=1;
+const POSTERS=['Northgate Patriots','J. Doe (acct. 3f9c)','Sunbelt Active Club','anon-relay-7','Freedom Signal Media','citizen_watch_tx','Iron Front Supply','Reclaim Now Podcast'];
+async function ingest(){
+  const lines=document.getElementById('urls').value.split('\n').map(x=>x.trim()).filter(Boolean);
+  if(!lines.length)return;
+  document.getElementById('urls').value='';for(const u of lines){await addItem(u)}render();
+}
+async function addItem(u){
+  let a=await analyzeRemote(u);if(!a)a=analyze(u);let h=0;for(const c of u)h=(h*7+c.charCodeAt(0))>>>0;
+  const it={id:idc++,url:u,platform:platformOf(u),poster:POSTERS[h%POSTERS.length],captured:new Date(Date.now()-(h%720)*60000).toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],shared:sharedOf(u),...a};
+  items.unshift(it);log(it,'ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade}${API_BASE?' · backend':' · demo'}`);render();
+}
+function loadSamples(){
+  ['https://www.facebook.com/groups/reclaim-chapter-1122/posts/88012 (join, apply — recruitment flyer)',
+   'https://www.facebook.com/PatriotSupplyMerch/posts/55019 (store, donate, btc wallet)',
+   'https://t.me/activeclub_training/4410 (training drill, meet, map coordinates)',
+   'https://www.instagram.com/p/AbC123/ (fallen hero, martyr tribute)',
+   'https://x.com/freedomsignal/status/1877001 (wake up, truth, manifesto)',
+   'https://www.facebook.com/citizen.watch.tx/posts/77120 (strike back, target them)',
+   'https://www.youtube.com/watch?v=Zq9x (community cleanup event)',
+   'https://www.reddit.com/r/localnews/comments/ab12/ (city council story)',
+   'https://www.tiktok.com/@ironfront.supply/video/9901 (merch drop, honor the fallen)',
+   'https://www.facebook.com/groups/northgate-patriots/posts/1201 (poster, reclaim america)'
+  ].forEach(u=>addItem(u));render();
+}
+function log(it,action,detail){audit.unshift({t:new Date().toLocaleTimeString(),id:it.id,action,detail,who:'D. Pennie'})}
+function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='score'?-1:1}render()}
+function fill(sel,vals){const s=document.getElementById(sel);const cur=s.value;s.innerHTML=s.options[0].outerHTML+vals.map(v=>`<option>${v}</option>`).join('');s.value=cur}
+function render(){
+  fill('fCat',CATS);fill('fPlat',[...new Set(items.map(i=>i.platform))].sort());
+  const q=document.getElementById('q').value.toLowerCase(),ft=fTier.value,fc=fCat.value,fp=fPlat.value,fs=fStatus.value;
+  let rows=items.filter(i=>(!q||i.url.toLowerCase().includes(q)||i.poster.toLowerCase().includes(q))&&(!ft||i.tier===ft)&&(!fc||i.category===fc)&&(!fp||i.platform===fp)&&(!fs||i.status===fs));
+  const tierRank=t=>TIERS.indexOf(t),gradeRank=g=>GRADES.indexOf(g);
+  rows.sort((a,b)=>{let x=a[sortKey],y=b[sortKey];if(sortKey==='tier'){x=tierRank(x);y=tierRank(y)}if(sortKey==='grade'){x=gradeRank(x);y=gradeRank(y)}return (x>y?1:x<y?-1:0)*sortDir});
+  document.getElementById('rows').innerHTML=rows.map(i=>`<tr class="${i.id===selId?'sel':''}" onclick="select(${i.id})">
+    <td><span class="url" title="${i.url}">${i.url.split(' ')[0]}</span><span class="plat">${i.platform} · ${i.poster}</span></td>
+    <td class="cat"><span style="color:${CATCOLOR[i.category]};font-weight:600">●</span> ${i.category.replace('_',' ')}</td>
+    <td class="score">${i.score}/10</td><td><span class="badge tier-${i.tier}">${i.tier}</span></td>
+    <td><span class="badge grade">${i.grade}</span></td><td class="status">${i.status}</td></tr>`).join('');
+  document.getElementById('empty').style.display=rows.length?'none':'block';
+  // KPIs
+  document.getElementById('k-queue').textContent=items.filter(i=>i.status==='Pending').length;
+  document.getElementById('k-crit').textContent=items.filter(i=>i.tier==='CRITICAL'&&i.status==='Pending').length;
+  document.getElementById('k-high').textContent=items.filter(i=>i.tier==='HIGH'&&i.status==='Pending').length;
+  document.getElementById('k-rev').textContent=items.filter(i=>i.status!=='Pending').length;
+  document.getElementById('k-esc').textContent=items.filter(i=>i.status==='Escalated').length;
+  drawCharts();renderDetail();if(document.getElementById('netPane').style.display!=='none')drawNet();
+}
+function select(id){selId=id;render()}
+function setField(k,v){const it=items.find(i=>i.id===selId);if(!it)return;const old=it[k];it[k]=v;log(it,`${k} changed`,`${old} → ${v}`);render()}
+function act(status){const it=items.find(i=>i.id===selId);if(!it)return;
+  if(status==='Escalated'&&it.tier==='CRITICAL'&&it.reviewers.length<1){it.reviewers.push('D. Pennie');log(it,'first confirmation recorded','CRITICAL requires a second analyst before escalation');render();return}
+  it.status=status;log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}`);render()}
+function renderDetail(){
+  const d=document.getElementById('detail');const it=items.find(i=>i.id===selId);
+  if(!it){d.innerHTML='<h3>3 · Item detail & analyst decision</h3><div class="empty">Select an item in the queue.</div>';return}
+  d.innerHTML=`<h3>3 · Item detail & analyst decision</h3>
+   <h2>${it.category.replace('_',' ')} <span class="badge tier-${it.tier}">${it.tier}</span> <span style="font-size:13px;color:var(--muted)">${it.score}/10</span></h2>
+   <div class="meta"><span class="url" style="max-width:100%">${it.url.split(' ')[0]}</span>${it.platform} · ${it.poster} · captured ${it.captured} · status <b>${it.status}</b></div>
+   <div class="box"><b>AI reasoning</b> (confidence ${(it.confidence*100).toFixed(0)}%)<br>${it.reasoning}
+     <ul class="ind">${it.indicators.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+   <div class="kv">
+     <div>Recommendation</div><div><b>${it.recommendation.replace(/_/g,' ')}</b></div>
+     <div>Evidence grade</div><div><select onchange="setField('grade',this.value)">${GRADES.map(g=>`<option ${g===it.grade?'selected':''}>${g}</option>`).join('')}</select></div>
+     <div>Connection type</div><div><select onchange="setField('connection',this.value)">${CONN.map(c=>`<option ${c===it.connection?'selected':''}>${c}</option>`).join('')}</select><div class="note">Only <i>operational coordination</i> is reported as an operational relationship.</div></div>
+     <div>Category</div><div><select onchange="setField('category',this.value)">${CATS.map(c=>`<option ${c===it.category?'selected':''}>${c.replace('_',' ')}</option>`).join('')}</select></div>
+     <div>Analyst notes</div><div><input style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px" value="${it.notes}" onchange="setField('notes',this.value)" placeholder="corroboration, alternative interpretation…"></div>
+   </div>
+   <div class="actions">
+     <button class="btn ok" onclick="act('Confirmed')">Confirm</button>
+     <button class="btn warn" onclick="act('Escalated')">Escalate</button>
+     <button class="btn mute" onclick="act('Dismissed')">Dismiss (FP)</button>
+   </div>
+   ${it.tier==='CRITICAL'?`<div class="twoman">CRITICAL tier: escalation requires two-analyst confirmation (${it.reviewers.length}/2 recorded).</div>`:''}
+   <div class="row" style="margin-top:8px"><span class="pill">report.md</span><span class="pill">metadata.json</span><span class="pill">screenshot.png</span><span class="pill">media/</span><button class="btn sec" style="margin-left:auto" onclick="alert('Report bundle generated for item #${it.id} (demo).')">Generate report</button></div>
+   <h3 style="margin-top:14px">Audit log</h3>
+   <div class="audit">${audit.filter(a=>a.id===it.id).map(a=>`<div><b>${a.t}</b> · ${a.who} · ${a.action} — ${a.detail}</div>`).join('')||'<div>—</div>'}</div>`;
+}
+function drawCharts(){
+  const cnt={};CATS.forEach(c=>cnt[c]=0);items.forEach(i=>cnt[i.category]++);
+  const max=Math.max(1,...Object.values(cnt));let y=8,html='';
+  CATS.forEach(c=>{const w=Math.round(cnt[c]/max*150);html+=`<text x="0" y="${y+11}" font-size="10" fill="#6B7785">${c.replace('_',' ')}</text><rect x="100" y="${y}" width="${w}" height="14" rx="3" fill="${CATCOLOR[c]}"/><text x="${104+w}" y="${y+11}" font-size="10" fill="#1F2933">${cnt[c]}</text>`;y+=26});
+  document.getElementById('catChart').innerHTML=html;
+  const tc={};TIERS.forEach(t=>tc[t]=0);items.forEach(i=>tc[i.tier]++);const tot=Math.max(1,items.length);
+  let x=0,bars='';TIERS.forEach(t=>{const w=Math.round(tc[t]/tot*270);bars+=`<rect x="${x}" y="30" width="${w}" height="34" fill="${TIERCOLOR[t]}"/>`;if(w>22)bars+=`<text x="${x+w/2}" y="52" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">${tc[t]}</text>`;x+=w});
+  document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
+  document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
+}
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer (add ?api=http://localhost:8000 to use the backend)';loadSamples();
+</script>
+</body>
+</html>
