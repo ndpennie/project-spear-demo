@@ -151,7 +151,23 @@
 
   <!-- CENTER: queue -->
   <div class="card">
-    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><span class="mode" id="modeTag">demo analyzer</span></div>
+    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab" id="tabL" onclick="showTab('lib')">Library</div><span class="mode" id="modeTag">demo analyzer</span></div>
+    <div id="libPane" style="display:none">
+      <h3>2d · Library — upload context to help the AI learn</h3>
+      <div class="box">
+        <b>Upload files</b> <span class="note" style="margin:0">— glossaries / codebook spreadsheets, reports &amp; briefs, example posts, chat exports, reference symbol images. Text is chunked and indexed so it is retrieved into the model's prompt when an item shares vocabulary with it; CSV/JSON with <code>term, meaning</code> columns are turned into codebook <i>proposals</i>; images become reference fingerprints for near-duplicate matching.</span>
+        <div class="form" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:6px">
+          <div style="grid-column:1/4"><label>Files (txt, md, csv, tsv, json, jsonl, html, pdf, docx, jpg, png)</label><input type="file" id="libFiles" multiple accept=".txt,.md,.csv,.tsv,.json,.jsonl,.html,.htm,.pdf,.docx,image/*"></div>
+          <div><label>Kind</label><select id="libKind"><option value="glossary">Glossary / codebook sheet</option><option value="report">Report / brief / article</option><option value="examples">Example posts (labelled or raw)</option><option value="reference_image">Reference symbol image</option><option value="reference" selected>Other reference</option></select></div>
+          <div><label>Label (for images) / short note</label><input id="libNote" placeholder="e.g. 'Active Club recruitment flyer template'"></div>
+          <div style="display:flex;align-items:flex-end"><button class="btn" onclick="ingestLibrary()">Add to library</button></div>
+        </div>
+        <div class="note" id="libMsg"></div>
+      </div>
+      <div style="max-height:360px;overflow:auto;margin-top:10px"><table id="libTable"><thead><tr><th>Document</th><th>Kind</th><th>Indexed</th><th>Extracted</th><th>Added</th></tr></thead><tbody></tbody></table></div>
+      <div class="empty" id="libEmpty">No library documents yet. Upload context above — it is used the next time an item is analyzed and shown as “Related library context” in the explanation.</div>
+      <div class="note">Location on the backend: <code>LIBRARY_DIR/docs/</code> (default <code>./library_data/docs</code>, git-ignored) via <code>POST /api/library/docs</code>. In demo mode documents live in memory for this session only.</div>
+    </div>
     <div id="cbPane" style="display:none">
       <h3>2c · Codebook — living library of codes, symbols &amp; nuance the AI learns from</h3>
       <div class="row" style="margin-bottom:8px"><input id="cbq" placeholder="Search term, meaning, variant…" oninput="renderCodebook()" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:6px 8px"><select id="cbKind" onchange="renderCodebook()" style="border:1px solid var(--line);border-radius:8px;padding:6px 8px"><option value="">All kinds</option><option>term</option><option>numeric_code</option><option>symbol</option><option>emoji</option><option>pattern</option><option>visual</option><option>hashtag</option></select><span class="note" id="cbStats" style="margin:0"></span></div>
@@ -284,7 +300,7 @@ function explain(it){
   return `<div class="box explain">
     <div class="xhead">🛈 AI analyst explanation <span class="note" style="font-weight:400">— plain language · confidence ${(it.confidence*100).toFixed(0)}% · ${it.type==='image'?'photo pipeline: fingerprint → OCR → labels → codebook → reasoning':'click the URL to open the source in a new tab'}</span></div>
     <div class="xs"><b>1 · What you are looking at</b><br>${imgSeeing||seeing}<br><span class="note">Framework position: ${LAYER[it.category]}. Connection type detected: <i>${it.connection}</i>.</span></div>
-    <div class="xs"><b>2 · Why it is considered threatening</b><br>${HARM[it.category]}${cbHtml}<br><span class="note">Signals the model weighted: ${it.indicators.join(' · ')||'—'}.</span></div>
+    <div class="xs"><b>2 · Why it is considered threatening</b><br>${HARM[it.category]}${cbHtml}${it.libctx&&it.libctx.length?`<div style="margin-top:6px"><b>Related library context</b> <span class="note" style="margin:0">(retrieved from documents you uploaded — the model reasons with this):</span>${it.libctx.map(c=>`<div class="cbhit ctx"><b>${c.doc}</b> · ${c.kind}<br><span class="note" style="margin:0">“${c.text.slice(0,260).replace(/</g,'&lt;')}${c.text.length>260?'…':''}”</span></div>`).join('')}</div>`:''}<br><span class="note">Signals the model weighted: ${it.indicators.join(' · ')||'—'}.</span></div>
     <div class="xs"><b>3 · Why it scored ${it.score}/10 → ${it.tier}</b>
       <table class="bd">${bd.map(b=>`<tr><td>${b.l}</td><td class="d ${b.d>=0?'pos':'neg'}">${b.d>=0?'+':''}${b.d}</td></tr>`).join('')}${bd.length?`<tr class="tot"><td>Risk score</td><td class="d">${Math.max(1,Math.min(10,total))} / 10</td></tr>`:`<tr><td>Score returned by the model’s reasoning (see above)</td><td class="d">${it.score} / 10</td></tr>`}</table>
       <span class="note">Scale: 9–10 CRITICAL (take-down, ${it.tier==='CRITICAL'?'<b>15-min SLA</b>':'15-min SLA'}) · 7–8 HIGH (flag, 1 hr) · 5–6 MEDIUM (monitor) · 3–4 LOW · 1–2 MINIMAL. This item’s SLA: <b>${sla}</b>. Evidence grade <b>${it.grade}</b> because ${gradeWhy}.</span></div>
@@ -310,7 +326,7 @@ const SHARED=['iron-front-supply.store','btc:1A1zP…f9x','freedom-signal.link',
 function sharedOf(u){let h=0;for(const c of u)h=(h*13+c.charCodeAt(0))>>>0;const s=u.toLowerCase();const out=[];
   if(/merch|store|supply/.test(s))out.push(SHARED[0]);if(/btc|wallet|donate|crypto/.test(s))out.push(SHARED[1]);if(/signal|truth|manifesto|wake/.test(s))out.push(SHARED[2]);if(/flyer|poster|reclaim/.test(s))out.push(SHARED[3]);
   return out}
-function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');if(t==='net')drawNet();if(t==='cb')renderCodebook()}
+function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');if(t==='net')drawNet();if(t==='cb')renderCodebook()}
 function drawNet(){
   const svg=document.getElementById('netSvg');const W=760,H=520;const nodes=[],edges=[];const idx={};
   const add=(key,n)=>{if(idx[key]===undefined){idx[key]=nodes.length;nodes.push(n)}return idx[key]};
@@ -390,9 +406,10 @@ async function addPhoto(dataUrl,o){
   let remote=null;if(API_BASE){try{const fd=new FormData();fd.append('file',await (await fetch(dataUrl)).blob(),o.name||'image.jpg');fd.append('caption',o.caption||'');fd.append('poster',o.poster||'');fd.append('source_url',o.source_url||'');fd.append('labels',(o.labels||[]).join(','));
       const r=await fetch(`${API_BASE}/api/analyze-image`,{method:'POST',body:fd});if(r.ok)remote=await r.json()}catch(e){toast('Backend unavailable — demo analyzer')}}
   const vlmLabels=remote&&remote.vision&&remote.vision.labels?remote.vision.labels:[];const visible=remote&&remote.vision&&remote.vision.visible_text?remote.vision.visible_text:ocr;
-  const labels=[...new Set([...(o.labels||[]),...vlmLabels])];
+  const refs=libRefImages(dh);const labels=[...new Set([...(o.labels||[]),...vlmLabels,...refs.map(r=>r.label)])];
   const text=[visible,o.caption,o.poster,o.source_url].filter(Boolean).join(' \n ');
   const hits=cbMatch(text,labels);const pr=cbPrior(hits);
+  if(refs.length){pr.bd.push({l:`Matches reference image in Library: <b>${refs.map(r=>r.label).join(', ')}</b> (hash distance ${refs[0].distance})`,d:1});pr.score=Math.min(10,pr.score+1)}
   let score=pr.score,cat=pr.category,bd=[...pr.bd],reasoning='',conf=0.5+Math.min(0.4,hits.length*0.08),ai=null;
   if(remote&&remote.analysis){ai=remote.analysis;score=ai.risk_score||score;cat=CATS.includes(ai.classification)?ai.classification:cat;reasoning=ai.reasoning||'';conf=ai.confidence||conf;bd=(ai.why_this_score||[]).map(x=>({l:x,d:''}))}
   else{reasoning=hits.length?`Image-derived text and visual labels matched ${hits.length} codebook entr${hits.length===1?'y':'ies'}; the strongest (${hits[0].term}) sets the base and co-occurring codes raise it. Pixels were read by OCR${labels.length?' plus analyst-marked visible elements':''}; no vision model in demo mode.`:'OCR text, caption and handle contain no codebook indicators.'}
@@ -403,7 +420,7 @@ async function addPhoto(dataUrl,o){
   let h=0;for(const c of (o.name||'')+dh)h=(h*7+c.charCodeAt(0))>>>0;
   const it={id:idc++,type:'image',url:o.source_url||('photo:'+(o.name||'upload')),name:o.name||'upload',thumb:dataUrl,dhash:dh,w:im.naturalWidth,h:im.naturalHeight,ocr:visible,labels,caption:o.caption||'',platform:o.platform||'upload',poster:o.poster||'unknown poster',
     captured:new Date().toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],shared:sharedOf(text)+ (o.poster?[]:[]),category:cat,score:Math.max(1,Math.min(10,score)),tier:tierOf(score),recommendation:recOf(score),grade,connection:dupes.length?'operational coordination':(hits.some(x=>x.id==='pt-handle-code')?'audience overlap':CONN[h%CONN.length]),
-    indicators:hits.map(x=>x.term),reasoning,breakdown:bd,hitWords:[],cbHits:hits,ai,confidence:conf,dupes:dupes.map(d=>d.id)};
+    indicators:hits.map(x=>x.term),reasoning,breakdown:bd,hitWords:[],cbHits:hits,ai,confidence:conf,dupes:dupes.map(d=>d.id),refs,libctx:libRetrieve(text+' '+hits.map(h=>h.term).join(' '))};
   it.shared=sharedOf(text);items.unshift(it);log(it,'photo ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade} · OCR ${visible?visible.length+' chars':'none'} · ${labels.length} labels · ${hits.length} codebook hits${API_BASE?' · backend':' · demo'}`);
   st.textContent='';render();return it}
 // ---------- teach / feedback ----------
@@ -425,6 +442,32 @@ function suggestTerms(it){const known=new Set();CODEBOOK.forEach(e=>[e.term,...(
   const stop=new Set(['http','https','www','com','post','posts','status','video','watch','group','groups','the','and','with','this','that','from','your','story','suggested','liked','others','hours','july','mail','more','human','than','white','zombie','order','doorstep','join','movement','national','socialist','civil','little']);
   return toks.filter(t=>!known.has(t)&&!stop.has(t)).slice(0,6)}
 async function sendFeedback(it,decision){if(!API_BASE)return;try{await fetch(`${API_BASE}/api/library/feedback`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:String(it.id),source_type:it.type||'url',content:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,model_category:it.category,model_score:it.score,codebook_hits:(it.cbHits||[]).map(h=>h.id),decision,final_category:it.category,final_score:it.score,grade:it.grade,notes:it.notes,analyst:'D. Pennie'})})}catch(e){}}
+// ---------- knowledge library (context docs & reference images) ----------
+let LIBRARY=[];  // {id,name,kind,note,size,text,chunks,terms,imported,image:{dhash,thumb}}
+const STOPW=new Set('the a an and or of to in on for with is are was were be by at as it this that from we you they he she his her their our not no if so than then there here into out up down over under about after before between during without within http https www com'.split(' '));
+const tokz=s=>((s||'').toLowerCase().match(/[a-z0-9#@_]{3,}/g)||[]).filter(t=>!STOPW.has(t));
+function readAs(f,mode){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);mode==='text'?fr.readAsText(f):fr.readAsDataURL(f)})}
+function parseCSV(t){const lines=t.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];const split=l=>{const out=[];let cur='',q=false;for(const c of l){if(c==='"'){q=!q}else if(c===','&&!q){out.push(cur);cur=''}else cur+=c}out.push(cur);return out.map(x=>x.trim())};const h=split(lines[0]).map(x=>x.toLowerCase());return lines.slice(1).map(l=>{const v=split(l);const o={};h.forEach((k,i)=>o[k]=v[i]||'');return o})}
+function structuredRows(name,text){const ext=name.split('.').pop().toLowerCase();let rows=[];try{if(ext==='csv')rows=parseCSV(text);else if(ext==='json'){const j=JSON.parse(text);rows=Array.isArray(j)?j:(j.entries||[])}else if(ext==='jsonl')rows=text.split(/\n/).filter(Boolean).map(l=>JSON.parse(l))}catch(e){return[]}
+  return rows.map(r=>{const low={};Object.keys(r).forEach(k=>low[k.toLowerCase().trim()]=typeof r[k]==='string'?r[k]:JSON.stringify(r[k]));const term=low.term||low.code||low.symbol||low.phrase||low.keyword,meaning=low.meaning||low.definition||low.description||low.explanation;if(!term||!meaning)return null;
+    return {id:'prop-'+Date.now()+Math.random().toString(36).slice(2,6),term:term.trim(),meaning:meaning.trim(),kind:(low.kind||low.type||'term').trim(),variants:(low.variants||low.aliases||'').split(/[;|,]/).map(x=>x.trim()).filter(Boolean),category:CATS.includes(low.category)?low.category:'propaganda',severity:Math.max(1,Math.min(5,parseInt(low.severity)||2)),context_required:!/^(0|false|no|n)$/i.test(low.context_required||low.context||'true'),status:'proposed',proposed_by:'library:'+name}}).filter(Boolean)}
+function candidateTerms(text){const known=new Set();CODEBOOK.forEach(e=>[e.term,...(e.variants||[])].forEach(ph=>tokz(ph).forEach(t=>known.add(t))));const toks=tokz(text);const f={};toks.forEach((t,i)=>{if(!known.has(t))f[t]=(f[t]||0)+1;if(i+1<toks.length){const bg=t+' '+toks[i+1];f[bg]=(f[bg]||0)+1}});return Object.entries(f).filter(([k,v])=>v>=2&&!/^\d+$/.test(k)).sort((a,b)=>b[1]-a[1]).slice(0,20).map(x=>x[0])}
+async function ingestLibrary(){const inp=document.getElementById('libFiles');const files=[...inp.files];if(!files.length){toast('Choose one or more files');return}
+  const kind=document.getElementById('libKind').value,note=document.getElementById('libNote').value.trim();let added=0,props=0;
+  for(const f of files){const isImg=/^image\//.test(f.type);const rec={id:'doc-'+Date.now()+added,name:f.name,kind:isImg&&kind!=='reference_image'?'reference_image':kind,note,size:f.size,text:'',chunks:0,terms:[],imported:0,image:null,ts:new Date().toLocaleString()};
+    if(isImg){const du=await readAs(f,'data');const im=await loadImg(du);rec.image={dhash:dHash(im),thumb:du}}
+    else{const ext=f.name.split('.').pop().toLowerCase();if(['txt','md','csv','tsv','json','jsonl','html','htm','log'].includes(ext)){rec.text=await readAs(f,'text');if(/htm/.test(ext))rec.text=rec.text.replace(/<[^>]+>/g,' ')}
+      else if(ext==='pdf'&&API_BASE===''){rec.text='';rec.note=(rec.note?rec.note+' · ':'')+'PDF text is extracted by the backend; stored as reference only in demo mode'}
+      rec.chunks=Math.ceil(rec.text.length/600);rec.terms=rec.text?candidateTerms(rec.text):[];
+      const rows=rec.text?structuredRows(f.name,rec.text):[];if(rows.length){PROPOSALS.push(...rows);rec.imported=rows.length;props+=rows.length;if(rec.kind==='reference')rec.kind='glossary'}}
+    if(files.length>1&&!isImg)rec.note='';
+    if(API_BASE){try{const fd=new FormData();fd.append('file',f);fd.append('kind',rec.kind);fd.append('note',note);fd.append('label',note);fd.append('added_by','D. Pennie');const r=await fetch(`${API_BASE}/api/library/docs`,{method:'POST',body:fd});if(r.ok){const j=await r.json();rec.backend_id=j.id;rec.chunks=j.chunks||rec.chunks;rec.imported=j.imported_proposals||rec.imported;if(j.terms&&j.terms.length)rec.terms=j.terms}}catch(e){toast('Backend unavailable — stored in session only')}}
+    LIBRARY.unshift(rec);added++;audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'library upload',detail:`${f.name} (${rec.kind}, ${rec.chunks} chunks, ${rec.imported} proposals)`,who:'D. Pennie'})}
+  inp.value='';document.getElementById('libNote').value='';document.getElementById('libMsg').textContent=`${added} file(s) added${props?` · ${props} codebook proposal(s) created — review in Codebook & teach`:''}. Retrieval is live for the next analysis.`;renderLibrary();renderCodebook();render()}
+function renderLibrary(){const tb=document.querySelector('#libTable tbody');document.getElementById('libEmpty').style.display=LIBRARY.length?'none':'block';
+  tb.innerHTML=LIBRARY.map(d=>`<tr><td>${d.image?`<img class="thumb" src="${d.image.thumb}">`:'📄 '}<b>${d.name}</b><br><span class="note" style="margin:0">${d.note||''}${d.image?` · dHash ${d.image.dhash}`:''}</span></td><td class="cat">${d.kind.replace('_',' ')}</td><td>${d.image?'fingerprint':d.chunks+' chunk'+(d.chunks===1?'':'s')}</td><td>${d.imported?`<b>${d.imported}</b> proposals · `:''}${d.terms.length?`<span class="note" style="margin:0">candidates: </span>${d.terms.slice(0,6).map(t=>`<span class="chip teach" onclick="teachFrom('${t.replace(/'/g,'')}')">+ ${t}</span>`).join(' ')}`:(d.image?'reference image':'—')}</td><td class="status">${d.ts}</td></tr>`).join('')}
+function libRetrieve(query,k=3){const q=new Set(tokz(query));if(!q.size)return[];const out=[];LIBRARY.forEach(d=>{if(!d.text)return;for(let i=0;i<d.text.length;i+=600){const ch=d.text.slice(i,i+600);const ct=new Set(tokz(ch));let ov=0;q.forEach(t=>{if(ct.has(t))ov++});if(ov>=2)out.push({doc:d.name,kind:d.kind,ov,text:ch.trim()})}});return out.sort((a,b)=>b.ov-a.ov).slice(0,k)}
+function libRefImages(dh){return LIBRARY.filter(d=>d.image&&ham(d.image.dhash,dh)<=8).map(d=>({label:d.note||d.name,distance:ham(d.image.dhash,dh)}))}
 // ---------- case samples (private repo only: dashboard/samples/samples.json) ----------
 async function loadCaseSamples(){try{const r=await fetch('samples/samples.json');if(!r.ok)return;const j=await r.json();
   for(const s of j.items){const b=await (await fetch('samples/'+s.file)).blob();const du=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b)});
@@ -440,6 +483,7 @@ async function ingest(){
 }
 async function addItem(u){
   let a=await analyzeRemote(u);if(!a)a=analyze(u);let h=0;for(const c of u)h=(h*7+c.charCodeAt(0))>>>0;
+  a.libctx=libRetrieve(u+' '+(a.cbHits||[]).map(x=>x.term).join(' '));
   const it={id:idc++,url:u,platform:platformOf(u),poster:POSTERS[h%POSTERS.length],captured:new Date(Date.now()-(h%720)*60000).toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],shared:sharedOf(u),...a};
   items.unshift(it);log(it,'ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade}${API_BASE?' · backend':' · demo'}`);render();
 }
