@@ -66,8 +66,14 @@
   .tab.lib{background:#2F855A;color:#fff;border-color:#2F855A}
   .tab.lib.on{background:#1F6B44;border-color:#1F6B44;box-shadow:inset 0 0 0 2px #9AE6B4}
   .tab.hunt{background:#B42318;color:#fff;border-color:#B42318}
+  .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99;align-items:center;justify-content:center}
+  .modalbox{background:#fff;border-radius:10px;padding:16px;max-width:720px;width:92%;max-height:84vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+  .modalbox pre{white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:12px;background:#F7FAFC;border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:8px}
   .badge.emerging{background:#FFF7E6;color:#B7791F;border:1px solid #F6C77A}
   .tab.hunt.on{background:#8A1B12;border-color:#8A1B12;box-shadow:inset 0 0 0 2px #FEB3AB}
+  .tab.bg{background:#2FA8CC;color:#fff;border-color:#2FA8CC}
+  .tab.bg.on{background:#1E7FA0;border-color:#1E7FA0;box-shadow:inset 0 0 0 2px #B3E5F2}
+  .bgalert{border-left:4px solid #B45309;background:#FFF8E1;border-radius:0 6px 6px 0;padding:8px 10px;margin:6px 0;font-size:12px}
   .huntdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#B42318;margin-right:6px;vertical-align:middle}
   .huntdot.on{background:#2F855A;animation:pulse 1.4s infinite}
   @keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
@@ -120,7 +126,7 @@
   <div class="kpi c"><div class="n" id="k-crit">0</div><div class="l">Critical (≤15 min SLA)</div></div>
   <div class="kpi h"><div class="n" id="k-high">0</div><div class="l">High (≤1 hr SLA)</div></div>
   <div class="kpi"><div class="n" id="k-rev">0</div><div class="l">Reviewed today</div></div>
-  <div class="kpi"><div class="n" id="k-esc">0</div><div class="l">Escalated to platform</div></div>
+  <div class="kpi"><div class="n" id="k-esc">0</div><div class="l">Reported to platform</div></div>
 </div>
 
 <div class="wrap">
@@ -159,7 +165,7 @@
 
   <!-- CENTER: queue -->
   <div class="card">
-    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt" id="tabH" onclick="showTab('hunt')">Active Hunt</div><span class="mode" id="modeTag">demo analyzer</span></div>
+    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt" id="tabH" onclick="showTab('hunt')">Active Hunt</div><div class="tab bg" id="tabBG" onclick="showTab('bg')">BrandGuard™</div><span class="mode" id="modeTag">demo analyzer</span></div>
     <div id="libPane" style="display:none">
       <h3>2d · Library — upload context to help the AI learn</h3>
       <div class="box">
@@ -202,6 +208,19 @@
       <div style="max-height:340px;overflow:auto"><table id="hTable"><thead><tr><th>Poster / platform</th><th>Category</th><th>Risk</th><th>Matched</th><th>Query</th><th></th></tr></thead><tbody></tbody></table></div>
       <div class="empty" id="hEmpty">No candidates yet. Set a watchlist and run a sweep. Excluded (allowlisted) accounts are skipped and reported in the status line.</div>
       <div class="note">Backend endpoints: <code>PUT /api/hunt/watchlist</code>, <code>PUT /api/hunt/exclude</code>, <code>POST /api/hunt/sweep</code>, <code>POST /api/hunt/start|stop</code>, <code>GET /api/hunt/queue</code>. In demo mode the crawler runs in this browser against a synthetic connector.</div>
+    </div>
+    <div id="bgPane" style="display:none">
+      <h3>2f · BrandGuard™ — advertiser brand-safety adjacency</h3>
+      <div class="box" style="border-left:4px solid #2FA8CC;background:#F0F9FC">
+        <b>For licensing advertisers &amp; agencies:</b> tell BrandGuard which brands to protect. It flags every case where a monitored brand — a mention, hashtag, or an ad placed beside a post — appears next to content Project Spear has categorized as harmful, so the advertiser knows their brand ran adjacent to extremism, drugs, or other unsafe content. This is the licensable brand-safety search over the same intelligence base.
+      </div>
+      <div class="form" style="margin-top:8px"><label>Monitored brands (one per line — names, #hashtags, or @handles)</label>
+        <textarea id="bgBrands" style="min-height:56px" placeholder="Acme Cola&#10;#AcmeRun&#10;@acme"></textarea></div>
+      <div class="row" style="margin-top:8px"><button class="btn" onclick="bgScan()">Scan queue for adjacency</button><button class="btn mute" onclick="bgLoadExample()">Load example</button><span class="note" id="bgStatus" style="margin:0"></span></div>
+      <h3 style="margin-top:14px">Brand-safety incidents — brand appeared beside flagged content</h3>
+      <div style="max-height:320px;overflow:auto"><table id="bgTable"><thead><tr><th>Brand</th><th>Adjacent content</th><th>Category</th><th>Risk</th><th></th></tr></thead><tbody></tbody></table></div>
+      <div class="empty" id="bgEmpty">No brand-safety incidents. Add brands and scan — incidents appear when a monitored brand co-occurs with content categorized above benign.</div>
+      <div class="note">Capability #11 (Brand Adjacency Monitoring) in the business plan. Sold as a white-label self-service search for ad companies; findings can also feed the advertiser's own dashboards.</div>
     </div>
     <div id="cbPane" style="display:none">
       <h3>2c · Codebook — living library of codes, symbols &amp; nuance the AI learns from</h3>
@@ -343,11 +362,12 @@ function explain(it){
   const cbHtml=cbh.length?`<div style="margin-top:6px"><b>Codes &amp; symbols recognized (living codebook):</b>${cbh.slice(0,7).map(h=>`<div class="cbhit ${h.context_required?'ctx':''}"><b>${h.term}</b> <span class="sev">sev ${h.severity}/5</span>${h.obfuscated?' <span class="sev">obfuscated spelling</span>':''}<br>${h.meaning}<br><span class="note" style="margin:0">matched: ${h.matched.join(', ')}${h.context_required?' · context-dependent — benign in ordinary use':''}</span></div>`).join('')}</div>`:'';
   const imgSeeing=it.type==='image'?`This is an <b>image</b>${it.platform!=='upload'?` (screenshot from <b>${it.platform}</b>)`:''} ${it.w}×${it.h}px, poster <b>${it.poster}</b>${it.ai&&it.ai.what_you_are_seeing?`. <b>Vision model:</b> ${it.ai.what_you_are_seeing}`:''}. ${it.ocr?`<b>Text read from the image (OCR):</b> <i>“${it.ocr.replace(/\s+/g,' ').slice(0,300)}${it.ocr.length>300?'…':''}”</i>. `:'<b>No legible text</b> was found in the image. '}${it.labels&&it.labels.length?`<b>Visible elements${it.ai?' (vision model + analyst)':' (analyst-marked)'}:</b> ${it.labels.join(', ')}. `:''}${it.caption?`<b>Caption/audio/comments supplied:</b> <i>${it.caption}</i>. `:''}${it.dupes&&it.dupes.length?`<b>This image is a near-duplicate</b> of ${it.dupes.length} other item(s) in the queue — the same graphic is being re-posted. `:''}${it.ai&&it.ai.why_threatening?`<br><b>Vision-model assessment:</b> ${it.ai.why_threatening}`:''}`:null;
   const nextTxt=it.ai&&it.ai.what_would_change_this?it.ai.what_would_change_this:NEXT[it.category];
+  const bgb=(typeof bgBrandsFor==='function')?bgBrandsFor(it):[];
   const sugg=suggestTerms(it);
   return `<div class="box explain">
     <div class="xhead">🛈 AI analyst explanation <span class="note" style="font-weight:400">— plain language · confidence ${(it.confidence*100).toFixed(0)}% · ${it.type==='image'?'photo pipeline: fingerprint → OCR → labels → codebook → reasoning':'click the URL to open the source in a new tab'}${isEmerging(it)?' · <b style=\"color:#B7791F\">⚡ EMERGING</b> — novel terms not in the codebook yet':''}</span></div>
     <div class="xs"><b>1 · What you are looking at</b><br>${imgSeeing||seeing}<br><span class="note">Framework position: ${LAYER[it.category]}. Connection type detected: <i>${it.connection}</i>.</span></div>
-    <div class="xs"><b>2 · Why it is considered threatening</b><br>${HARM[it.category]}${cbHtml}${it.libctx&&it.libctx.length?`<div style="margin-top:6px"><b>Related library context</b> <span class="note" style="margin:0">(retrieved from documents you uploaded — the model reasons with this):</span>${it.libctx.map(c=>`<div class="cbhit ctx"><b>${c.doc}</b> · ${c.kind}<br><span class="note" style="margin:0">“${c.text.slice(0,260).replace(/</g,'&lt;')}${c.text.length>260?'…':''}”</span></div>`).join('')}</div>`:''}<br><span class="note">Signals the model weighted: ${it.indicators.join(' · ')||'—'}.</span></div>
+    <div class="xs"><b>2 · Why it is considered threatening</b><br>${HARM[it.category]}${cbHtml}${bgb.length&&it.category!=='benign'?`<div class="bgalert">⚠ <b>BrandGuard:</b> monitored brand ${bgb.join(', ')} appears beside this ${it.category.replace(/_/g,' ')} content — advertiser brand-safety exposure.</div>`:''}${it.libctx&&it.libctx.length?`<div style="margin-top:6px"><b>Related library context</b> <span class="note" style="margin:0">(retrieved from documents you uploaded — the model reasons with this):</span>${it.libctx.map(c=>`<div class="cbhit ctx"><b>${c.doc}</b> · ${c.kind}<br><span class="note" style="margin:0">“${c.text.slice(0,260).replace(/</g,'&lt;')}${c.text.length>260?'…':''}”</span></div>`).join('')}</div>`:''}<br><span class="note">Signals the model weighted: ${it.indicators.join(' · ')||'—'}.</span></div>
     <div class="xs"><b>3 · Why it scored ${it.score}/10 → ${it.tier}</b>
       <table class="bd">${bd.map(b=>`<tr><td>${b.l}</td><td class="d ${b.d>=0?'pos':'neg'}">${b.d>=0?'+':''}${b.d}</td></tr>`).join('')}${bd.length?`<tr class="tot"><td>Risk score</td><td class="d">${Math.max(1,Math.min(10,total))} / 10</td></tr>`:`<tr><td>Score returned by the model’s reasoning (see above)</td><td class="d">${it.score} / 10</td></tr>`}</table>
       <span class="note">Scale: 9–10 CRITICAL (take-down, ${it.tier==='CRITICAL'?'<b>15-min SLA</b>':'15-min SLA'}) · 7–8 HIGH (flag, 1 hr) · 5–6 MEDIUM (monitor) · 3–4 LOW · 1–2 MINIMAL. This item’s SLA: <b>${sla}</b>. Evidence grade <b>${it.grade}</b> because ${gradeWhy}.</span></div>
@@ -373,7 +393,7 @@ const SHARED=['iron-front-supply.store','btc:1A1zP…f9x','freedom-signal.link',
 function sharedOf(u){let h=0;for(const c of u)h=(h*13+c.charCodeAt(0))>>>0;const s=u.toLowerCase();const out=[];
   if(/merch|store|supply/.test(s))out.push(SHARED[0]);if(/btc|wallet|donate|crypto/.test(s))out.push(SHARED[1]);if(/signal|truth|manifesto|wake/.test(s))out.push(SHARED[2]);if(/flyer|poster|reclaim/.test(s))out.push(SHARED[3]);
   return out}
-function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');document.getElementById('huntPane').style.display=t==='hunt'?'':'none';document.getElementById('tabH').classList.toggle('on',t==='hunt');if(t==='net')drawNet();if(t==='cb')renderCodebook();if(t==='hunt')renderHunt()}
+function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');document.getElementById('huntPane').style.display=t==='hunt'?'':'none';document.getElementById('tabH').classList.toggle('on',t==='hunt');if(t==='net')drawNet();if(t==='cb')renderCodebook();if(t==='hunt')renderHunt();document.getElementById('bgPane').style.display=t==='bg'?'':'none';document.getElementById('tabBG').classList.toggle('on',t==='bg');if(t==='bg')bgRender()}
 function drawNet(){
   const svg=document.getElementById('netSvg');const W=760,H=520;const nodes=[],edges=[];const idx={};
   const add=(key,n)=>{if(idx[key]===undefined){idx[key]=nodes.length;nodes.push(n)}return idx[key]};
@@ -490,6 +510,76 @@ function suggestTerms(it){const known=new Set();CODEBOOK.forEach(e=>[e.term,...(
   const stop=new Set(['http','https','www','com','post','posts','status','video','watch','group','groups','the','and','with','this','that','from','your','story','suggested','liked','others','hours','july','mail','more','human','than','white','zombie','order','doorstep','join','movement','national','socialist','civil','little']);
   return toks.filter(t=>!known.has(t)&&!stop.has(t)).slice(0,6)}
 async function sendFeedback(it,decision){if(!API_BASE)return;try{await fetch(`${API_BASE}/api/library/feedback`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:String(it.id),source_type:it.type||'url',content:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,model_category:it.category,model_score:it.score,codebook_hits:(it.cbHits||[]).map(h=>h.id),decision,final_category:it.category,final_score:it.score,grade:it.grade,notes:it.notes,analyst:'Strategic'})})}catch(e){}}
+
+
+
+// ---------- BrandGuard™ (advertiser brand-safety adjacency) ----------
+let BRANDS=[], BGINCIDENTS=[];
+function bgBrandList(){return (document.getElementById('bgBrands').value||'').split('\n').map(x=>x.trim()).filter(Boolean)}
+function bgTextOf(it){return [it.url,it.ocr,it.caption,it.poster].filter(Boolean).join(' ').toLowerCase()}
+function bgScan(){BRANDS=bgBrandList();BGINCIDENTS=[];
+ const brands=BRANDS.map(b=>({raw:b,k:b.toLowerCase().replace(/^[@#]/,'')})).filter(b=>b.k.length>=2);
+ items.forEach(it=>{if(it.category==='benign')return;const hay=bgTextOf(it);
+   brands.forEach(b=>{if(hay.includes(b.k))BGINCIDENTS.push({brand:b.raw,it,category:it.category,score:it.score,tier:it.tier})})});
+ document.getElementById('bgStatus').textContent=`${BRANDS.length} brand(s) · ${BGINCIDENTS.length} adjacency incident(s) across ${items.filter(i=>i.category!=='benign').length} flagged items`;
+ bgRender();audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'BrandGuard scan',detail:`${BGINCIDENTS.length} brand-adjacency incidents for ${BRANDS.length} brands`,who:'Strategic'})}
+function bgLoadExample(){document.getElementById('bgBrands').value='Acme Cola\n#AcmeRun';
+ addItem('https://instagram.com/deathstar__88 (sponsored: Acme Cola #AcmeRun ad shown beside — JOIN THE NATIONAL SOCIALIST MOVEMENT)');
+ setTimeout(()=>bgScan(),150)}
+function bgRender(){const tb=document.querySelector('#bgTable tbody');document.getElementById('bgEmpty').style.display=BGINCIDENTS.length?'none':'block';
+ tb.innerHTML=BGINCIDENTS.map(x=>`<tr><td><b>${x.brand}</b></td><td class="note" style="margin:0;max-width:280px">${(/^https?:/.test(x.it.url)?x.it.url:x.it.name).split(' ')[0]}<br>${x.it.platform} · ${x.it.poster}</td><td class="cat"><span style="color:${CATCOLOR[x.category]}">●</span> ${x.category.replace(/_/g,' ')}</td><td class="score">${x.score}/10 <span class="badge tier-${x.tier}">${x.tier}</span></td><td><button class="btn sec" style="padding:3px 8px;font-size:11px" onclick="select(${x.it.id});showTab('queue')">view</button></td></tr>`).join('')}
+function bgBrandsFor(it){const brands=bgBrandList().map(b=>b.toLowerCase().replace(/^[@#]/,'')).filter(b=>b.length>=2);const hay=bgTextOf(it);return bgBrandList().filter((b,i)=>hay.includes(brands[i]))}
+
+// ---------- platform takedown report (Report stage) ----------
+const POLICY_MAP={
+ propaganda:{clause:'Dangerous Organizations & Individuals — praise/support',reason:'Terrorism or violent extremism'},
+ recruitment:{clause:'Dangerous Organizations & Individuals — recruitment',reason:'Terrorism or violent extremism'},
+ glorification:{clause:'Dangerous Organizations & Individuals — glorification',reason:'Terrorism or violent extremism'},
+ incitement:{clause:'Violence & Incitement',reason:'Violence or incitement'},
+ financing:{clause:'Dangerous Organizations & Individuals — material support/financing',reason:'Terrorism or violent extremism'},
+ operational_planning:{clause:'Coordinating Harm / Violence & Incitement',reason:'Credible threat / coordination of harm'},
+ domestic_terrorism:{clause:'Dangerous Organizations & Individuals — militarized social movement',reason:'Violent extremism / credible threat'},
+ narcotics:{clause:'Restricted Goods & Services — drugs',reason:'Sale of illegal or regulated goods (drugs)'},
+ counterfeit_meds:{clause:'Restricted Goods & Services — non-medical drugs / counterfeit',reason:'Sale of drugs / counterfeit medication'},
+ public_safety_threat:{clause:'Violence & Incitement — credible threat',reason:'Credible threat to public safety'},
+ child_safety:{clause:'Child Sexual Exploitation, Abuse & Nudity — ROUTE TO NCMEC',reason:'Child safety (route to NCMEC/PhotoDNA — cleared reviewers only)'},
+ self_harm_promotion:{clause:'Suicide & Self-Injury — promotion',reason:'Promotion of suicide or self-harm'},
+ benign:{clause:'(no violation)',reason:'No action'}};
+function buildReport(it){const pm=POLICY_MAP[it.category]||POLICY_MAP.benign;const rid='SPEAR-'+String(it.id).padStart(5,'0');
+ const src=/^https?:/.test(it.url)?it.url.split(' ')[0]:(it.type==='image'?('image: '+it.name):it.url.split(' ')[0]);
+ return `PROJECT SPEAR — PLATFORM TAKEDOWN REPORT
+Report ID: ${rid}        Prepared: ${new Date().toISOString().slice(0,16).replace('T',' ')} UTC        Analyst: Strategic (human-reviewed)
+STATUS: HUMAN-APPROVED — ready to submit. Project Spear does not auto-submit; a person files this with the platform.
+
+1. CONTENT
+   Platform: ${it.platform}
+   URL / source: ${src}
+   Poster / account: ${it.poster}
+   Captured: ${it.captured}${it.type==='image'?'\n   Media fingerprint (dHash): '+it.dhash:''}
+
+2. ASSESSMENT
+   Category: ${it.category.replace(/_/g,' ')}
+   Risk score: ${it.score}/10  (${it.tier})
+   Evidence grade: ${it.grade}
+   Indicators: ${(it.indicators||[]).join(', ')||'—'}
+   Reasoning: ${(it.reasoning||'').replace(/\s+/g,' ')}
+
+3. POLICY MAPPING
+   Platform policy clause: ${pm.clause}
+   In-product report reason: "${pm.reason}"
+   Requested action: REMOVE content${it.tier==='CRITICAL'?' — priority (15-min SLA)':''}${it.category==='child_safety'?'\n   *** DO NOT ATTACH MEDIA. Route to NCMEC CyberTipline / PhotoDNA via cleared child-safety reviewer. ***':''}${it.category==='self_harm_promotion'?'\n   Also route to platform wellbeing team; if a user is in crisis, surface 988 (US) resources.':''}
+
+4. EVIDENCE PACKET
+   report.md · metadata.json · screenshot.png · media/ (evidence preserved with tamper-evident timestamp)
+
+5. CHAIN OF CUSTODY / AUDIT
+${(audit.filter(a=>a.id===it.id).map(a=>'   '+a.t+' · '+a.who+' · '+a.action+' — '+a.detail).join('\n'))||'   (see audit log)'}
+
+— Generated by GIPEC AI² · Project Spear (patent pending). Predictions are leads; this report reflects a human analyst decision.`}
+function openReport(){const it=items.find(i=>i.id===selId);if(!it)return;const rep=buildReport(it);
+ let m=document.getElementById('repModal');if(!m){m=document.createElement('div');m.id='repModal';m.className='modal';m.innerHTML='<div class="modalbox"><div class="row" style="justify-content:space-between"><b>Platform takedown report</b><span><button class="btn sec" id="repCopy">Copy</button> <button class="btn mute" id="repClose">Close</button></span></div><pre id="repText"></pre><div class="note">Human-approved report packet. Nothing is auto-submitted — a person files this with the platform (or the platform pulls it via API). For child-safety items, media is never attached; route to NCMEC.</div></div>';document.body.appendChild(m);
+   m.querySelector('#repClose').onclick=()=>m.style.display='none';m.querySelector('#repCopy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('repText').textContent);toast('Report copied')};}
+ document.getElementById('repText').textContent=rep;m.style.display='flex'}
 
 // ---------- Active Hunt (autonomous discovery crawler) ----------
 let HUNTQ=[], huntTimer=null, huntRunning=false;
@@ -649,11 +739,11 @@ function renderDetail(){
    </div>
    <div class="actions">
      <button class="btn ok" onclick="act('Confirmed')">Confirm</button>
-     <button class="btn warn" onclick="act('Escalated')">Escalate</button>
+     <button class="btn warn" onclick="act('Escalated')">Report to platform</button>
      <button class="btn mute" onclick="act('Dismissed')">Dismiss (FP)</button>
    </div>
    ${it.tier==='CRITICAL'?`<div class="twoman">CRITICAL tier: escalation requires two-analyst confirmation (${it.reviewers.length}/2 recorded).</div>`:''}
-   <div class="row" style="margin-top:8px"><span class="pill">report.md</span><span class="pill">metadata.json</span><span class="pill">screenshot.png</span><span class="pill">media/</span><button class="btn sec" style="margin-left:auto" onclick="alert('Report bundle generated for item #${it.id} (demo).')">Generate report</button></div>
+   <div class="row" style="margin-top:8px"><span class="pill">report.md</span><span class="pill">metadata.json</span><span class="pill">screenshot.png</span><span class="pill">media/</span><button class="btn sec" style="margin-left:auto" onclick="openReport()">Generate report</button></div>
    <h3 style="margin-top:14px">Audit log</h3>
    <div class="audit">${audit.filter(a=>a.id===it.id).map(a=>`<div><b>${a.t}</b> · ${a.who} · ${a.action} — ${a.detail}</div>`).join('')||'<div>—</div>'}</div>`;
 }
