@@ -106,7 +106,7 @@
     <div class="brand">PROJECT <span>SPEAR</span> · Threat Categorization Dashboard</div>
     <div class="sub">GIPEC AI² · Anticipatory, human-in-the-loop detection · Patent pending (U.S. Prov. App. 64/135,028)</div>
   </div>
-  <div class="right">Analyst: <b>D. Pennie</b> · Role: Owner/Reviewer<br>Session: Aug 17, 2026 · <span style="color:#9FE0F2">SAMPLE DATA — demonstration mode</span></div>
+  <div class="right">Analyst: <b>Strategic</b> · Role: Owner/Reviewer<br>Session: Aug 17, 2026 · <span style="color:#9FE0F2">SAMPLE DATA — demonstration mode</span></div>
 </header>
 
 <div class="kpis">
@@ -434,9 +434,9 @@ function renderCodebook(){const q=(document.getElementById('cbq').value||'').toL
   document.querySelector('#cbTable tbody').innerHTML=rows.map(e=>`<tr><td><b>${e.term}</b><span class="sev">${e.kind}</span><br><span class="note" style="margin:0">${(e.variants||[]).slice(0,5).join(' · ')}</span></td><td>${e.meaning}${e.context_required?' <span class="sev">context</span>':''}</td><td class="cat">${e.category.replace('_',' ')}</td><td><b>${e.severity}</b></td><td class="status">${e.status}</td></tr>`).join('');
   document.getElementById('cbStats').textContent=`${CODEBOOK.length} approved · ${PROPOSALS.filter(p=>p.status==='proposed').length} proposed`}
 async function proposeTerm(){const g=id=>document.getElementById(id).value.trim();if(!g('tTerm')||!g('tMean')){document.getElementById('tMsg').textContent='Term and meaning are required.';return}
-  const p={id:'prop-'+Date.now(),kind:g('tKind'),term:g('tTerm'),variants:g('tVar').split(',').map(x=>x.trim()).filter(Boolean),meaning:g('tMean'),category:g('tCat'),severity:+g('tSev'),context_required:g('tCtx')==='true',visual_cues:[],example:g('tEx'),status:'proposed',proposed_by:'D. Pennie'};
+  const p={id:'prop-'+Date.now(),kind:g('tKind'),term:g('tTerm'),variants:g('tVar').split(',').map(x=>x.trim()).filter(Boolean),meaning:g('tMean'),category:g('tCat'),severity:+g('tSev'),context_required:g('tCtx')==='true',visual_cues:[],example:g('tEx'),status:'proposed',proposed_by:'Strategic'};
   PROPOSALS.push(p);if(API_BASE){try{await fetch(`${API_BASE}/api/library/propose`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})}catch(e){}}
-  audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'codebook proposal',detail:`${p.term} (${p.kind}, sev ${p.severity}) — pending owner approval`,who:'D. Pennie'});
+  audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'codebook proposal',detail:`${p.term} (${p.kind}, sev ${p.severity}) — pending owner approval`,who:'Strategic'});
   ['tTerm','tVar','tMean','tEx'].forEach(id=>document.getElementById(id).value='');document.getElementById('tMsg').textContent='Proposal recorded — pending approval.';renderCodebook()}
 function approveAll(){let n=0;PROPOSALS.filter(p=>p.status==='proposed').forEach(p=>{p.status='approved';CODEBOOK.push({...p,id:p.id.replace('prop-','an-')});n++});PROPOSALS=PROPOSALS.filter(p=>p.status!=='approved');document.getElementById('tMsg').textContent=n?`${n} proposal(s) approved and now active in the matcher.`:'Nothing pending.';renderCodebook();toast(n?'Codebook updated — new terms are live for the next analysis':'No pending proposals')}
 function teachFrom(term){showTab('cb');document.getElementById('tTerm').value=term;document.getElementById('tMean').focus();window.scrollTo(0,0)}
@@ -444,7 +444,7 @@ function suggestTerms(it){const known=new Set();CODEBOOK.forEach(e=>[e.term,...(
   const src=((it.ocr||'')+' '+(it.caption||'')+' '+(it.type==='image'?'':it.url)).toLowerCase();const toks=[...new Set(src.match(/[a-z][a-z0-9]{3,}|#[a-z0-9_]{3,}/g)||[])];
   const stop=new Set(['http','https','www','com','post','posts','status','video','watch','group','groups','the','and','with','this','that','from','your','story','suggested','liked','others','hours','july','mail','more','human','than','white','zombie','order','doorstep','join','movement','national','socialist','civil','little']);
   return toks.filter(t=>!known.has(t)&&!stop.has(t)).slice(0,6)}
-async function sendFeedback(it,decision){if(!API_BASE)return;try{await fetch(`${API_BASE}/api/library/feedback`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:String(it.id),source_type:it.type||'url',content:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,model_category:it.category,model_score:it.score,codebook_hits:(it.cbHits||[]).map(h=>h.id),decision,final_category:it.category,final_score:it.score,grade:it.grade,notes:it.notes,analyst:'D. Pennie'})})}catch(e){}}
+async function sendFeedback(it,decision){if(!API_BASE)return;try{await fetch(`${API_BASE}/api/library/feedback`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:String(it.id),source_type:it.type||'url',content:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,model_category:it.category,model_score:it.score,codebook_hits:(it.cbHits||[]).map(h=>h.id),decision,final_category:it.category,final_score:it.score,grade:it.grade,notes:it.notes,analyst:'Strategic'})})}catch(e){}}
 // ---------- knowledge library (context docs & reference images) ----------
 let LIBRARY=[];  // {id,name,kind,note,size,text,chunks,terms,imported,image:{dhash,thumb}}
 const STOPW=new Set('the a an and or of to in on for with is are was were be by at as it this that from we you they he she his her their our not no if so than then there here into out up down over under about after before between during without within http https www com'.split(' '));
@@ -464,8 +464,8 @@ async function ingestLibrary(){const inp=document.getElementById('libFiles');con
       rec.chunks=Math.ceil(rec.text.length/600);rec.terms=rec.text?candidateTerms(rec.text):[];
       const rows=rec.text?structuredRows(f.name,rec.text):[];if(rows.length){PROPOSALS.push(...rows);rec.imported=rows.length;props+=rows.length;if(rec.kind==='reference')rec.kind='glossary'}}
     if(files.length>1&&!isImg)rec.note='';
-    if(API_BASE){try{const fd=new FormData();fd.append('file',f);fd.append('kind',rec.kind);fd.append('note',note);fd.append('label',note);fd.append('added_by','D. Pennie');const r=await fetch(`${API_BASE}/api/library/docs`,{method:'POST',body:fd});if(r.ok){const j=await r.json();rec.backend_id=j.id;rec.chunks=j.chunks||rec.chunks;rec.imported=j.imported_proposals||rec.imported;if(j.terms&&j.terms.length)rec.terms=j.terms}}catch(e){toast('Backend unavailable — stored in session only')}}
-    LIBRARY.unshift(rec);added++;audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'library upload',detail:`${f.name} (${rec.kind}, ${rec.chunks} chunks, ${rec.imported} proposals)`,who:'D. Pennie'})}
+    if(API_BASE){try{const fd=new FormData();fd.append('file',f);fd.append('kind',rec.kind);fd.append('note',note);fd.append('label',note);fd.append('added_by','Strategic');const r=await fetch(`${API_BASE}/api/library/docs`,{method:'POST',body:fd});if(r.ok){const j=await r.json();rec.backend_id=j.id;rec.chunks=j.chunks||rec.chunks;rec.imported=j.imported_proposals||rec.imported;if(j.terms&&j.terms.length)rec.terms=j.terms}}catch(e){toast('Backend unavailable — stored in session only')}}
+    LIBRARY.unshift(rec);added++;audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'library upload',detail:`${f.name} (${rec.kind}, ${rec.chunks} chunks, ${rec.imported} proposals)`,who:'Strategic'})}
   inp.value='';document.getElementById('libNote').value='';document.getElementById('libMsg').textContent=`${added} file(s) added${props?` · ${props} codebook proposal(s) created — review in Codebook & teach`:''}. Retrieval is live for the next analysis.`;renderLibrary();renderCodebook();render()}
 function renderLibrary(){const tb=document.querySelector('#libTable tbody');document.getElementById('libEmpty').style.display=LIBRARY.length?'none':'block';
   tb.innerHTML=LIBRARY.map(d=>`<tr><td>${d.image?`<img class="thumb" src="${d.image.thumb}">`:'📄 '}<b>${d.name}</b><br><span class="note" style="margin:0">${d.note||''}${d.image?` · dHash ${d.image.dhash}`:''}</span></td><td class="cat">${d.kind.replace('_',' ')}</td><td>${d.image?'fingerprint':d.chunks+' chunk'+(d.chunks===1?'':'s')}</td><td>${d.imported?`<b>${d.imported}</b> proposals · `:''}${d.terms.length?`<span class="note" style="margin:0">candidates: </span>${d.terms.slice(0,6).map(t=>`<span class="chip teach" onclick="teachFrom('${t.replace(/'/g,'')}')">+ ${t}</span>`).join(' ')}`:(d.image?'reference image':'—')}</td><td class="status">${d.ts}</td></tr>`).join('')}
@@ -506,7 +506,7 @@ function loadSamples(){
    'https://www.facebook.com/groups/northgate-patriots/posts/1201 (poster, reclaim america)'
   ].forEach(u=>addItem(u));render();
 }
-function log(it,action,detail){audit.unshift({t:new Date().toLocaleTimeString(),id:it.id,action,detail,who:'D. Pennie'})}
+function log(it,action,detail){audit.unshift({t:new Date().toLocaleTimeString(),id:it.id,action,detail,who:'Strategic'})}
 function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='score'?-1:1}render()}
 function fill(sel,vals){const s=document.getElementById(sel);const cur=s.value;s.innerHTML=s.options[0].outerHTML+vals.map(v=>`<option>${v}</option>`).join('');s.value=cur}
 function render(){
@@ -532,7 +532,7 @@ function render(){
 function select(id){selId=id;render()}
 function setField(k,v){const it=items.find(i=>i.id===selId);if(!it)return;const old=it[k];it[k]=v;log(it,`${k} changed`,`${old} → ${v}`);render()}
 function act(status){const it=items.find(i=>i.id===selId);if(!it)return;
-  if(status==='Escalated'&&it.tier==='CRITICAL'&&it.reviewers.length<1){it.reviewers.push('D. Pennie');log(it,'first confirmation recorded','CRITICAL requires a second analyst before escalation');render();return}
+  if(status==='Escalated'&&it.tier==='CRITICAL'&&it.reviewers.length<1){it.reviewers.push('Strategic');log(it,'first confirmation recorded','CRITICAL requires a second analyst before escalation');render();return}
   it.status=status;log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}${API_BASE?' · feedback → library':' · feedback recorded (demo)'}`);sendFeedback(it,status);render()}
 function renderDetail(){
   const d=document.getElementById('detail');const it=items.find(i=>i.id===selId);
