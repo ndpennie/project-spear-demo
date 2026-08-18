@@ -523,6 +523,8 @@ function huntToggle(){huntRunning=!huntRunning;const b=document.getElementById('
  else{b.textContent='Start crawler';b.classList.add('warn');b.classList.remove('mute');clearInterval(huntTimer);document.getElementById('hStatus').innerHTML='<span class="huntdot"></span>idle'}}
 function huntClear(){HUNTQ=[];renderHunt()}
 function huntToReview(i){const r=HUNTQ[i];if(!r)return;addItem(`${r.platform==='x'?'https://x.com':'https://'+r.platform+'.com'}/${r.poster} (${r.text})`);showTab('queue');toast('Sent to review queue')}
+async function loadHuntAllowlist(){try{const r=await fetch('samples/hunt_allowlist.json');if(!r.ok)return;const j=await r.json();
+  const el=document.getElementById('hExclude');if(el&&!el.value.trim())el.value=(j.exclude_accounts||[]).join('\n');}catch(e){}}
 function renderHunt(){const tb=document.querySelector('#hTable tbody');document.getElementById('hEmpty').style.display=HUNTQ.length?'none':'block';
  tb.innerHTML=HUNTQ.map((r,i)=>`<tr><td><b>${r.poster}</b><span class="plat">${r.platform}</span></td><td class="cat"><span style="color:${CATCOLOR[r.category]||'#5A6472'}">●</span> ${(r.category||'').replace('_',' ')}</td><td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td><td class="note" style="margin:0;max-width:220px">${(r.hits||[]).slice(0,4).join(', ')}</td><td class="note" style="margin:0">${r.query||''}</td><td><button class="btn sec" style="padding:3px 8px;font-size:11px" onclick="huntToReview(${i})">→ review</button></td></tr>`).join('')}
 
@@ -651,7 +653,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer (add ?api=http://localhost:8000 to use the backend)';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer (add ?api=http://localhost:8000 to use the backend)';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();loadHuntAllowlist();
 </script>
 </body>
 </html>
