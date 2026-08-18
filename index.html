@@ -65,6 +65,11 @@
   .tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
   .tab.lib{background:#2F855A;color:#fff;border-color:#2F855A}
   .tab.lib.on{background:#1F6B44;border-color:#1F6B44;box-shadow:inset 0 0 0 2px #9AE6B4}
+  .tab.hunt{background:#B42318;color:#fff;border-color:#B42318}
+  .tab.hunt.on{background:#8A1B12;border-color:#8A1B12;box-shadow:inset 0 0 0 2px #FEB3AB}
+  .huntdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#B42318;margin-right:6px;vertical-align:middle}
+  .huntdot.on{background:#2F855A;animation:pulse 1.4s infinite}
+  @keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
   #netSvg{width:100%;height:520px;background:#FBFCFE;border:1px solid var(--line);border-radius:8px}
   .netlegend{font-size:11px;color:var(--muted);margin-top:6px}
   .toast{position:fixed;bottom:16px;right:16px;background:var(--navy);color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none}
@@ -153,7 +158,7 @@
 
   <!-- CENTER: queue -->
   <div class="card">
-    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib" id="tabL" onclick="showTab('lib')">Library</div><span class="mode" id="modeTag">demo analyzer</span></div>
+    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt" id="tabH" onclick="showTab('hunt')">Active Hunt</div><span class="mode" id="modeTag">demo analyzer</span></div>
     <div id="libPane" style="display:none">
       <h3>2d · Library — upload context to help the AI learn</h3>
       <div class="box">
@@ -170,6 +175,32 @@
       <div class="empty" id="libEmpty">No library documents yet. Upload context above — it is used the next time an item is analyzed and shown as “Related library context” in the explanation.</div>
       <div class="note"><b>Persistence:</b> with the backend, uploads are stored under <code>library_data/docs/</code> and reloaded every start; seed documents in <code>backend/app/library/seed_docs/</code> ship with the repo. <b>In demo mode (this page without <code>?api=</code>), uploads live only in this browser tab</b> — to make a document permanent, add it to the repo (seed_docs) or run the backend.</div>
       <div class="note">Location on the backend: <code>LIBRARY_DIR/docs/</code> (default <code>./library_data/docs</code>, git-ignored) via <code>POST /api/library/docs</code>. In demo mode documents live in memory for this session only.</div>
+    </div>
+    <div id="huntPane" style="display:none">
+      <h3>2e · Active Hunt — autonomous discovery crawler</h3>
+      <div class="box" style="border-left:4px solid #B42318;background:#FDECEA">
+        <b>What this does:</b> instead of you pasting URLs, the crawler builds search queries from your watchlist + high-severity codebook terms, asks each platform connector for <b>public</b> candidates, scores them, and drops threats into the review queue for a human. <b>Nothing is auto-reported or auto-actioned.</b> Connectors use official platform APIs / approved access only — no private content, no credential stuffing. Demo mode uses a synthetic connector (no live calls).
+      </div>
+      <div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;margin-top:10px">
+        <div><label>Accounts to watch (one per line)</label><textarea id="hAccts" style="min-height:56px" placeholder="ironfront.supply&#10;@activeclub_tx"></textarea></div>
+        <div><label>Hashtags (one per line)</label><textarea id="hTags" style="min-height:56px" placeholder="#W2R&#10;#willtorise"></textarea></div>
+        <div><label>Keywords / slogans (one per line)</label><textarea id="hKw" style="min-height:56px" placeholder="tribe and train&#10;national socialist&#10;day of the rope"></textarea></div>
+        <div><label>Audio / track IDs (one per line)</label><textarea id="hAudio" style="min-height:56px" placeholder="optional"></textarea></div>
+      </div>
+      <div class="box" style="border-left:4px solid #2F855A;background:#EAF7EF;margin-top:6px">
+        <b>Allowlist — never flag these accounts</b> <span class="note" style="margin:0">Put Eric's own T&amp;S profile and every analyst/investigator account here. They interact with this content as part of the job, so the crawler skips them entirely — never queued, never scored as a threat.</span>
+        <textarea id="hExclude" style="min-height:44px;margin-top:6px" placeholder="eric.feinberg&#10;gipec_analyst_1"></textarea>
+      </div>
+      <div class="row" style="margin-top:10px;align-items:center">
+        <button class="btn" onclick="huntSweep()">Run one sweep</button>
+        <button class="btn warn" id="hToggle" onclick="huntToggle()">Start crawler</button>
+        <button class="btn mute" onclick="huntClear()">Clear queue</button>
+        <span class="note" id="hStatus" style="margin:0"><span class="huntdot"></span>idle</span>
+      </div>
+      <h3 style="margin-top:14px">Discovery queue — candidates found, awaiting human review</h3>
+      <div style="max-height:340px;overflow:auto"><table id="hTable"><thead><tr><th>Poster / platform</th><th>Category</th><th>Risk</th><th>Matched</th><th>Query</th><th></th></tr></thead><tbody></tbody></table></div>
+      <div class="empty" id="hEmpty">No candidates yet. Set a watchlist and run a sweep. Excluded (allowlisted) accounts are skipped and reported in the status line.</div>
+      <div class="note">Backend endpoints: <code>PUT /api/hunt/watchlist</code>, <code>PUT /api/hunt/exclude</code>, <code>POST /api/hunt/sweep</code>, <code>POST /api/hunt/start|stop</code>, <code>GET /api/hunt/queue</code>. In demo mode the crawler runs in this browser against a synthetic connector.</div>
     </div>
     <div id="cbPane" style="display:none">
       <h3>2c · Codebook — living library of codes, symbols &amp; nuance the AI learns from</h3>
@@ -329,7 +360,7 @@ const SHARED=['iron-front-supply.store','btc:1A1zP…f9x','freedom-signal.link',
 function sharedOf(u){let h=0;for(const c of u)h=(h*13+c.charCodeAt(0))>>>0;const s=u.toLowerCase();const out=[];
   if(/merch|store|supply/.test(s))out.push(SHARED[0]);if(/btc|wallet|donate|crypto/.test(s))out.push(SHARED[1]);if(/signal|truth|manifesto|wake/.test(s))out.push(SHARED[2]);if(/flyer|poster|reclaim/.test(s))out.push(SHARED[3]);
   return out}
-function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');if(t==='net')drawNet();if(t==='cb')renderCodebook()}
+function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');document.getElementById('huntPane').style.display=t==='hunt'?'':'none';document.getElementById('tabH').classList.toggle('on',t==='hunt');if(t==='net')drawNet();if(t==='cb')renderCodebook();if(t==='hunt')renderHunt()}
 function drawNet(){
   const svg=document.getElementById('netSvg');const W=760,H=520;const nodes=[],edges=[];const idx={};
   const add=(key,n)=>{if(idx[key]===undefined){idx[key]=nodes.length;nodes.push(n)}return idx[key]};
@@ -445,6 +476,56 @@ function suggestTerms(it){const known=new Set();CODEBOOK.forEach(e=>[e.term,...(
   const stop=new Set(['http','https','www','com','post','posts','status','video','watch','group','groups','the','and','with','this','that','from','your','story','suggested','liked','others','hours','july','mail','more','human','than','white','zombie','order','doorstep','join','movement','national','socialist','civil','little']);
   return toks.filter(t=>!known.has(t)&&!stop.has(t)).slice(0,6)}
 async function sendFeedback(it,decision){if(!API_BASE)return;try{await fetch(`${API_BASE}/api/library/feedback`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:String(it.id),source_type:it.type||'url',content:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,model_category:it.category,model_score:it.score,codebook_hits:(it.cbHits||[]).map(h=>h.id),decision,final_category:it.category,final_score:it.score,grade:it.grade,notes:it.notes,analyst:'Strategic'})})}catch(e){}}
+
+// ---------- Active Hunt (autonomous discovery crawler) ----------
+let HUNTQ=[], huntTimer=null, huntRunning=false;
+const HUNT_SAMPLE=[
+ ['instagram','deathstar__88','WHITE MEN THE NEW WORLD ORDER IS AT OUR DOORSTEP JOIN THE NATIONAL SOCIALIST MOVEMENT'],
+ ['instagram','ironfront.supply','merch drop — support the cause, honor the fallen 🔥 #willtorise'],
+ ['telegram','activeclub_tx','tribe and train saturday — apply to join your local chapter, 14 words'],
+ ['x','freedomsignal','wake up — the JQ explains everything, every single time'],
+ ['x','noticer_1488','just noticing… check the early life section 🧃'],
+ ['facebook','reclaim_now','community cleanup event saturday at the park'],
+ ['tiktok','w2r.official','euro-style streetwear, will to rise, #W2R'],
+ ['telegram','siege_reader','read siege, day of the rope soon, gtkrwn'],
+ ['facebook','local_pta','bake sale fundraiser for the school, all welcome'],
+ ['instagram','sons.of.columbia','crossed axes — start a chapter in your city']
+];
+function huntLines(id){return (document.getElementById(id).value||'').split('\n').map(x=>x.trim()).filter(Boolean)}
+function huntWatchlist(){return {accounts:huntLines('hAccts'),hashtags:huntLines('hTags'),keywords:huntLines('hKw'),audio_ids:huntLines('hAudio'),exclude_accounts:huntLines('hExclude')}}
+function huntQueries(w){let q=[];w.accounts.forEach(a=>q.push(a.startsWith('@')?a:'@'+a));w.hashtags.forEach(h=>q.push(h.startsWith('#')?h:'#'+h));q=q.concat(w.keywords,w.audio_ids);
+ CODEBOOK.filter(e=>!e.context_required&&e.severity>=3).slice(0,25).forEach(e=>q.push(e.term));
+ const seen=new Set(),out=[];q.forEach(x=>{const k=x.toLowerCase();if(x&&!seen.has(k)){seen.add(k);out.push(x)}});return out}
+function huntExcluded(handle,w){const set=new Set(w.exclude_accounts.map(a=>a.toLowerCase().replace(/^@/,'')));return set.has((handle||'').toLowerCase().replace(/^@/,''))}
+async function huntSweepDemo(){const w=huntWatchlist();const qs=huntQueries(w);let excluded=0;const found={};
+ for(const q of qs){const ql=q.toLowerCase().replace(/^[@#]/,'');for(const [plat,handle,text] of HUNT_SAMPLE){
+   if((text.toLowerCase()+' '+handle.toLowerCase()).split(/\W+/).some(tok=>tok&&ql.split(/\s+/).includes(tok))){
+     if(huntExcluded(handle,w)){excluded++;continue}
+     const key=plat+':'+handle;if(!found[key])found[key]={plat,handle,text,q}}}}
+ const rows=[];for(const k in found){const {plat,handle,text,q}=found[k];const hits=cbMatch([text,handle].join(' '),[]);const pr=cbPrior(hits);
+   if(pr.score>=(window.HUNT_MIN||5))rows.push({platform:plat,poster:handle,text,query:q,score:pr.score,category:pr.category,tier:tierOf(pr.score),hits:hits.map(h=>h.term)})}
+ return {rows:rows.sort((a,b)=>b.score-a.score),excluded,queries:qs.length}}
+async function huntSweep(){document.getElementById('hStatus').innerHTML='<span class="huntdot on"></span>sweeping…';
+ let res;
+ if(API_BASE){try{const w=huntWatchlist();
+   await fetch(`${API_BASE}/api/hunt/watchlist`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(w)});
+   await fetch(`${API_BASE}/api/hunt/exclude`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({accounts:w.exclude_accounts})});
+   await fetch(`${API_BASE}/api/hunt/sweep`,{method:'POST'});
+   const j=await (await fetch(`${API_BASE}/api/hunt/queue`)).json();
+   res={rows:(j.items||[]).map(it=>({platform:it.candidate.platform,poster:it.candidate.poster,text:it.candidate.text,query:it.candidate.query,score:it.risk_score,category:it.classification,tier:tierOf(it.risk_score),hits:it.codebook_hits||[]})),excluded:'—',queries:'—'}
+ }catch(e){toast('Backend unavailable — running demo crawler');res=await huntSweepDemo()}}
+ else res=await huntSweepDemo();
+ res.rows.forEach(r=>{if(!HUNTQ.some(x=>x.poster===r.poster&&x.platform===r.platform))HUNTQ.push(r)});
+ document.getElementById('hStatus').innerHTML=`<span class="huntdot ${huntRunning?'on':''}"></span>${huntRunning?'crawler running':'idle'} · swept ${res.queries} queries · ${res.rows.length} hits · ${res.excluded} allowlisted-skipped`;
+ renderHunt();audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'hunt sweep',detail:`${res.rows.length} candidates queued, ${res.excluded} allowlisted accounts skipped`,who:'Strategic'})}
+function huntToggle(){huntRunning=!huntRunning;const b=document.getElementById('hToggle');
+ if(huntRunning){b.textContent='Stop crawler';b.classList.remove('warn');b.classList.add('mute');huntSweep();huntTimer=setInterval(huntSweep,15000)}
+ else{b.textContent='Start crawler';b.classList.add('warn');b.classList.remove('mute');clearInterval(huntTimer);document.getElementById('hStatus').innerHTML='<span class="huntdot"></span>idle'}}
+function huntClear(){HUNTQ=[];renderHunt()}
+function huntToReview(i){const r=HUNTQ[i];if(!r)return;addItem(`${r.platform==='x'?'https://x.com':'https://'+r.platform+'.com'}/${r.poster} (${r.text})`);showTab('queue');toast('Sent to review queue')}
+function renderHunt(){const tb=document.querySelector('#hTable tbody');document.getElementById('hEmpty').style.display=HUNTQ.length?'none':'block';
+ tb.innerHTML=HUNTQ.map((r,i)=>`<tr><td><b>${r.poster}</b><span class="plat">${r.platform}</span></td><td class="cat"><span style="color:${CATCOLOR[r.category]||'#5A6472'}">●</span> ${(r.category||'').replace('_',' ')}</td><td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td><td class="note" style="margin:0;max-width:220px">${(r.hits||[]).slice(0,4).join(', ')}</td><td class="note" style="margin:0">${r.query||''}</td><td><button class="btn sec" style="padding:3px 8px;font-size:11px" onclick="huntToReview(${i})">→ review</button></td></tr>`).join('')}
+
 // ---------- knowledge library (context docs & reference images) ----------
 let LIBRARY=[];  // {id,name,kind,note,size,text,chunks,terms,imported,image:{dhash,thumb}}
 const STOPW=new Set('the a an and or of to in on for with is are was were be by at as it this that from we you they he she his her their our not no if so than then there here into out up down over under about after before between during without within http https www com'.split(' '));
