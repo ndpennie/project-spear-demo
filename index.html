@@ -110,6 +110,10 @@
 .form label{font-size:11px;color:var(--muted);display:block;margin-top:6px}
 .form textarea{min-height:52px}
 .kind{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.scopebar{background:#0F2038;color:#fff;padding:10px 24px 12px;border-bottom:2px solid var(--cyan)}
+  .scopetitle{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#9FE0F2;font-weight:700;margin-bottom:8px}
+  .scopechips{display:flex;flex-wrap:wrap;gap:6px}
+  .scopechip{font-size:12px;font-weight:600;color:#fff;background:var(--c);padding:3px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.18);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -120,6 +124,25 @@
   </div>
   <div class="right">Analyst: <b>Strategic</b> · Role: Owner/Reviewer<br>Session: Aug 17, 2026 · <span style="color:#9FE0F2">SAMPLE DATA — demonstration mode</span></div>
 </header>
+
+<div class="scopebar">
+  <div class="scopetitle">Issues this system is designed to analyze</div>
+  <div class="scopechips">
+    <span class="scopechip" style="--c:#7C3AED">Violent extremism — propaganda</span>
+    <span class="scopechip" style="--c:#D9480F">Recruitment</span>
+    <span class="scopechip" style="--c:#B7791F">Glorification</span>
+    <span class="scopechip" style="--c:#B42318">Incitement to violence</span>
+    <span class="scopechip" style="--c:#0F766E">Financing / material support</span>
+    <span class="scopechip" style="--c:#1D4ED8">Operational planning</span>
+    <span class="scopechip" style="--c:#9B1C1C">Domestic terrorism</span>
+    <span class="scopechip" style="--c:#047857">Narcotics — illegal drug sales</span>
+    <span class="scopechip" style="--c:#B45309">Counterfeit / dangerous meds</span>
+    <span class="scopechip" style="--c:#BE123C">Public-safety threats</span>
+    <span class="scopechip" style="--c:#701A75">Child safety (detect &amp; route)</span>
+    <span class="scopechip" style="--c:#7C2D12">Self-harm / suicide promotion</span>
+    <span class="scopechip" style="--c:#B7791F;--bg:#FFF7E6">⚡ Emerging threats (new patterns)</span>
+  </div>
+</div>
 
 <div class="kpis">
   <div class="kpi"><div class="n" id="k-queue">0</div><div class="l">In queue (pending review)</div></div>
