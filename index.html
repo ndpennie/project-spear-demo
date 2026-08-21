@@ -364,8 +364,9 @@
           <option value="reportable" selected>Reportable (score ≥ 5, not dismissed)</option>
           <option value="confirmed">Confirmed / Reported only</option>
         </select>
-        <button class="btn" style="padding:6px 10px" onclick="exportIncidentsCSV()">⬇ Incidents (.csv)</button>
-        <button class="btn sec" style="padding:6px 10px" onclick="exportReportsBundle()">⬇ All reports (.md)</button>
+        <button class="btn" style="padding:6px 10px;background:#1877F2;border-color:#1877F2" onclick="exportMetaCSV()">⬇ Meta submission (.csv)</button>
+        <button class="btn sec" style="padding:6px 10px" onclick="exportIncidentsCSV()">⬇ Full detail (.csv)</button>
+        <button class="btn sec" style="padding:6px 10px" onclick="exportReportsBundle()">⬇ Reports (.md)</button>
       </span>
     </div>
     <div class="row filters" style="margin-bottom:10px">
@@ -754,6 +755,31 @@ function exportScopeItems(){const scope=(document.getElementById('expScope')||{}
  return items.filter(i=>i.score>=5&&i.status!=='Dismissed'); // reportable
 }
 function csvCell(v){v=(v==null?'':String(v)).replace(/"/g,'""');return /[",\n]/.test(v)?'"'+v+'"':v;}
+// Eric's Meta submission format: Date Found | Type | Insta/Facebook | User | URL | Keywords/images/Hashtags | Notes/context
+const META_TYPE={propaganda:'Hate speech',recruitment:'Terrorism',glorification:'Terrorism',incitement:'Terrorism',
+ financing:'Terrorism',operational_planning:'Terrorism',domestic_terrorism:'Terrorism',narcotics:'Narcotics',
+ counterfeit_meds:'Counterfeit meds',public_safety_threat:'Public safety',child_safety:'Child safety (NCMEC)',
+ self_harm_promotion:'Self-harm',benign:'Review'};
+function metaPlatform(p){p=(p||'').toLowerCase();if(p.includes('insta'))return 'Instagram';if(p.includes('face')||p==='fb')return 'Facebook';return (p?p.charAt(0).toUpperCase()+p.slice(1):'');}
+function metaKeywords(it){ // the "what is in it" column Eric fills from ChatGPT today — we build it from the image/codebook read
+ if(it.category==='child_safety')return '(routed to NCMEC — description withheld)';
+ const parts=[];
+ if(it.caption)parts.push(it.caption);
+ if(it.ocr&&it.ocr.length<=140)parts.push('text: '+it.ocr.replace(/\s+/g,' ').trim());
+ if(it.labels&&it.labels.length)parts.push(it.labels.slice(0,6).join(', '));
+ else if(it.indicators&&it.indicators.length)parts.push(it.indicators.slice(0,6).join(', '));
+ return parts.join(' — ').slice(0,300);
+}
+function metaNotes(it){if(it.category==='child_safety')return 'Detect-and-route to NCMEC CyberTipline';
+ return (it.reasoning||'').replace(/\s+/g,' ').trim().slice(0,300);}
+function exportMetaCSV(){const list=exportScopeItems();if(!list.length){toast('No incidents in this scope');return}
+ const cols=['Date Found','Type','Insta/Facebook','User','URL','Keywords/images/Hashtags','Notes/context'];
+ const rows=[cols.join(',')];
+ for(const it of list){const date=(it.captured||'').slice(0,10);
+   const r=[date,META_TYPE[it.category]||it.category,metaPlatform(it.platform),it.poster||'',(it.url||'').split(' ')[0],metaKeywords(it),metaNotes(it)];
+   rows.push(r.map(csvCell).join(','));}
+ dl('Meta_Submissions_'+new Date().toISOString().slice(0,10)+'.csv',rows.join('\n'),'text/csv');
+ toast(list.length+' rows in Meta format (.csv) — paste into your monthly tab');}
 function exportIncidentsCSV(){const list=exportScopeItems();if(!list.length){toast('No incidents in this scope');return}
  const cols=['report_id','detected_utc','platform','poster','url','category','risk_score','tier','evidence_grade','recommendation','status','policy_clause','indicators','reasoning','media_dhash','notes'];
  const rows=[cols.join(',')];
