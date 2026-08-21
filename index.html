@@ -272,7 +272,11 @@
     <div id="huntPane" style="display:none">
       <h3>2e · Active Hunt — autonomous discovery crawler</h3>
       <div class="box" style="border-left:4px solid #B42318;background:#FDECEA">
-        <b>What this does:</b> instead of you pasting URLs, the crawler builds search queries from your watchlist + high-severity codebook terms, asks each platform connector for <b>public</b> candidates, scores them, and drops threats into the review queue for a human. <b>Nothing is auto-reported or auto-actioned.</b> Connectors use official platform APIs / approved access only — no private content, no credential stuffing. Demo mode uses a synthetic connector (no live calls).
+        <b>What this does:</b> instead of you pasting URLs, the crawler actively goes and finds the material. It hunts two ways at once: <b>(1) text</b> — search queries built from your watchlist + high-severity codebook terms; and <b>(2) image-first</b> — reverse-image / perceptual-hash matching that finds <b>re-posts of a known-bad image</b> (a flag, a media-affiliate logo, a corner watermark) across many accounts, even cropped or re-saved. It scores each candidate and drops threats into the review queue for a human. <b>Nothing is auto-reported or auto-actioned.</b> Connectors use official platform APIs / approved access only — no private content, no credential stuffing. Your own model can be plugged in as the finder. Demo mode uses a synthetic connector (no live calls).
+      </div>
+      <div class="box" style="border-left:4px solid #1D4ED8;background:#EEF3FF;margin-top:8px">
+        <b>Image-first discovery</b> <span class="note" style="margin:0">— for image-borne threats (the dominant pattern: the same flag/logo/watermark re-posted over and over), the strongest signal isn't words, it's the picture. Add reference images in the <b>Library</b> tab; each becomes a perceptual-hash <i>watch</i>, and every sweep hunts the network for re-posts of it. Confirmed hits add their own images back to the watch set, so coverage compounds.</span>
+        <div id="hWatchImgs" style="margin-top:6px;font-size:12px;color:var(--muted)">Watched images: 0 — add reference images in the Library to hunt their re-posts.</div>
       </div>
       <div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;margin-top:10px">
         <div><label>Accounts to watch (one per line)</label><textarea id="hAccts" style="min-height:56px" placeholder="ironfront.supply&#10;@activeclub_tx"></textarea></div>
@@ -880,7 +884,10 @@ function huntClear(){HUNTQ=[];renderHunt()}
 function huntToReview(i){const r=HUNTQ[i];if(!r)return;addItem(`${r.platform==='x'?'https://x.com':'https://'+r.platform+'.com'}/${r.poster} (${r.text})`);showTab('queue');toast('Sent to review queue')}
 async function loadHuntAllowlist(){try{const r=await fetch('samples/hunt_allowlist.json');if(!r.ok)return;const j=await r.json();
   const el=document.getElementById('hExclude');if(el&&!el.value.trim())el.value=(j.exclude_accounts||[]).join('\n');}catch(e){}}
-function renderSeeds(){const el=document.getElementById('hSeeds');if(!el)return;
+function renderSeeds(){
+ const wi=document.getElementById('hWatchImgs');if(wi){const refImgs=LIBRARY.filter(d=>d.image).length;const total=HUNTHASHES.size+refImgs;
+   wi.textContent=total?`Watched images: ${total} (${refImgs} reference image(s) from Library + ${HUNTHASHES.size} from confirmed threats) — each sweep hunts the network for re-posts of these.`:'Watched images: 0 — add reference images in the Library to hunt their re-posts.';}
+ const el=document.getElementById('hSeeds');if(!el)return;
  const S=HUNTSEEDS;const parts=[['accounts',[...S.accounts]],['hashtags',[...S.hashtags]],['keywords',[...S.keywords]],['links/domains',[...S.links,...S.domains]],['image hashes',[...HUNTHASHES]]];
  el.innerHTML=parts.map(([k,v])=>`<div style="margin:2px 0"><b>${v.length}</b> <span class="note" style="margin:0">${k}</span>${v.length?': ':''}<span class="note" style="margin:0">${v.slice(0,6).map(x=>x.replace(/</g,'&lt;')).join(', ')}${v.length>6?' …':''}</span></div>`).join('');}
 function renderHunt(){const tb=document.querySelector('#hTable tbody');renderSeeds();document.getElementById('hEmpty').style.display=HUNTQ.length?'none':'block';
