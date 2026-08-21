@@ -13,7 +13,15 @@
   header .brand{font-weight:700;font-size:18px;letter-spacing:.3px}
   header .brand span{color:var(--cyan)}
   header .sub{font-size:12px;opacity:.85}
-  header .right{margin-left:auto;font-size:12px;opacity:.9;text-align:right}
+  header .right{margin-left:auto;font-size:12px;opacity:.9;text-align:right;display:flex;align-items:center;gap:16px}
+  .tally{background:rgba(47,168,204,.12);border:1px solid rgba(47,168,204,.55);border-radius:12px;padding:8px 14px;text-align:center;line-height:1.15;min-width:120px}
+  .tally .tallyn{font-size:26px;font-weight:800;color:#9FE0F2;font-variant-numeric:tabular-nums;letter-spacing:.5px}
+  .tally .tallylbl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;opacity:.85;margin-top:1px}
+  .tally .tallysub{font-size:10px;opacity:.8;margin-top:3px;white-space:nowrap}
+  .tally .live{display:inline-block;width:7px;height:7px;border-radius:50%;background:#37D67A;margin-right:4px;vertical-align:middle;animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(55,214,122,.6)}70%{box-shadow:0 0 0 6px rgba(55,214,122,0)}100%{box-shadow:0 0 0 0 rgba(55,214,122,0)}}
+  .tally.bump{animation:tallybump .5s}
+  @keyframes tallybump{0%{transform:scale(1)}35%{transform:scale(1.08)}100%{transform:scale(1)}}
   .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;letter-spacing:.2px}
   .tier-CRITICAL{background:var(--critbg);color:var(--crit)} .tier-HIGH{background:var(--highbg);color:var(--high)}
   .tier-MEDIUM{background:var(--medbg);color:var(--med)} .tier-LOW{background:var(--lowbg);color:var(--low)} .tier-MINIMAL{background:var(--minbg);color:var(--min)}
@@ -122,7 +130,14 @@
     <div class="brand">PROJECT <span>SPEAR</span> · Threat Categorization Dashboard</div>
     <div class="sub">GIPEC AI² · Anticipatory, human-in-the-loop detection · Patent pending (U.S. Prov. App. 64/135,028)</div>
   </div>
-  <div class="right">Analyst: <b>Strategic</b> · Role: Owner/Reviewer<br>Session: Aug 17, 2026 · <span style="color:#9FE0F2">SAMPLE DATA — demonstration mode</span></div>
+  <div class="right">
+    <div class="tally" id="tally" title="Running tally of everything the system has found and is tracking — review-queue items, live-hunt findings and brand-safety incidents. Updates live as the self-expanding hunt keeps compiling.">
+      <div><span class="live"></span><span class="tallyn" id="tally-n">0</span></div>
+      <div class="tallylbl">items found</div>
+      <div class="tallysub" id="tally-sub">0 tracked in live corpus</div>
+    </div>
+    <div>Analyst: <b>Strategic</b> · Role: Owner/Reviewer<br>Session: Aug 17, 2026 · <span style="color:#9FE0F2">SAMPLE DATA — demonstration mode</span></div>
+  </div>
 </header>
 
 <div class="scopebar">
@@ -590,13 +605,13 @@ function bgMonitorPass(){if(!BGTENANT||!BGTENANT.active)return;let n=0;
  bgRenderTenant()}
 function bgRenderTenant(){const tb=document.querySelector('#bgTable tbody');const inc=(BGTENANT?BGTENANT.incidents:[]).concat(BGINCIDENTS.map(x=>({brand:x.brand,platform:x.it.platform,poster:x.it.poster,text:'',score:x.score,category:x.category,tier:x.tier,brand_reference:[x.brand],context_query:''})));
  document.getElementById('bgEmpty').style.display=inc.length?'none':'block';
- tb.innerHTML=inc.map(x=>`<tr><td><b>${x.brand}</b><br><span class="note" style="margin:0">ref: ${(x.brand_reference||[]).join(', ')}</span></td><td class="note" style="margin:0;max-width:300px">${x.platform} · ${x.poster}${x.text?'<br>'+x.text.slice(0,110):''}</td><td class="cat"><span style="color:${CATCOLOR[x.category]}">●</span> ${(x.category||'').replace(/_/g,' ')}</td><td class="score">${x.score}/10 <span class="badge tier-${x.tier}">${x.tier}</span></td><td></td></tr>`).join('')}
+ tb.innerHTML=inc.map(x=>`<tr><td><b>${x.brand}</b><br><span class="note" style="margin:0">ref: ${(x.brand_reference||[]).join(', ')}</span></td><td class="note" style="margin:0;max-width:300px">${x.platform} · ${x.poster}${x.text?'<br>'+x.text.slice(0,110):''}</td><td class="cat"><span style="color:${CATCOLOR[x.category]}">●</span> ${(x.category||'').replace(/_/g,' ')}</td><td class="score">${x.score}/10 <span class="badge tier-${x.tier}">${x.tier}</span></td><td></td></tr>`).join('');updateTally()}
 function bgScan(){BRANDS=bgBrandList();BGINCIDENTS=[];
  const brands=BRANDS.map(b=>({raw:b,k:b.toLowerCase().replace(/^[@#]/,'')})).filter(b=>b.k.length>=2);
  items.forEach(it=>{if(it.category==='benign')return;const hay=bgTextOf(it);
    brands.forEach(b=>{if(hay.includes(b.k))BGINCIDENTS.push({brand:b.raw,it,category:it.category,score:it.score,tier:it.tier})})});
  document.getElementById('bgStatus').textContent=`${BRANDS.length} brand(s) · ${BGINCIDENTS.length} adjacency incident(s) across ${items.filter(i=>i.category!=='benign').length} flagged items`;
- bgRender();audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'BrandGuard scan',detail:`${BGINCIDENTS.length} brand-adjacency incidents for ${BRANDS.length} brands`,who:'Strategic'})}
+ bgRender();updateTally();audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'BrandGuard scan',detail:`${BGINCIDENTS.length} brand-adjacency incidents for ${BRANDS.length} brands`,who:'Strategic'})}
 function bgLoadExample(){document.getElementById('bgBrands').value='Acme Cola\n#AcmeRun';
  addItem('https://instagram.com/deathstar__88 (sponsored: Acme Cola #AcmeRun ad shown beside — JOIN THE NATIONAL SOCIALIST MOVEMENT)');
  setTimeout(()=>bgScan(),150)}
@@ -733,7 +748,7 @@ function renderSeeds(){const el=document.getElementById('hSeeds');if(!el)return;
  const S=HUNTSEEDS;const parts=[['accounts',[...S.accounts]],['hashtags',[...S.hashtags]],['keywords',[...S.keywords]],['links/domains',[...S.links,...S.domains]],['image hashes',[...HUNTHASHES]]];
  el.innerHTML=parts.map(([k,v])=>`<div style="margin:2px 0"><b>${v.length}</b> <span class="note" style="margin:0">${k}</span>${v.length?': ':''}<span class="note" style="margin:0">${v.slice(0,6).map(x=>x.replace(/</g,'&lt;')).join(', ')}${v.length>6?' …':''}</span></div>`).join('');}
 function renderHunt(){const tb=document.querySelector('#hTable tbody');renderSeeds();document.getElementById('hEmpty').style.display=HUNTQ.length?'none':'block';
- tb.innerHTML=HUNTQ.map((r,i)=>`<tr><td><b>${r.poster}</b><span class="plat">${r.platform}</span></td><td class="cat"><span style="color:${CATCOLOR[r.category]||'#5A6472'}">●</span> ${(r.category||'').replace('_',' ')}</td><td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td><td class="note" style="margin:0;max-width:220px">${(r.hits||[]).slice(0,4).join(', ')}</td><td class="note" style="margin:0">${r.query||''}</td><td><button class="btn sec" style="padding:3px 8px;font-size:11px" onclick="huntToReview(${i})">→ review</button></td></tr>`).join('')}
+ tb.innerHTML=HUNTQ.map((r,i)=>`<tr><td><b>${r.poster}</b><span class="plat">${r.platform}</span></td><td class="cat"><span style="color:${CATCOLOR[r.category]||'#5A6472'}">●</span> ${(r.category||'').replace('_',' ')}</td><td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td><td class="note" style="margin:0;max-width:220px">${(r.hits||[]).slice(0,4).join(', ')}</td><td class="note" style="margin:0">${r.query||''}</td><td><button class="btn sec" style="padding:3px 8px;font-size:11px" onclick="huntToReview(${i})">→ review</button></td></tr>`).join('');updateTally()}
 
 // ---------- knowledge library (context docs & reference images) ----------
 let LIBRARY=[];  // {id,name,kind,note,size,text,chunks,terms,imported,image:{dhash,thumb}}
@@ -799,6 +814,22 @@ function loadSamples(){
 function log(it,action,detail){audit.unshift({t:new Date().toLocaleTimeString(),id:it.id,action,detail,who:'Strategic'})}
 function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='score'?-1:1}render()}
 function fill(sel,vals){const s=document.getElementById(sel);const cur=s.value;s.innerHTML=s.options[0].outerHTML+vals.map(v=>`<option>${v}</option>`).join('');s.value=cur}
+let _tallyLast=0;
+function updateTally(){
+  const el=document.getElementById('tally-n'),sub=document.getElementById('tally-sub'),box=document.getElementById('tally');
+  if(!el)return;
+  let found=0;
+  try{found+=(typeof items!=='undefined'&&items)?items.length:0}catch(e){}
+  try{found+=(typeof HUNTQ!=='undefined'&&HUNTQ)?HUNTQ.length:0}catch(e){}
+  try{found+=(typeof BGINCIDENTS!=='undefined'&&BGINCIDENTS)?BGINCIDENTS.length:0}catch(e){}
+  try{found+=(typeof BGTENANT!=='undefined'&&BGTENANT&&BGTENANT.incidents)?BGTENANT.incidents.length:0}catch(e){}
+  let corpus=0;
+  try{corpus=(typeof huntSeedCount==='function')?huntSeedCount():0}catch(e){}
+  el.textContent=found.toLocaleString();
+  if(sub)sub.textContent=corpus.toLocaleString()+' tracked in live corpus';
+  if(box&&found>_tallyLast){box.classList.remove('bump');void box.offsetWidth;box.classList.add('bump')}
+  _tallyLast=found;
+}
 function render(){
   fill('fCat',CATS);fill('fPlat',[...new Set(items.map(i=>i.platform))].sort());
   const q=document.getElementById('q').value.toLowerCase(),ft=fTier.value,fc=fCat.value,fp=fPlat.value,fs=fStatus.value;
@@ -817,7 +848,7 @@ function render(){
   document.getElementById('k-high').textContent=items.filter(i=>i.tier==='HIGH'&&i.status==='Pending').length;
   document.getElementById('k-rev').textContent=items.filter(i=>i.status!=='Pending').length;
   document.getElementById('k-esc').textContent=items.filter(i=>i.status==='Escalated').length;
-  drawCharts();renderDetail();if(document.getElementById('netPane').style.display!=='none')drawNet();
+  drawCharts();renderDetail();updateTally();if(document.getElementById('netPane').style.display!=='none')drawNet();
 }
 function select(id){selId=id;render()}
 function setField(k,v){const it=items.find(i=>i.id===selId);if(!it)return;const old=it[k];it[k]=v;log(it,`${k} changed`,`${old} → ${v}`);render()}
