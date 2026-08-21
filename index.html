@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Project Spear — Threat Categorization Dashboard</title>
+<meta name="theme-color" content="#152A4E">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Project Spear">
 <style>
   :root{--navy:#152A4E;--cyan:#2FA8CC;--bg:#F4F7FA;--card:#FFFFFF;--ink:#1F2933;--muted:#6B7785;--line:#E1E7EE;
     --crit:#B42318;--high:#D9480F;--med:#B7791F;--low:#2F855A;--min:#5A6472;--critbg:#FDECEA;--highbg:#FFF1E6;--medbg:#FFF8E1;--lowbg:#EAF7EF;--minbg:#EEF1F4;}
@@ -122,6 +129,47 @@
   .scopetitle{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#9FE0F2;font-weight:700;margin-bottom:8px}
   .scopechips{display:flex;flex-wrap:wrap;gap:6px}
   .scopechip{font-size:12px;font-weight:600;color:#fff;background:var(--c);padding:3px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.18);white-space:nowrap}
+
+  /* ---------- phone / tablet: stack the 3-column workspace, shrink chrome, let wide tables scroll ---------- */
+  @media (max-width: 820px){
+    body{font-size:14px}
+    header{padding:10px 14px;gap:10px;flex-wrap:wrap}
+    header .brand{font-size:16px}
+    header .sub{font-size:11px}
+    header .right{width:100%;margin-left:0;justify-content:space-between;gap:10px;text-align:left;flex-wrap:wrap}
+    .tally{min-width:0;padding:6px 12px}
+    .tally .tallyn{font-size:22px}
+    .scopebar{padding:8px 14px 10px}
+    .scopechip{font-size:11px;padding:3px 8px}
+    .kpis{grid-template-columns:repeat(2,1fr);gap:8px;padding:12px 14px 0}
+    .wrap{grid-template-columns:1fr;gap:12px;padding:12px 14px}
+    /* detail panel (3rd column) floats to a comfortable reading width, full-width stacked */
+    .wrap > *{min-width:0}
+    .card{padding:12px;overflow-x:auto}            /* wide tables scroll inside their card, page never scrolls sideways */
+    .charts{grid-template-columns:1fr}
+    .actions{grid-template-columns:1fr 1fr}
+    .kv{grid-template-columns:110px 1fr}
+    .tabs{flex-wrap:wrap}
+    .url{max-width:70vw}
+    table{font-size:12px}
+    .form[style*="grid-template-columns"]{grid-template-columns:1fr !important}
+    .modalbox{width:96%;padding:12px}
+    #detail pre, .modalbox pre{font-size:11px}
+    /* bigger tap targets on touch */
+    .btn{padding:9px 12px}
+    .tab{padding:8px 12px}
+  }
+  @media (max-width: 480px){
+    header .sub{display:none}                      /* reclaim vertical space on small phones */
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .actions{grid-template-columns:1fr}
+    .kv{grid-template-columns:1fr}
+    .kv > div:nth-child(odd){font-weight:600;color:var(--muted);padding-top:6px}
+  }
+  /* PWA standalone: pad for the phone status bar / notch when launched from home screen */
+  @media (display-mode: standalone){
+    header{padding-top:max(10px, env(safe-area-inset-top))}
+  }
 </style>
 </head>
 <body>
@@ -306,6 +354,20 @@
     </div>
     <div id="queuePane">
     <h3>2 · Review queue — categorized by URL</h3>
+    <div class="row" style="margin-bottom:8px;gap:8px;align-items:center;background:#EAF3F8;border:1px solid #CDE4EE;border-radius:8px;padding:8px 10px">
+      <b style="font-size:13px">Batch export</b>
+      <span class="note" id="expCount" style="margin:0"></span>
+      <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+        <select id="expScope" style="border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px">
+          <option value="all">All items</option>
+          <option value="filtered">Current filter</option>
+          <option value="reportable" selected>Reportable (score ≥ 5, not dismissed)</option>
+          <option value="confirmed">Confirmed / Reported only</option>
+        </select>
+        <button class="btn" style="padding:6px 10px" onclick="exportIncidentsCSV()">⬇ Incidents (.csv)</button>
+        <button class="btn sec" style="padding:6px 10px" onclick="exportReportsBundle()">⬇ All reports (.md)</button>
+      </span>
+    </div>
     <div class="row filters" style="margin-bottom:10px">
       <input id="q" placeholder="Search URL / poster…" oninput="render()" style="flex:1;min-width:160px">
       <select id="fTier" onchange="render()"><option value="">All tiers</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option><option>MINIMAL</option></select>
@@ -521,7 +583,9 @@ function loadImg(src){return new Promise((res,rej)=>{const im=new Image();im.onl
 function selectedLabels(){return [...document.querySelectorAll('#visChips .chip.on')].map(c=>c.dataset.l)}
 async function ingestPhotos(){const inp=document.getElementById('photoFile');const files=[...inp.files];if(!files.length){toast('Choose an image first');return}
   const poster=document.getElementById('photoPoster').value.trim(),caption=document.getElementById('photoCaption').value.trim(),labels=selectedLabels();
-  for(const f of files){await addPhoto(await readFile(f),{name:f.name,poster,caption,labels,platform:'upload'})}
+  const st=document.getElementById('ocrStatus');let done=0;
+  for(const f of files){st.textContent=`Batch: analyzing ${done+1} of ${files.length} — ${f.name}`;await addPhoto(await readFile(f),{name:f.name,poster,caption,labels,platform:'upload'});done++;}
+  st.textContent=`Batch complete — ${done} image(s) analyzed and added to the queue`;
   inp.value='';document.querySelectorAll('#visChips .chip.on').forEach(c=>c.classList.remove('on'));render()}
 async function addPhoto(dataUrl,o){
   const st=document.getElementById('ocrStatus');st.textContent='Fingerprinting…';const im=await loadImg(dataUrl);const dh=dHash(im);
@@ -680,6 +744,38 @@ function openReport(){const it=items.find(i=>i.id===selId);if(!it)return;const r
    m.querySelector('#repClose').onclick=()=>m.style.display='none';m.querySelector('#repCopy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('repText').textContent);toast('Report copied')};
    m.querySelector('#repDl').onclick=downloadReportMd;m.querySelector('#repDlJson').onclick=downloadReportJson;}
  document.getElementById('repText').textContent=rep;m.style.display='flex'}
+// ---------- batch export (compile many incidents at once — the throughput accelerator) ----------
+function queueFilterPredicate(){const q=(document.getElementById('q').value||'').toLowerCase(),ft=fTier.value,fc=fCat.value,fp=fPlat.value,fs=fStatus.value;
+ return i=>(!q||i.url.toLowerCase().includes(q)||i.poster.toLowerCase().includes(q)||(i.ocr||'').toLowerCase().includes(q)||(i.caption||'').toLowerCase().includes(q))&&(!ft||i.tier===ft)&&(!fc||i.category===fc)&&(!fp||i.platform===fp)&&(!fs||i.status===fs);}
+function exportScopeItems(){const scope=(document.getElementById('expScope')||{}).value||'reportable';
+ if(scope==='all')return items.slice();
+ if(scope==='filtered')return items.filter(queueFilterPredicate());
+ if(scope==='confirmed')return items.filter(i=>i.status==='Confirmed'||i.status==='Escalated'||/NCMEC/.test(i.status||''));
+ return items.filter(i=>i.score>=5&&i.status!=='Dismissed'); // reportable
+}
+function csvCell(v){v=(v==null?'':String(v)).replace(/"/g,'""');return /[",\n]/.test(v)?'"'+v+'"':v;}
+function exportIncidentsCSV(){const list=exportScopeItems();if(!list.length){toast('No incidents in this scope');return}
+ const cols=['report_id','detected_utc','platform','poster','url','category','risk_score','tier','evidence_grade','recommendation','status','policy_clause','indicators','reasoning','media_dhash','notes'];
+ const rows=[cols.join(',')];
+ for(const it of list){const pm=POLICY_MAP[it.category]||POLICY_MAP.benign;const rid='SPEAR-'+String(it.id).padStart(5,'0');
+   const cs=it.category==='child_safety'; // provenance-only for child safety — no description exported
+   const r=[rid,it.captured,it.platform,it.poster,(it.url||'').split(' ')[0],it.category,it.score,it.tier,it.grade,it.recommendation,it.status,pm.clause,
+     cs?'':(it.indicators||[]).join('; '),cs?'':(it.reasoning||'').replace(/\s+/g,' '),it.type==='image'&&!cs?(it.dhash||''):'',
+     cs?'ROUTED TO NCMEC — media/description not exported':''];
+   rows.push(r.map(csvCell).join(','));}
+ dl('project_spear_incidents_'+new Date().toISOString().slice(0,10)+'.csv',rows.join('\n'),'text/csv');
+ toast(list.length+' incidents exported (.csv)');}
+function exportReportsBundle(){const list=exportScopeItems().filter(i=>i.category!=='child_safety'); // CS routes to NCMEC, not a platform .md
+ const csCount=exportScopeItems().length-list.length;
+ if(!list.length){toast(csCount?'Only child-safety items in scope — route those to NCMEC':'No incidents in this scope');return}
+ const head=`PROJECT SPEAR — COMPILED TAKEDOWN DOSSIER
+Generated: ${new Date().toISOString().slice(0,16).replace('T',' ')} UTC · Analyst: Strategic
+Incidents in this file: ${list.length}${csCount?`  (plus ${csCount} child-safety item(s) excluded — routed to NCMEC CyberTipline separately)`:''}
+Each incident below is a human-approved, policy-mapped takedown report ready to submit to the platform.
+${'='.repeat(72)}\n\n`;
+ const body=list.map((it,n)=>`INCIDENT ${n+1} of ${list.length}\n`+buildReport(it)).join('\n\n'+'-'.repeat(72)+'\n\n');
+ dl('project_spear_dossier_'+new Date().toISOString().slice(0,10)+'.md',head+body,'text/markdown');
+ toast(list.length+' reports compiled (.md)');}
 
 // ---------- Active Hunt (autonomous discovery crawler) ----------
 let HUNTQ=[], huntTimer=null, huntRunning=false;
@@ -862,7 +958,9 @@ function render(){
   document.getElementById('k-high').textContent=items.filter(i=>i.tier==='HIGH'&&i.status==='Pending').length;
   document.getElementById('k-rev').textContent=items.filter(i=>i.status!=='Pending').length;
   document.getElementById('k-esc').textContent=items.filter(i=>i.status==='Escalated').length;
-  drawCharts();renderDetail();updateTally();if(document.getElementById('netPane').style.display!=='none')drawNet();
+  drawCharts();renderDetail();updateTally();
+  const ec=document.getElementById('expCount');if(ec){try{ec.textContent=exportScopeItems().length+' incident(s) in scope';}catch(e){}}
+  if(document.getElementById('netPane').style.display!=='none')drawNet();
 }
 function select(id){selId=id;render()}
 function setField(k,v){const it=items.find(i=>i.id===selId);if(!it)return;const old=it[k];it[k]=v;log(it,`${k} changed`,`${old} → ${v}`);render()}
@@ -970,6 +1068,7 @@ function drawCharts(){
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
 document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer (add ?api=http://localhost:8000 to use the backend)';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();loadHuntAllowlist();
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){})});}
 </script>
 </body>
 </html>
