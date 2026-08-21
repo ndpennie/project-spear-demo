@@ -703,8 +703,11 @@ function huntExcluded(handle,w){const set=new Set(w.exclude_accounts.map(a=>a.to
 const HUNTSEEDS={accounts:new Set(),hashtags:new Set(),keywords:new Set(),links:new Set(),domains:new Set()};
 const HUNTHASHES=new Set();
 function huntSeedCount(){return HUNTSEEDS.accounts.size+HUNTSEEDS.hashtags.size+HUNTSEEDS.keywords.size+HUNTSEEDS.links.size+HUNTSEEDS.domains.size+HUNTHASHES.size}
-function huntSeedFrom(o){ // o: {poster,text,post_url,hits,image_hash,excluded}
-  if(o.excluded)return 0;let before=huntSeedCount();
+function huntSeedFrom(o){ // o: {poster,text,post_url,hits,image_hash,excluded,category}
+  if(o.excluded)return 0;
+  // child-safety is detect-and-route ONLY: never propagate its media hash/terms into the corpus
+  if(o.category==='child_safety'){o={poster:o.poster,text:'',hits:[],excluded:false};}
+  let before=huntSeedCount();
   if(o.poster)HUNTSEEDS.accounts.add((o.poster.startsWith('@')?o.poster:'@'+o.poster).toLowerCase());
   (o.text||'').match(/#\w{2,40}/g)?.forEach(t=>HUNTSEEDS.hashtags.add(t.toLowerCase()));
   (o.hits||[]).forEach(h=>{if(typeof h==='string'&&h.length>=3)HUNTSEEDS.keywords.add(h.toLowerCase())});
@@ -855,11 +858,73 @@ function setField(k,v){const it=items.find(i=>i.id===selId);if(!it)return;const 
 function act(status){const it=items.find(i=>i.id===selId);if(!it)return;
   if(status==='Escalated'&&it.tier==='CRITICAL'&&it.reviewers.length<1){it.reviewers.push('Strategic');log(it,'first confirmation recorded','CRITICAL requires a second analyst before escalation');render();return}
   it.status=status;log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}${API_BASE?' · feedback → library':' · feedback recorded (demo)'}`);sendFeedback(it,status);
-  if((status==='Confirmed'||status==='Escalated')&&typeof huntSeedFrom==='function'){const n=huntSeedFrom({poster:it.poster,text:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,hits:it.indicators||[],image_hash:it.dhash||''});if(n)toast(`Confirmed threat added ${n} live target(s) to the hunt`)}
+  if((status==='Confirmed'||status==='Escalated')&&typeof huntSeedFrom==='function'){const n=huntSeedFrom({poster:it.poster,text:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,hits:it.indicators||[],image_hash:it.dhash||'',category:it.category});if(n)toast(`Confirmed threat added ${n} live target(s) to the hunt`)}
   render()}
+// ---------- child-safety: detect-and-route ONLY (never store / hash / describe media) ----------
+// Suspected child-sexual-exploitation content is NOT handled in the normal analyst queue.
+// The system routes a provenance-only referral to the NCMEC CyberTipline and suppresses the
+// media, OCR text, model description and reusable hash. Programmatic CyberTipline submission is
+// reserved to registered Electronic Service Providers under 18 U.S.C. §2258A; until the operator
+// is registered, this produces the referral that the platform (the ESP) files, or a manual
+// CyberTipline web report (report.cybertip.org).
+function ncmecReferral(it){
+  const rid='NCMEC-SPEAR-'+String(it.id).padStart(5,'0');
+  const url=(it.url||'').split(' ')[0];
+  return {rid,url,platform:it.platform,poster:it.poster,detected:it.captured,
+    // provenance ONLY — deliberately no media, no caption/OCR, no description, no reusable hash
+    body:[`NCMEC CyberTipline referral — ${rid}`,
+      `Category: Suspected child sexual exploitation (detect-and-route)`,
+      `Platform: ${it.platform}`,
+      `Public URL: ${url||'(supplied by operator)'}`,
+      `Account/handle: ${it.poster||'(unknown)'}`,
+      `Detected (UTC): ${it.captured}`,
+      ``,
+      `HANDLING: Media was NOT opened, stored, downloaded, hashed for reuse, or described.`,
+      `Only the public location and account are referred. Routed to authorized child-safety`,
+      `channel for CyberTipline filing (report.cybertip.org / ESP API where registered).`,
+      `Access restricted to cleared child-safety personnel.`].join('\n')};
+}
+function routeToNCMEC(){
+  const it=items.find(i=>i.id===selId);if(!it||it.category!=='child_safety')return;
+  const ref=ncmecReferral(it);
+  it.status='Routed → NCMEC';it.ncmec=ref.rid;
+  // strip anything descriptive from the record so it is never retained here
+  it.ocr='';it.caption='';it.thumb='';it.reasoning='Suppressed — child-safety detect-and-route.';it.indicators=[];
+  audit.unshift({t:new Date().toLocaleTimeString(),id:it.id,action:'Routed to NCMEC CyberTipline',
+    detail:`${ref.rid} — provenance-only referral; media not stored/hashed/described`,who:'Strategic'});
+  toast('Routed to NCMEC CyberTipline — media not stored or described');
+  window._ncmecRef=ref;render();
+}
+function openNCMEC(){const ref=window._ncmecRef||ncmecReferral(items.find(i=>i.id===selId));
+  const w=window.open('','_blank');w.document.write('<pre style="font:13px ui-monospace,Menlo,monospace;padding:20px;white-space:pre-wrap">'+ref.body.replace(/</g,'&lt;')+'</pre>');w.document.title=ref.rid}
 function renderDetail(){
   const d=document.getElementById('detail');const it=items.find(i=>i.id===selId);
   if(!it){d.innerHTML='<h3>3 · Item detail & analyst decision</h3><div class="empty">Select an item in the queue.</div>';return}
+  if(it.category==='child_safety'){
+    const ref=it.ncmec?null:ncmecReferral(it);const url=(it.url||'').split(' ')[0];
+    d.innerHTML=`<h3>3 · Item detail & analyst decision</h3>
+     <h2 style="color:#701A75">child safety <span class="badge tier-${it.tier}">${it.tier}</span></h2>
+     <div class="box" style="border:2px solid #701A75;background:#FBF1FA">
+       <b style="color:#701A75">⛔ Contained — detect-and-route only</b><br>
+       This item is suspected child-sexual-exploitation content. Project Spear does <b>not</b> display,
+       store, download, hash for reuse, or describe the media, and it is not worked in the normal queue.
+       <div class="kv" style="margin-top:8px">
+         <div>Platform</div><div>${it.platform}</div>
+         <div>Account/handle</div><div>${it.poster||'—'}</div>
+         <div>Public location</div><div>${url?`<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8">${url} ↗</a>`:'(operator-supplied)'}</div>
+         <div>Detected (UTC)</div><div>${it.captured}</div>
+         <div>Status</div><div><b>${it.status}</b>${it.ncmec?` · <code>${it.ncmec}</code>`:''}</div>
+       </div>
+     </div>
+     <div class="actions">
+       ${it.ncmec?`<button class="btn sec" onclick="openNCMEC()">View referral (${it.ncmec})</button>`
+                 :`<button class="btn" style="background:#701A75;color:#fff" onclick="routeToNCMEC()">Route to NCMEC CyberTipline</button>`}
+     </div>
+     <div class="note">Programmatic CyberTipline submission is reserved to registered Electronic Service Providers (18 U.S.C. §2258A). Until registered, this referral is filed by the platform (the ESP) or via the manual CyberTipline web report at report.cybertip.org. PhotoDNA-style hash matching is performed only by cleared personnel in the authorized channel — never here.</div>
+     <h3 style="margin-top:14px">Audit log</h3>
+     <div class="audit">${audit.filter(a=>a.id===it.id).map(a=>`<div><b>${a.t}</b> · ${a.who} · ${a.action} — ${a.detail}</div>`).join('')||'<div>—</div>'}</div>`;
+    return;
+  }
   d.innerHTML=`<h3>3 · Item detail & analyst decision</h3>
    <h2>${it.category.replace('_',' ')} <span class="badge tier-${it.tier}">${it.tier}</span> <span style="font-size:13px;color:var(--muted)">${it.score}/10</span></h2>
    <div class="meta">${it.type==='image'?`<img class="bigthumb" src="${it.thumb}" alt="uploaded image">${/^https?:/.test(it.url)?`<a class="url" style="max-width:100%;color:#1D4ED8;text-decoration:underline" href="${it.url}" target="_blank" rel="noopener noreferrer">${it.url} ↗</a>`:`<span class="url">${it.name}</span>`}${it.ocr?`<div class="ocr">${it.ocr.replace(/</g,'&lt;')}</div>`:''}`:`<a class="url" style="max-width:100%;color:#1D4ED8;text-decoration:underline" href="${it.url.split(' ')[0]}" target="_blank" rel="noopener noreferrer" title="Open source in new tab">${it.url.split(' ')[0]} ↗</a>`}${it.platform} · ${it.poster} · captured ${it.captured} · status <b>${it.status}</b>${it.type==='image'?` · dHash <code>${it.dhash}</code>`:''}</div>
