@@ -227,6 +227,10 @@
         <button class="btn mute" onclick="huntClear()">Clear queue</button>
         <span class="note" id="hStatus" style="margin:0"><span class="huntdot"></span>idle</span>
       </div>
+      <div class="box" style="border-left:4px solid #2F855A;background:#EAF7EF;margin-top:12px">
+        <b>Live target set — the platform keeps compiling</b> <span class="note" style="margin:0">Every confirmed threat feeds its accounts, links, hashtags, codebook terms and image fingerprints back into the crawler, so each sweep searches more than the last. This is a continuously-running, self-expanding platform — not a static list.</span>
+        <div id="hSeeds" style="margin-top:6px;font-size:12px">No live targets yet — run a sweep or confirm a threat.</div>
+      </div>
       <h3 style="margin-top:14px">Discovery queue — candidates found, awaiting human review</h3>
       <div style="max-height:340px;overflow:auto"><table id="hTable"><thead><tr><th>Poster / platform</th><th>Category</th><th>Risk</th><th>Matched</th><th>Query</th><th></th></tr></thead><tbody></tbody></table></div>
       <div class="empty" id="hEmpty">No candidates yet. Set a watchlist and run a sweep. Excluded (allowlisted) accounts are skipped and reported in the status line.</div>
@@ -235,9 +239,24 @@
     <div id="bgPane" style="display:none">
       <h3>2f · BrandGuard™ — advertiser brand-safety adjacency</h3>
       <div class="box" style="border-left:4px solid #2FA8CC;background:#F0F9FC">
-        <b>For licensing advertisers &amp; agencies:</b> tell BrandGuard which brands to protect. It flags every case where a monitored brand — a mention, hashtag, or an ad placed beside a post — appears next to content Project Spear has categorized as harmful, so the advertiser knows their brand ran adjacent to extremism, drugs, or other unsafe content. This is the licensable brand-safety search over the same intelligence base.
+        <b>For licensing advertisers &amp; agencies:</b> when an advertiser connects their ad account and turns monitoring on, BrandGuard continuously scans the public content in their ad context and flags every case where their brand runs beside content Project Spear categorizes as harmful — extremism, drugs, child-safety, and the rest. This is the licensable brand-safety search over the same intelligence base.
       </div>
-      <div class="form" style="margin-top:8px"><label>Monitored brands (one per line — names, #hashtags, or @handles)</label>
+      <div class="box" style="border-left:4px solid #1E7FA0;background:#F0F9FC;margin-top:10px">
+        <b>Advertiser sign-in &amp; monitoring (licensing tenant)</b>
+        <div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;margin-top:6px">
+          <div><label>Brand / advertiser</label><input id="bgBrand" placeholder="e.g. Procter &amp; Gamble"></div>
+          <div><label>Brand terms &amp; @handles (comma-separated)</label><input id="bgTerms" placeholder="P&amp;G, Tide, Gillette, @proctergamble"></div>
+          <div><label>Live campaign #hashtags (from the ad account)</label><input id="bgTags" placeholder="#TideAd, #GilletteGame"></div>
+          <div><label>Targeted topics / placements</label><input id="bgTopics" placeholder="sports, gaming, news feeds"></div>
+        </div>
+        <div class="note" style="margin-top:6px">Authorization is via the advertiser's <b>ad-account OAuth / the platform's marketing API</b> — the system learns where their ads run. <b>No password is handled and the system never logs in as them.</b> Public content only.</div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn sec" id="bgAuthBtn" onclick="bgAuthorize()">1 · Connect ad account (authorize)</button>
+          <button class="btn" id="bgSignInBtn" onclick="bgToggleMonitor()" disabled>2 · Sign in &amp; start monitoring</button>
+          <span class="note" id="bgTenantStatus" style="margin:0"><span class="huntdot"></span>not connected</span>
+        </div>
+      </div>
+      <h3 style="margin-top:14px">Manual check</h3><div class="form"><label>Or paste brands to scan the current queue directly (one per line)</label>
         <textarea id="bgBrands" style="min-height:56px" placeholder="Acme Cola&#10;#AcmeRun&#10;@acme"></textarea></div>
       <div class="row" style="margin-top:8px"><button class="btn" onclick="bgScan()">Scan queue for adjacency</button><button class="btn mute" onclick="bgLoadExample()">Load example</button><span class="note" id="bgStatus" style="margin:0"></span></div>
       <h3 style="margin-top:14px">Brand-safety incidents — brand appeared beside flagged content</h3>
@@ -416,7 +435,7 @@ const SHARED=['iron-front-supply.store','btc:1A1zP…f9x','freedom-signal.link',
 function sharedOf(u){let h=0;for(const c of u)h=(h*13+c.charCodeAt(0))>>>0;const s=u.toLowerCase();const out=[];
   if(/merch|store|supply/.test(s))out.push(SHARED[0]);if(/btc|wallet|donate|crypto/.test(s))out.push(SHARED[1]);if(/signal|truth|manifesto|wake/.test(s))out.push(SHARED[2]);if(/flyer|poster|reclaim/.test(s))out.push(SHARED[3]);
   return out}
-function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');document.getElementById('huntPane').style.display=t==='hunt'?'':'none';document.getElementById('tabH').classList.toggle('on',t==='hunt');if(t==='net')drawNet();if(t==='cb')renderCodebook();if(t==='hunt')renderHunt();document.getElementById('bgPane').style.display=t==='bg'?'':'none';document.getElementById('tabBG').classList.toggle('on',t==='bg');if(t==='bg')bgRender()}
+function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');document.getElementById('huntPane').style.display=t==='hunt'?'':'none';document.getElementById('tabH').classList.toggle('on',t==='hunt');if(t==='net')drawNet();if(t==='cb')renderCodebook();if(t==='hunt')renderHunt();document.getElementById('bgPane').style.display=t==='bg'?'':'none';document.getElementById('tabBG').classList.toggle('on',t==='bg');if(t==='bg'){bgRender();if(typeof bgRenderTenant==='function')bgRenderTenant()}}
 function drawNet(){
   const svg=document.getElementById('netSvg');const W=760,H=520;const nodes=[],edges=[];const idx={};
   const add=(key,n)=>{if(idx[key]===undefined){idx[key]=nodes.length;nodes.push(n)}return idx[key]};
@@ -540,6 +559,38 @@ async function sendFeedback(it,decision){if(!API_BASE)return;try{await fetch(`${
 let BRANDS=[], BGINCIDENTS=[];
 function bgBrandList(){return (document.getElementById('bgBrands').value||'').split('\n').map(x=>x.trim()).filter(Boolean)}
 function bgTextOf(it){return [it.url,it.ocr,it.caption,it.poster].filter(Boolean).join(' ').toLowerCase()}
+// ---- BrandGuard advertiser tenant (licensing sign-in + continuous monitoring) ----
+let BGTENANT=null, bgMonTimer=null;
+const BG_ADSAMPLE=[
+ ['instagram','fashfit_1488','#TideAd sponsored — lifting for the cause, JOIN THE NATIONAL SOCIALIST MOVEMENT, tide clean'],
+ ['x','plug_daily','beside your #GilletteGame ad: dm for menu, blues perc30, cashapp only'],
+ ['telegram','saints_tv','#news feed placement — day of the rope, St. tribute; P&G banner shown'],
+ ['facebook','wholesome_mom','#TideAd laundry tips, family friendly, nothing here'],
+ ['tiktok','gamer_streams','#GilletteGame clip — just gaming highlights, all clean']
+];
+function bgCommaList(id){return (document.getElementById(id).value||'').split(',').map(x=>x.trim()).filter(Boolean)}
+function bgAuthorize(){const brand=(document.getElementById('bgBrand').value||'').trim();if(!brand){toast('Enter a brand first');return}
+ BGTENANT={brand,brand_terms:bgCommaList('bgTerms').concat([brand]),handles:bgCommaList('bgTerms').filter(x=>x.startsWith('@')),campaign_hashtags:bgCommaList('bgTags').map(x=>x.replace(/^#/,'')),topics:bgCommaList('bgTopics'),authorized:true,active:false,incidents:[],seen:new Set()};
+ if(API_BASE){try{fetch(`${API_BASE}/api/brandguard/tenant`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(BGTENANT)}).then(()=>fetch(`${API_BASE}/api/brandguard/tenant/${brand.toLowerCase().replace(/[^a-z0-9]+/g,'-')}/authorize`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scope:'ad_read',campaign_hashtags:BGTENANT.campaign_hashtags,topics:BGTENANT.topics})}))}catch(e){}}
+ document.getElementById('bgSignInBtn').disabled=false;
+ document.getElementById('bgTenantStatus').innerHTML='<span class="huntdot"></span>ad account authorized (OAuth) — ready to monitor';
+ audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'BrandGuard authorize',detail:`${brand} connected ad account (scope ad_read) — no credentials handled`,who:'Strategic'});toast('Ad account authorized')}
+function bgToggleMonitor(){if(!BGTENANT||!BGTENANT.authorized){toast('Authorize first');return}
+ BGTENANT.active=!BGTENANT.active;const b=document.getElementById('bgSignInBtn');
+ if(BGTENANT.active){b.textContent='Stop monitoring';b.classList.remove('btn');b.classList.add('btn','mute');bgMonitorPass();bgMonTimer=setInterval(bgMonitorPass,12000);
+   if(API_BASE){try{fetch(`${API_BASE}/api/brandguard/tenant/${BGTENANT.brand.toLowerCase().replace(/[^a-z0-9]+/g,'-')}/activate`,{method:'POST'})}catch(e){}}}
+ else{b.textContent='2 · Sign in & start monitoring';clearInterval(bgMonTimer);document.getElementById('bgTenantStatus').innerHTML='<span class="huntdot"></span>monitoring stopped';}}
+function bgTenantMatch(text){const hay=text.toLowerCase();const keys=[...(BGTENANT.brand_terms||[]),...(BGTENANT.handles||[]),...(BGTENANT.campaign_hashtags||[]).map(h=>'#'+h)];return keys.filter(k=>{const kk=k.toLowerCase().replace(/^[@#]/,'');return kk&&hay.includes(kk)})}
+function bgMonitorPass(){if(!BGTENANT||!BGTENANT.active)return;let n=0;
+ for(const [plat,handle,text] of BG_ADSAMPLE){const key=plat+':'+handle;if(BGTENANT.seen.has(key))continue;BGTENANT.seen.add(key);
+   const hits=cbMatch([text,handle].join(' '),[]);const pr=cbPrior(hits);const bh=bgTenantMatch(text+' '+handle);
+   if(pr.score>=5&&bh.length){BGTENANT.incidents.push({brand:BGTENANT.brand,platform:plat,poster:handle,text,score:pr.score,category:pr.category,tier:tierOf(pr.score),brand_reference:bh,context_query:bh[0]});n++}}
+ document.getElementById('bgTenantStatus').innerHTML=`<span class="huntdot on"></span><b style="color:#1E7FA0">MONITORING ${BGTENANT.brand}</b> · ${BGTENANT.incidents.length} brand-safety incident(s) found in ad context`;
+ if(n){toast(`${n} new brand-safety incident(s) for ${BGTENANT.brand}`);audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'BrandGuard incident',detail:`${n} adjacency incident(s) for ${BGTENANT.brand}`,who:'Strategic'})}
+ bgRenderTenant()}
+function bgRenderTenant(){const tb=document.querySelector('#bgTable tbody');const inc=(BGTENANT?BGTENANT.incidents:[]).concat(BGINCIDENTS.map(x=>({brand:x.brand,platform:x.it.platform,poster:x.it.poster,text:'',score:x.score,category:x.category,tier:x.tier,brand_reference:[x.brand],context_query:''})));
+ document.getElementById('bgEmpty').style.display=inc.length?'none':'block';
+ tb.innerHTML=inc.map(x=>`<tr><td><b>${x.brand}</b><br><span class="note" style="margin:0">ref: ${(x.brand_reference||[]).join(', ')}</span></td><td class="note" style="margin:0;max-width:300px">${x.platform} · ${x.poster}${x.text?'<br>'+x.text.slice(0,110):''}</td><td class="cat"><span style="color:${CATCOLOR[x.category]}">●</span> ${(x.category||'').replace(/_/g,' ')}</td><td class="score">${x.score}/10 <span class="badge tier-${x.tier}">${x.tier}</span></td><td></td></tr>`).join('')}
 function bgScan(){BRANDS=bgBrandList();BGINCIDENTS=[];
  const brands=BRANDS.map(b=>({raw:b,k:b.toLowerCase().replace(/^[@#]/,'')})).filter(b=>b.k.length>=2);
  items.forEach(it=>{if(it.category==='benign')return;const hay=bgTextOf(it);
@@ -549,7 +600,7 @@ function bgScan(){BRANDS=bgBrandList();BGINCIDENTS=[];
 function bgLoadExample(){document.getElementById('bgBrands').value='Acme Cola\n#AcmeRun';
  addItem('https://instagram.com/deathstar__88 (sponsored: Acme Cola #AcmeRun ad shown beside — JOIN THE NATIONAL SOCIALIST MOVEMENT)');
  setTimeout(()=>bgScan(),150)}
-function bgRender(){const tb=document.querySelector('#bgTable tbody');document.getElementById('bgEmpty').style.display=BGINCIDENTS.length?'none':'block';
+function bgRender(){if(typeof bgRenderTenant==='function'&&BGTENANT){bgRenderTenant();return}const tb=document.querySelector('#bgTable tbody');document.getElementById('bgEmpty').style.display=BGINCIDENTS.length?'none':'block';
  tb.innerHTML=BGINCIDENTS.map(x=>`<tr><td><b>${x.brand}</b></td><td class="note" style="margin:0;max-width:280px">${(/^https?:/.test(x.it.url)?x.it.url:x.it.name).split(' ')[0]}<br>${x.it.platform} · ${x.it.poster}</td><td class="cat"><span style="color:${CATCOLOR[x.category]}">●</span> ${x.category.replace(/_/g,' ')}</td><td class="score">${x.score}/10 <span class="badge tier-${x.tier}">${x.tier}</span></td><td><button class="btn sec" style="padding:3px 8px;font-size:11px" onclick="select(${x.it.id});showTab('queue')">view</button></td></tr>`).join('')}
 function bgBrandsFor(it){const brands=bgBrandList().map(b=>b.toLowerCase().replace(/^[@#]/,'')).filter(b=>b.length>=2);const hay=bgTextOf(it);return bgBrandList().filter((b,i)=>hay.includes(brands[i]))}
 
@@ -607,31 +658,56 @@ function openReport(){const it=items.find(i=>i.id===selId);if(!it)return;const r
 // ---------- Active Hunt (autonomous discovery crawler) ----------
 let HUNTQ=[], huntTimer=null, huntRunning=false;
 const HUNT_SAMPLE=[
- ['instagram','deathstar__88','WHITE MEN THE NEW WORLD ORDER IS AT OUR DOORSTEP JOIN THE NATIONAL SOCIALIST MOVEMENT'],
- ['instagram','ironfront.supply','merch drop — support the cause, honor the fallen 🔥 #willtorise'],
- ['telegram','activeclub_tx','tribe and train saturday — apply to join your local chapter, 14 words'],
+ // wave 1 — surfaced by the analyst's own watchlist / codebook terms
+ ['instagram','deathstar__88','WHITE MEN THE NEW WORLD ORDER IS AT OUR DOORSTEP JOIN THE NATIONAL SOCIALIST MOVEMENT #willtorise'],
+ ['instagram','ironfront.supply','merch drop — support the cause, honor the fallen 🔥 #willtorise shop iron-front.store'],
+ ['telegram','activeclub_tx','tribe and train saturday — apply to join your local chapter, 14 words #w2r'],
  ['x','freedomsignal','wake up — the JQ explains everything, every single time'],
  ['x','noticer_1488','just noticing… check the early life section 🧃'],
  ['facebook','reclaim_now','community cleanup event saturday at the park'],
- ['tiktok','w2r.official','euro-style streetwear, will to rise, #W2R'],
+ ['tiktok','w2r.official','euro-style streetwear, will to rise, #W2R iron-front.store'],
  ['telegram','siege_reader','read siege, day of the rope soon, gtkrwn'],
  ['facebook','local_pta','bake sale fundraiser for the school, all welcome'],
- ['instagram','sons.of.columbia','crossed axes — start a chapter in your city']
+ ['instagram','sons.of.columbia','crossed axes — start a chapter in your city'],
+ // wave 2+ — CONNECTED actors that only surface once the crawler seeds the hashtags/handles/links/hashes above
+ ['x','gymbros_1488','#willtorise gains — lifting for the fash, dm @deathstar__88'],
+ ['telegram','w2r_cell_ny','#w2r new chapter forming, honor the fallen, shop iron-front.store'],
+ ['instagram','ironfront.east','iron-front.store restock — support the cause, saints calendar inside'],
+ ['x','saints_tribute','St. Tarrant tribute — day of the rope, follow @siege_reader'],
+ ['telegram','w2r_south','#w2r #willtorise brotherhood, tribe and train, day of the rope']
 ];
 function huntLines(id){return (document.getElementById(id).value||'').split('\n').map(x=>x.trim()).filter(Boolean)}
 function huntWatchlist(){return {accounts:huntLines('hAccts'),hashtags:huntLines('hTags'),keywords:huntLines('hKw'),audio_ids:huntLines('hAudio'),exclude_accounts:huntLines('hExclude')}}
 function huntQueries(w){let q=[];w.accounts.forEach(a=>q.push(a.startsWith('@')?a:'@'+a));w.hashtags.forEach(h=>q.push(h.startsWith('#')?h:'#'+h));q=q.concat(w.keywords,w.audio_ids);
  CODEBOOK.filter(e=>!e.context_required&&e.severity>=3).slice(0,25).forEach(e=>q.push(e.term));
+ // LIVE auto-seeds harvested from confirmed threats
+ [...HUNTSEEDS.accounts,...HUNTSEEDS.hashtags,...HUNTSEEDS.keywords,...HUNTSEEDS.domains].forEach(x=>q.push(x));
  const seen=new Set(),out=[];q.forEach(x=>{const k=x.toLowerCase();if(x&&!seen.has(k)){seen.add(k);out.push(x)}});return out}
 function huntExcluded(handle,w){const set=new Set(w.exclude_accounts.map(a=>a.toLowerCase().replace(/^@/,'')));return set.has((handle||'').toLowerCase().replace(/^@/,''))}
+// ---- LIVE self-expanding target set (confirmed threats feed new search targets) ----
+const HUNTSEEDS={accounts:new Set(),hashtags:new Set(),keywords:new Set(),links:new Set(),domains:new Set()};
+const HUNTHASHES=new Set();
+function huntSeedCount(){return HUNTSEEDS.accounts.size+HUNTSEEDS.hashtags.size+HUNTSEEDS.keywords.size+HUNTSEEDS.links.size+HUNTSEEDS.domains.size+HUNTHASHES.size}
+function huntSeedFrom(o){ // o: {poster,text,post_url,hits,image_hash,excluded}
+  if(o.excluded)return 0;let before=huntSeedCount();
+  if(o.poster)HUNTSEEDS.accounts.add((o.poster.startsWith('@')?o.poster:'@'+o.poster).toLowerCase());
+  (o.text||'').match(/#\w{2,40}/g)?.forEach(t=>HUNTSEEDS.hashtags.add(t.toLowerCase()));
+  (o.hits||[]).forEach(h=>{if(typeof h==='string'&&h.length>=3)HUNTSEEDS.keywords.add(h.toLowerCase())});
+  const urls=[...(o.text||'').matchAll(/https?:\/\/[^\s)\]]+/g)].map(m=>m[0]);
+  (o.text||'').match(/\b[a-z0-9-]+\.(?:store|shop|link|xyz|top|ru|to|info|net|org|com)\b/gi)?.forEach(d=>HUNTSEEDS.domains.add(d.toLowerCase()));
+  urls.forEach(u=>{HUNTSEEDS.links.add(u);try{HUNTSEEDS.domains.add(new URL(u).hostname.toLowerCase())}catch(e){}});
+  if(o.image_hash)HUNTHASHES.add(o.image_hash);
+  if(API_BASE){try{fetch(`${API_BASE}/api/hunt/seed`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({poster:o.poster||'',text:o.text||'',image_hash:o.image_hash||'',codebook_hits:o.hits||[]})})}catch(e){}}
+  return huntSeedCount()-before}
 async function huntSweepDemo(){const w=huntWatchlist();const qs=huntQueries(w);let excluded=0;const found={};
  for(const q of qs){const ql=q.toLowerCase().replace(/^[@#]/,'');for(const [plat,handle,text] of HUNT_SAMPLE){
    if((text.toLowerCase()+' '+handle.toLowerCase()).split(/\W+/).some(tok=>tok&&ql.split(/\s+/).includes(tok))){
      if(huntExcluded(handle,w)){excluded++;continue}
      const key=plat+':'+handle;if(!found[key])found[key]={plat,handle,text,q}}}}
  const rows=[];for(const k in found){const {plat,handle,text,q}=found[k];const hits=cbMatch([text,handle].join(' '),[]);const pr=cbPrior(hits);
-   if(pr.score>=(window.HUNT_MIN||5))rows.push({platform:plat,poster:handle,text,query:q,score:pr.score,category:pr.category,tier:tierOf(pr.score),hits:hits.map(h=>h.term)})}
- return {rows:rows.sort((a,b)=>b.score-a.score),excluded,queries:qs.length}}
+   if(pr.score>=(window.HUNT_MIN||5)){rows.push({platform:plat,poster:handle,text,query:q,score:pr.score,category:pr.category,tier:tierOf(pr.score),hits:hits.map(h=>h.term)});
+     huntSeedFrom({poster:handle,text,hits:hits.map(h=>h.term)})}}  // self-expand
+ return {rows:rows.sort((a,b)=>b.score-a.score),excluded,queries:qs.length,seeds:huntSeedCount()}}
 async function huntSweep(){document.getElementById('hStatus').innerHTML='<span class="huntdot on"></span>sweeping…';
  let res;
  if(API_BASE){try{const w=huntWatchlist();
@@ -643,7 +719,8 @@ async function huntSweep(){document.getElementById('hStatus').innerHTML='<span c
  }catch(e){toast('Backend unavailable — running demo crawler');res=await huntSweepDemo()}}
  else res=await huntSweepDemo();
  res.rows.forEach(r=>{if(!HUNTQ.some(x=>x.poster===r.poster&&x.platform===r.platform))HUNTQ.push(r)});
- document.getElementById('hStatus').innerHTML=`<span class="huntdot ${huntRunning?'on':''}"></span>${huntRunning?'crawler running':'idle'} · swept ${res.queries} queries · ${res.rows.length} hits · ${res.excluded} allowlisted-skipped`;
+ document.getElementById('hStatus').innerHTML=`<span class="huntdot ${huntRunning?'on':''}"></span>${huntRunning?'<b style="color:#9AE6B4">LIVE — continuously compiling</b>':'idle'} · swept ${res.queries} queries · ${res.rows.length} hits · ${res.excluded} skipped · <b>${huntSeedCount()} live targets tracked</b>`;
+ renderSeeds();
  renderHunt();audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'hunt sweep',detail:`${res.rows.length} candidates queued, ${res.excluded} allowlisted accounts skipped`,who:'Strategic'})}
 function huntToggle(){huntRunning=!huntRunning;const b=document.getElementById('hToggle');
  if(huntRunning){b.textContent='Stop crawler';b.classList.remove('warn');b.classList.add('mute');huntSweep();huntTimer=setInterval(huntSweep,15000)}
@@ -652,7 +729,10 @@ function huntClear(){HUNTQ=[];renderHunt()}
 function huntToReview(i){const r=HUNTQ[i];if(!r)return;addItem(`${r.platform==='x'?'https://x.com':'https://'+r.platform+'.com'}/${r.poster} (${r.text})`);showTab('queue');toast('Sent to review queue')}
 async function loadHuntAllowlist(){try{const r=await fetch('samples/hunt_allowlist.json');if(!r.ok)return;const j=await r.json();
   const el=document.getElementById('hExclude');if(el&&!el.value.trim())el.value=(j.exclude_accounts||[]).join('\n');}catch(e){}}
-function renderHunt(){const tb=document.querySelector('#hTable tbody');document.getElementById('hEmpty').style.display=HUNTQ.length?'none':'block';
+function renderSeeds(){const el=document.getElementById('hSeeds');if(!el)return;
+ const S=HUNTSEEDS;const parts=[['accounts',[...S.accounts]],['hashtags',[...S.hashtags]],['keywords',[...S.keywords]],['links/domains',[...S.links,...S.domains]],['image hashes',[...HUNTHASHES]]];
+ el.innerHTML=parts.map(([k,v])=>`<div style="margin:2px 0"><b>${v.length}</b> <span class="note" style="margin:0">${k}</span>${v.length?': ':''}<span class="note" style="margin:0">${v.slice(0,6).map(x=>x.replace(/</g,'&lt;')).join(', ')}${v.length>6?' …':''}</span></div>`).join('');}
+function renderHunt(){const tb=document.querySelector('#hTable tbody');renderSeeds();document.getElementById('hEmpty').style.display=HUNTQ.length?'none':'block';
  tb.innerHTML=HUNTQ.map((r,i)=>`<tr><td><b>${r.poster}</b><span class="plat">${r.platform}</span></td><td class="cat"><span style="color:${CATCOLOR[r.category]||'#5A6472'}">●</span> ${(r.category||'').replace('_',' ')}</td><td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td><td class="note" style="margin:0;max-width:220px">${(r.hits||[]).slice(0,4).join(', ')}</td><td class="note" style="margin:0">${r.query||''}</td><td><button class="btn sec" style="padding:3px 8px;font-size:11px" onclick="huntToReview(${i})">→ review</button></td></tr>`).join('')}
 
 // ---------- knowledge library (context docs & reference images) ----------
@@ -743,7 +823,9 @@ function select(id){selId=id;render()}
 function setField(k,v){const it=items.find(i=>i.id===selId);if(!it)return;const old=it[k];it[k]=v;log(it,`${k} changed`,`${old} → ${v}`);render()}
 function act(status){const it=items.find(i=>i.id===selId);if(!it)return;
   if(status==='Escalated'&&it.tier==='CRITICAL'&&it.reviewers.length<1){it.reviewers.push('Strategic');log(it,'first confirmation recorded','CRITICAL requires a second analyst before escalation');render();return}
-  it.status=status;log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}${API_BASE?' · feedback → library':' · feedback recorded (demo)'}`);sendFeedback(it,status);render()}
+  it.status=status;log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}${API_BASE?' · feedback → library':' · feedback recorded (demo)'}`);sendFeedback(it,status);
+  if((status==='Confirmed'||status==='Escalated')&&typeof huntSeedFrom==='function'){const n=huntSeedFrom({poster:it.poster,text:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,hits:it.indicators||[],image_hash:it.dhash||''});if(n)toast(`Confirmed threat added ${n} live target(s) to the hunt`)}
+  render()}
 function renderDetail(){
   const d=document.getElementById('detail');const it=items.find(i=>i.id===selId);
   if(!it){d.innerHTML='<h3>3 · Item detail & analyst decision</h3><div class="empty">Select an item in the queue.</div>';return}
