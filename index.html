@@ -380,8 +380,8 @@
           <option value="reportable" selected>Reportable (score ≥ 5, not dismissed)</option>
           <option value="confirmed">Confirmed / Reported only</option>
         </select>
-        <button class="btn" style="padding:6px 10px;background:#1877F2;border-color:#1877F2" onclick="exportMetaCSV()">⬇ Meta submission (.csv)</button>
-        <button class="btn sec" style="padding:6px 10px" onclick="exportIncidentsCSV()">⬇ Full detail (.csv)</button>
+        <button class="btn" style="padding:6px 10px;background:#1877F2;border-color:#1877F2" onclick="exportMetaXLS()">⬇ Meta spreadsheet (.xls)</button>
+        <button class="btn sec" style="padding:6px 10px" onclick="exportMetaCSV()">⬇ Meta (.csv)</button>
         <button class="btn sec" style="padding:6px 10px" onclick="exportReportsBundle()">⬇ Reports (.md)</button>
       </span>
     </div>
@@ -785,6 +785,58 @@ function metaKeywords(it){ // the "what is in it" column Eric fills from ChatGPT
  if(it.labels&&it.labels.length)parts.push(it.labels.slice(0,6).join(', '));
  else if(it.indicators&&it.indicators.length)parts.push(it.indicators.slice(0,6).join(', '));
  return parts.join(' — ').slice(0,300);
+}
+// ---- three plain-language columns for the formatted spreadsheet ----
+function metaSeen(it){
+ if(it.category==='child_safety')return '(routed to NCMEC — description withheld)';
+ const parts=[];
+ if(it.caption)parts.push('Caption: “'+it.caption.replace(/\s+/g,' ').trim()+'”');
+ if(it.ocr)parts.push('Visible text: “'+it.ocr.replace(/\s+/g,' ').trim().slice(0,240)+'”');
+ const labs=(it.labels&&it.labels.length?it.labels:it.indicators)||[];
+ if(labs.length)parts.push('Symbols / elements: '+labs.slice(0,8).join(', '));
+ if(!parts.length)parts.push('A '+(it.platform||'social')+' post from '+(it.poster||'an unknown account')+'.');
+ return parts.join('. ');
+}
+function metaMeaning(it){
+ if(it.category==='child_safety')return 'Suspected child-safety violation — detect-and-route only.';
+ const r=(it.reasoning||'').replace(/\s+/g,' ').trim();
+ return r || ('Categorized as '+(it.category||'review').replace(/_/g,' ')+'.');
+}
+function metaDanger(it){
+ return (typeof HARM!=='undefined' && HARM[it.category]) ? HARM[it.category].replace(/\s+/g,' ').trim() : 'Reviewed content.';
+}
+function xE(v){return (v==null?'':String(v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+const TIERHEX={CRITICAL:'#B42318',HIGH:'#D9480F',MEDIUM:'#B7791F',LOW:'#2F855A',MINIMAL:'#5A6472'};
+function exportMetaXLS(){
+ const list=exportScopeItems(); if(!list.length){toast('No incidents in this scope');return}
+ const cols=[['Date Found',70],['Type',110],['Platform',80],['User',120],['URL',230],
+   ['What is in the image',300],['What it means',300],['Why it is a danger',330],['Risk',48],['Tier',90]];
+ const colgroup='<colgroup>'+cols.map(c=>`<col style="width:${c[1]}px">`).join('')+'</colgroup>';
+ const head='<tr>'+cols.map(c=>`<th style="background:#152A4E;color:#ffffff;font-weight:bold;border:1px solid #0F2038;padding:7px 9px;text-align:left;vertical-align:middle">${c[0]}</th>`).join('')+'</tr>';
+ const body=list.map((it,n)=>{
+   const bg=n%2?'#EEF3F8':'#FFFFFF';const url=(it.url||'').split(' ')[0];
+   const tcol=TIERHEX[it.tier]||'#5A6472';
+   const base='border:1px solid #C9D4DE;padding:7px 9px;vertical-align:top;white-space:normal;mso-data-placement:same-cell;background:'+bg;
+   const cells=[
+     `<td style="${base}">${xE((it.captured||'').slice(0,10))}</td>`,
+     `<td style="${base};font-weight:bold">${xE(META_TYPE[it.category]||it.category)}</td>`,
+     `<td style="${base}">${xE(metaPlatform(it.platform))}</td>`,
+     `<td style="${base}">${xE(it.poster||'')}</td>`,
+     `<td style="${base}">${url?`<a href="${xE(url)}" style="color:#1D4ED8;text-decoration:underline">${xE(url)}</a>`:''}</td>`,
+     `<td style="${base}">${xE(metaSeen(it))}</td>`,
+     `<td style="${base}">${xE(metaMeaning(it))}</td>`,
+     `<td style="${base}">${xE(metaDanger(it))}</td>`,
+     `<td style="${base};text-align:center;font-weight:bold">${it.score!=null?it.score+'/10':''}</td>`,
+     `<td style="${base};font-weight:bold;color:${tcol}">${xE(it.tier||'')}</td>`];
+   return '<tr>'+cells.join('')+'</tr>';
+ }).join('');
+ const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8">`+
+   `<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Incidents</x:Name>`+
+   `<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->`+
+   `<style>table{border-collapse:collapse;font-family:Calibri,Segoe UI,Arial,sans-serif;font-size:10.5pt}</style></head>`+
+   `<body><table>${colgroup}${head}${body}</table></body></html>`;
+ dl('Meta_Submissions_'+new Date().toISOString().slice(0,10)+'.xls', html, 'application/vnd.ms-excel');
+ toast(list.length+' incidents exported as a formatted spreadsheet — links are clickable');
 }
 function metaNotes(it){if(it.category==='child_safety')return 'Detect-and-route to NCMEC CyberTipline';
  return (it.reasoning||'').replace(/\s+/g,' ').trim().slice(0,300);}
