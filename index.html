@@ -208,6 +208,7 @@
     <span class="scopechip" style="--c:#BE123C">Public-safety threats</span>
     <span class="scopechip" style="--c:#701A75">Child safety (detect &amp; route)</span>
     <span class="scopechip" style="--c:#7C2D12">Self-harm / suicide promotion</span>
+    <span class="scopechip" style="--c:#0891B2">Inauthentic AI accounts (bots targeting teens)</span>
     <span class="scopechip" style="--c:#B7791F;--bg:#FFF7E6">⚡ Emerging threats (new patterns)</span>
   </div>
 </div>
@@ -414,8 +415,8 @@
 
 <script>
 // ---------- taxonomy ----------
-const CATS=['propaganda','recruitment','glorification','incitement','financing','operational_planning','domestic_terrorism','narcotics','counterfeit_meds','public_safety_threat','child_safety','self_harm_promotion','benign'];
-const CATCOLOR={propaganda:'#7C3AED',recruitment:'#D9480F',glorification:'#B7791F',incitement:'#B42318',financing:'#0F766E',operational_planning:'#1D4ED8',domestic_terrorism:'#9B1C1C',narcotics:'#047857',counterfeit_meds:'#B45309',public_safety_threat:'#BE123C',child_safety:'#701A75',self_harm_promotion:'#7C2D12',benign:'#5A6472'};
+const CATS=['propaganda','recruitment','glorification','incitement','financing','operational_planning','domestic_terrorism','narcotics','counterfeit_meds','public_safety_threat','child_safety','self_harm_promotion','inauthentic_ai','benign'];
+const CATCOLOR={propaganda:'#7C3AED',recruitment:'#D9480F',glorification:'#B7791F',incitement:'#B42318',financing:'#0F766E',operational_planning:'#1D4ED8',domestic_terrorism:'#9B1C1C',narcotics:'#047857',counterfeit_meds:'#B45309',public_safety_threat:'#BE123C',child_safety:'#701A75',self_harm_promotion:'#7C2D12',inauthentic_ai:'#0891B2',benign:'#5A6472'};
 const GRADES=['Observed','Corroborated','Inferred','Predicted','Disputed','Unverified'];
 const CONN=['linguistic resemblance','narrative similarity','audience overlap','commercial/social interaction','operational coordination'];
 const TIERS=['CRITICAL','HIGH','MEDIUM','LOW','MINIMAL'];
@@ -433,6 +434,23 @@ const RULES=[
  {k:['plan','meet','coordinates','map','route','training','drill'],cat:'operational_planning',score:9,ind:['logistics/coordination language','location or timing reference','physical mobilization']},
  {k:['flyer','poster','reclaim','manifesto','truth','wake up'],cat:'propaganda',score:6,ind:['branded propaganda material','coded slogan','institutional-distrust frame']},
 ];
+// ---------- inauthentic / AI-run account signals (fake personas pushing counterfeit ads, often at teens) ----------
+const AI_ACCOUNT_SIGNS=[
+ {re:/[a-z]{3,}[._]?[a-z]*\d{4,}(?![a-z])/i, s:'Handle is a name followed by a long random number string (auto-generated pattern)'},
+ {re:/\b(link in bio|shop now|dm to order|dm to buy|order (now|via dm)|checkout link|swipe up to (buy|shop))\b/i, s:'Off-platform “DM to buy / link in bio” sales funnel'},
+ {re:/\b(gucci|louis ?vuitton|rolex|nike|jordan|prada|chanel|dior|balenciaga|yeezy|air ?force)\b[^$]{0,40}\$\s?\d{1,3}\b/i, s:'Luxury/brand-name goods at an implausibly low price (counterfeit signal)'},
+ {re:/\b(replica|1:1|mirror quality|aaa\+? quality|factory price|rep(s)?\b|dupes?)\b/i, s:'Explicit counterfeit / “replica” terminology'},
+ {re:/\b(free ?gift|giveaway|you(’|')?ve been selected|claim your|congratulations you won)\b/i, s:'Prize / giveaway lure (common bot script)'},
+ {re:/(hey|hi|hello)\b[^.!?]{0,24}\b(cutie|dear|sweetie|hun|young|kid|teen)\b/i, s:'Generic flattery opener aimed at younger users'},
+ {re:/\b(ai[- ]generated|this is not a real person|virtual (model|influencer)|bot)\b/i, s:'Self-evident AI/virtual persona markers'},
+];
+function aiAccountSigns(text, labels){
+ const hay=(text||'').toLowerCase();const out=[];
+ for(const g of AI_ACCOUNT_SIGNS){if(g.re.test(hay))out.push(g.s);}
+ (labels||[]).forEach(l=>{const ll=(l||'').toLowerCase();
+   if(/ai[- ]generated|gan face|synthetic (face|portrait)|deepfake/.test(ll))out.push('Profile/image appears AI-generated (GAN-style face)');});
+ return [...new Set(out)];
+}
 function analyze(url){
   const s=url.toLowerCase();let best=null;
   for(const r of RULES){const hits=r.k.filter(k=>s.includes(k));if(hits.length&&(!best||hits.length>best.hits))best={...r,hits:hits.length}}
@@ -449,9 +467,15 @@ function analyze(url){
     glorification:'Content celebrates a prior attack or perpetrator using martyrdom/hero framing; functions as status reinforcement for members and normalization for newcomers.',
     operational_planning:'Content references logistics — meeting, movement, timing, or training — suggesting transition from digital community to physical organization. Highest-priority lead for corroboration.',
     propaganda:'Content is branded messaging designed to attract attention and signal an organized presence; coded slogans present. Gateway-layer material.',
+    inauthentic_ai:'The account shows tell-tale signs of being an automated / AI-generated fake persona rather than a real person — and it is pushing counterfeit or scam advertising, often at younger users. This is coordinated inauthentic behavior, not a genuine account.',
     benign:'No indicators of coordinated harmful activity in the captured content; may be news, commentary, or unrelated. Retained for audit only.'
   }[cat];
   // living codebook pass (numeric codes, coded handles, symbols) — can raise the demo score
+  // inauthentic AI-account signals — an account-level overlay that can set/raise the category
+  const aiSigns=aiAccountSigns(url,[]);
+  if(aiSigns.length>=2){bd.push({l:`Inauthentic AI-account signals (${aiSigns.length}): ${aiSigns.join('; ')}`,d:Math.min(4,aiSigns.length)});
+    if(cat==='benign'||cat==='counterfeit_meds'||cat==='narcotics'){cat='inauthentic_ai'}
+    score=Math.min(10,Math.max(score,4+aiSigns.length));ind=[...new Set([...ind.filter(x=>!/no risk indicators/.test(x)),...aiSigns])];}
   const cbh=cbMatch(url,[]);const pr=cbPrior(cbh);
   if(cbh.length&&pr.score>score){bd.push({l:`Codebook: <b>${cbh[0].term}</b> ${cbh.length>1?'+'+(cbh.length-1)+' more':''} — raises score to codebook prior`,d:pr.score-score});score=pr.score;if(cat==='benign')cat=pr.category}
   else if(cbh.length){bd.push({l:`Codebook corroboration: ${cbh.map(x=>x.term).slice(0,3).join(', ')}`,d:0})}
@@ -459,7 +483,7 @@ function analyze(url){
   return {category:cat,score,tier:tierOf(score),recommendation:recOf(score),grade:cbh.some(x=>!x.context_required&&x.severity>=4)?'Corroborated':grade,connection:conn,indicators:ind,reasoning,breakdown:bd,hitWords,cbHits:cbh,confidence:cat==='benign'?0.9:0.55+((h%40)/100)};
 }
 // ---------- plain-language explanation shown when an analyst clicks a link ----------
-const LAYER={propaganda:'Layer 1–2 · Gateway / narrative seeding',recruitment:'Layer 3 · Affiliation & onboarding',glorification:'Layer 4 · Identity reinforcement',financing:'Layer 5 · Resourcing / monetization',incitement:'Layer 6 · Mobilization to violence',operational_planning:'Layer 7 · Operational transition (online → offline)',domestic_terrorism:'Layer 6–7 · Mobilization / targeted violence',narcotics:'Illicit-commerce domain · online drug sales',counterfeit_meds:'Illicit-commerce domain · counterfeit / fentanyl-pressed pills',public_safety_threat:'Imminent-harm domain · threats to public safety',child_safety:'Child-safety domain · detect & route only',self_harm_promotion:'Wellbeing domain · self-harm/suicide promotion',benign:'Outside the harm framework'};
+const LAYER={propaganda:'Layer 1–2 · Gateway / narrative seeding',recruitment:'Layer 3 · Affiliation & onboarding',glorification:'Layer 4 · Identity reinforcement',financing:'Layer 5 · Resourcing / monetization',incitement:'Layer 6 · Mobilization to violence',operational_planning:'Layer 7 · Operational transition (online → offline)',domestic_terrorism:'Layer 6–7 · Mobilization / targeted violence',narcotics:'Illicit-commerce domain · online drug sales',counterfeit_meds:'Illicit-commerce domain · counterfeit / fentanyl-pressed pills',public_safety_threat:'Imminent-harm domain · threats to public safety',child_safety:'Child-safety domain · detect & route only',self_harm_promotion:'Wellbeing domain · self-harm/suicide promotion',inauthentic_ai:'Platform-integrity domain · inauthentic AI accounts & counterfeit-ad networks',benign:'Outside the harm framework'};
 const HARM={
  propaganda:'It functions as a doorway. Branded slogans and “wake up / truth” framing are designed to attract curious viewers and signal that an organized group exists. On its own it rarely causes direct harm, but it is where audiences are first captured and routed toward the more dangerous layers.',
  recruitment:'It converts an audience into members. Language of belonging (“brothers”, “chapter”, “join”) plus an application or contact pathway means the post is actively growing the network. Growth is what makes every downstream harm possible.',
@@ -473,6 +497,7 @@ const HARM={
  public_safety_threat:'It is a specific threat of harm — a targeted or mass-casualty attack, a bomb/venue/school threat, swatting or doxxing of officials, or an imminent self-harm crisis. These are time-critical: the value is minutes-to-alert, and self-harm cases route to wellbeing resources rather than enforcement.',
  child_safety:'It appears to endanger, exploit, or groom a minor. Project Spear only DETECTS and immediately routes these to authorized child-safety programs (e.g., NCMEC CyberTipline and PhotoDNA-style hash matching by cleared personnel). The system never stores, reproduces, or describes the material, and access is restricted to authorized reviewers.',
  self_harm_promotion:'It promotes, encourages, or glorifies suicide or self-harm — including dangerous viral “challenges” and pro-eating-disorder content — rather than offering support or recovery. It is a wellbeing threat, especially to minors: detection routes to crisis resources and platform safety teams. Support, recovery, and help-seeking content is NOT flagged.',
+ inauthentic_ai:'It is a fake, likely AI-run account impersonating a real person to push counterfeit or scam advertising — frequently aimed at teens, who are more susceptible. The harm is twofold: deception at scale (many identical bot personas manufacture false credibility and reach) and the counterfeit/scam products themselves (fraud, unsafe goods). Because these accounts operate as coordinated networks, flagging the pattern — not just one post — is what disrupts them.',
  benign:'Nothing in the captured content indicates coordinated harmful activity. It is retained only so the audit trail shows it was reviewed.'};
 const NEXT={
  propaganda:'Check whether the account links onward to recruitment or financing pages; if it does, the item should be re-graded upward.',
@@ -487,6 +512,7 @@ const NEXT={
  public_safety_threat:'Verify specificity (target + time/place) and that the words are the author\'s own; route CRITICAL threats immediately per policy. Self-harm cases go to wellbeing resources (e.g., 988 in the US), never enforcement.',
  child_safety:'Do not open, download, or describe the media. Escalate immediately to a cleared child-safety reviewer for routing to NCMEC/PhotoDNA. Restrict the item and preserve only the provenance metadata.',
  self_harm_promotion:'Confirm the content encourages or glorifies self-harm rather than seeking or offering help — recovery/support content is a false positive and must be dismissed. Route confirmed promotion to wellbeing/crisis pathways (e.g., 988 in the US) and platform safety; escalate challenge-style content aimed at minors.',
+ inauthentic_ai:'Confirm two or more tell-tale signs (AI-generated profile photo, name+random-number handle, templated bio, off-platform "DM/link in bio" funnel, luxury brand at implausible price / replica terms, generic mass-outreach to younger users). Report the account, not just the post, and seed its avatar image + caption template into the hunt — bot networks re-use the same face and copy across many accounts, so one confirmation surfaces the cluster.',
  benign:'No action needed unless the poster later appears in a network cluster.'};
 function explain(it){
   const first=it.url.split(' ')[0];const bd=it.breakdown||[];const total=bd.reduce((a,b)=>a+b.d,0);
@@ -620,6 +646,10 @@ async function addPhoto(dataUrl,o){
   if(remote&&remote.analysis){ai=remote.analysis;score=ai.risk_score||score;cat=CATS.includes(ai.classification)?ai.classification:cat;reasoning=ai.reasoning||'';conf=ai.confidence||conf;bd=(ai.why_this_score||[]).map(x=>({l:x,d:''}))}
   else{reasoning=hits.length?`Image-derived text and visual labels matched ${hits.length} codebook entr${hits.length===1?'y':'ies'}; the strongest (${hits[0].term}) sets the base and co-occurring codes raise it. Pixels were read by OCR${labels.length?' plus analyst-marked visible elements':''}; no vision model in demo mode.`:'OCR text, caption and handle contain no codebook indicators.'}
   if(!ocr&&!o.caption&&!labels.length){bd.push({l:'No readable text, caption or visible-element labels — pixels not interpreted (needs vision model)',d:0});conf=0.3}
+  // inauthentic AI-account overlay (fake persona pushing counterfeit ads)
+  const aiSigns=aiAccountSigns(text,labels);
+  if(aiSigns.length>=2){bd.push({l:`Inauthentic AI-account signals (${aiSigns.length}): ${aiSigns.join('; ')}`,d:Math.min(4,aiSigns.length)});
+    if(!remote||!remote.analysis){if(cat==='benign'||cat==='counterfeit_meds'||cat==='narcotics')cat='inauthentic_ai';score=Math.min(10,Math.max(score,4+aiSigns.length));}}
   const dupes=items.filter(i=>i.type==='image'&&ham(i.dhash,dh)<=6);
   if(dupes.length){bd.push({l:`Near-duplicate of ${dupes.length} image(s) already in queue (re-posted across ${[...new Set(dupes.map(d=>d.poster))].join(', ')}) — coordination signal`,d:1});score=Math.min(10,score+1)}
   const grade=hits.some(h=>!h.context_required&&h.severity>=4)?'Corroborated':hits.length?'Inferred':'Unverified';
@@ -776,7 +806,7 @@ function csvCell(v){v=(v==null?'':String(v)).replace(/"/g,'""');return /[",\n]/.
 const META_TYPE={propaganda:'Hate speech',recruitment:'Terrorism',glorification:'Terrorism',incitement:'Terrorism',
  financing:'Terrorism',operational_planning:'Terrorism',domestic_terrorism:'Terrorism',narcotics:'Narcotics',
  counterfeit_meds:'Counterfeit meds',public_safety_threat:'Public safety',child_safety:'Child safety (NCMEC)',
- self_harm_promotion:'Self-harm',benign:'Review'};
+ self_harm_promotion:'Self-harm',inauthentic_ai:'Inauthentic behavior / fake account',benign:'Review'};
 function metaPlatform(p){p=(p||'').toLowerCase();if(p.includes('insta'))return 'Instagram';if(p.includes('face')||p==='fb')return 'Facebook';return (p?p.charAt(0).toUpperCase()+p.slice(1):'');}
 function metaKeywords(it){ // the "what is in it" column Eric fills from ChatGPT today — we build it from the image/codebook read
  if(it.category==='child_safety')return '(routed to NCMEC — description withheld)';
