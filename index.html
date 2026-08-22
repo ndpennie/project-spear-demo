@@ -381,6 +381,7 @@
           <option value="confirmed">Confirmed / Reported only</option>
         </select>
         <button class="btn" style="padding:6px 10px;background:#1877F2;border-color:#1877F2" onclick="exportMetaXLS()">⬇ Meta spreadsheet (.xls)</button>
+        <button class="btn sec" style="padding:6px 10px" onclick="exportDetailXLS()">⬇ Full detail (.xls)</button>
         <button class="btn sec" style="padding:6px 10px" onclick="exportMetaCSV()">⬇ Meta (.csv)</button>
         <button class="btn sec" style="padding:6px 10px" onclick="exportReportsBundle()">⬇ Reports (.md)</button>
       </span>
@@ -848,17 +849,30 @@ function exportMetaCSV(){const list=exportScopeItems();if(!list.length){toast('N
    rows.push(r.map(csvCell).join(','));}
  dl('Meta_Submissions_'+new Date().toISOString().slice(0,10)+'.csv',rows.join('\n'),'text/csv');
  toast(list.length+' rows in Meta format (.csv) — paste into your monthly tab');}
-function exportIncidentsCSV(){const list=exportScopeItems();if(!list.length){toast('No incidents in this scope');return}
- const cols=['report_id','detected_utc','platform','poster','url','category','risk_score','tier','evidence_grade','recommendation','status','policy_clause','indicators','reasoning','media_dhash','notes'];
- const rows=[cols.join(',')];
- for(const it of list){const pm=POLICY_MAP[it.category]||POLICY_MAP.benign;const rid='SPEAR-'+String(it.id).padStart(5,'0');
-   const cs=it.category==='child_safety'; // provenance-only for child safety — no description exported
-   const r=[rid,it.captured,it.platform,it.poster,(it.url||'').split(' ')[0],it.category,it.score,it.tier,it.grade,it.recommendation,it.status,pm.clause,
-     cs?'':(it.indicators||[]).join('; '),cs?'':(it.reasoning||'').replace(/\s+/g,' '),it.type==='image'&&!cs?(it.dhash||''):'',
-     cs?'ROUTED TO NCMEC — media/description not exported':''];
-   rows.push(r.map(csvCell).join(','));}
- dl('project_spear_incidents_'+new Date().toISOString().slice(0,10)+'.csv',rows.join('\n'),'text/csv');
- toast(list.length+' incidents exported (.csv)');}
+// shared: build a nicely-formatted Excel (.xls via styled HTML table) with clickable links + colored tiers
+function buildXLS(cols, rowObjs, filename, sheet){
+ const colgroup='<colgroup>'+cols.map(c=>`<col style="width:${c.w}px">`).join('')+'</colgroup>';
+ const head='<tr>'+cols.map(c=>`<th style="background:#152A4E;color:#ffffff;font-weight:bold;border:1px solid #0F2038;padding:7px 9px;text-align:left;vertical-align:middle">${c.h}</th>`).join('')+'</tr>';
+ const body=rowObjs.map((row,n)=>{const bg=n%2?'#EEF3F8':'#FFFFFF';
+   return '<tr>'+cols.map(c=>{const cell=row[c.k]||{};const base='border:1px solid #C9D4DE;padding:7px 9px;vertical-align:top;white-space:normal;mso-data-placement:same-cell;background:'+bg+(cell.style||'');
+     return `<td style="${base}">${cell.html!=null?cell.html:xE(cell.v)}</td>`;}).join('')+'</tr>';}).join('');
+ const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8">`+
+  `<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>${sheet||'Incidents'}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->`+
+  `<style>table{border-collapse:collapse;font-family:Calibri,Segoe UI,Arial,sans-serif;font-size:10.5pt}</style></head><body><table>${colgroup}${head}${body}</table></body></html>`;
+ dl(filename, html, 'application/vnd.ms-excel');
+}
+function exportDetailXLS(){const list=exportScopeItems();if(!list.length){toast('No incidents in this scope');return}
+ const cols=[{k:'rid',h:'Report ID',w:95},{k:'date',h:'Date Found',w:70},{k:'plat',h:'Platform',w:80},{k:'user',h:'User',w:110},
+  {k:'url',h:'URL',w:220},{k:'type',h:'Type',w:105},{k:'risk',h:'Risk',w:48},{k:'tier',h:'Tier',w:85},{k:'grade',h:'Evidence',w:95},
+  {k:'policy',h:'Platform policy clause',w:230},{k:'seen',h:'What is in the image',w:290},{k:'means',h:'What it means',w:290},{k:'danger',h:'Why it is a danger',w:320}];
+ const rowObjs=list.map(it=>{const pm=POLICY_MAP[it.category]||POLICY_MAP.benign;const rid='SPEAR-'+String(it.id).padStart(5,'0');const url=(it.url||'').split(' ')[0];
+  return {rid:{v:rid},date:{v:(it.captured||'').slice(0,10)},plat:{v:metaPlatform(it.platform)},user:{v:it.poster||''},
+   url:{html:url?`<a href="${xE(url)}" style="color:#1D4ED8;text-decoration:underline">${xE(url)}</a>`:''},
+   type:{v:META_TYPE[it.category]||it.category,style:';font-weight:bold'},risk:{v:(it.score!=null?it.score+'/10':''),style:';text-align:center;font-weight:bold'},
+   tier:{v:it.tier||'',style:';font-weight:bold;color:'+(TIERHEX[it.tier]||'#5A6472')},grade:{v:it.grade||''},policy:{v:pm.clause},
+   seen:{v:metaSeen(it)},means:{v:metaMeaning(it)},danger:{v:metaDanger(it)}};});
+ buildXLS(cols, rowObjs, 'Project_Spear_incidents_'+new Date().toISOString().slice(0,10)+'.xls','Incidents');
+ toast(list.length+' incidents exported — formatted spreadsheet with clickable links');}
 function exportReportsBundle(){const list=exportScopeItems().filter(i=>i.category!=='child_safety'); // CS routes to NCMEC, not a platform .md
  const csCount=exportScopeItems().length-list.length;
  if(!list.length){toast(csCount?'Only child-safety items in scope — route those to NCMEC':'No incidents in this scope');return}
