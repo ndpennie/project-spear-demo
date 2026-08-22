@@ -170,6 +170,11 @@
   @media (display-mode: standalone){
     header{padding-top:max(10px, env(safe-area-inset-top))}
   }
+  .pipeline{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+  .pstage{font-size:11px;font-weight:800;letter-spacing:.4px;color:#fff;padding:3px 9px;border-radius:6px}
+  .pstage.be{background:#B7791F}.pstage.hunt{background:#B42318}.pstage.cap{background:#1D4ED8}
+  .pstage.flag{background:#7C3AED}.pstage.rep{background:#2F855A}
+  .parrow{color:var(--muted);font-weight:800}
 </style>
 </head>
 <body>
@@ -219,15 +224,22 @@
   <!-- LEFT: intake + charts -->
   <div>
     <div class="card">
-      <h3>1 · Intake — submit URL links</h3>
+      <div class="pipeline">
+        <span class="pstage be">BE HUNTED</span><span class="pstage hunt">HUNT</span><span class="parrow">→</span>
+        <span class="pstage cap">CAPTURE</span><span class="parrow">→</span>
+        <span class="pstage flag">FLAG</span><span class="parrow">→</span>
+        <span class="pstage rep">REPORT</span>
+      </div>
+      <div class="note" style="margin:0 0 8px">Two ways content comes in: <b>Be Hunted</b> — the platform's algorithm pushes nefarious content to the investigator's feed (paste the URL or drop the screenshot it served); and <b>Hunt</b> — the system actively goes and finds it (the Active Hunt tab). Both flow into <b>Capture</b> → <b>Flag</b> → <b>Report</b>.</div>
+      <h3>1 · CAPTURE — Be Hunted (paste what the feed served you)</h3>
       <textarea id="urls" placeholder="Paste one or more post / profile / group / video URLs, one per line…"></textarea>
       <div class="row" style="margin-top:8px">
-        <button class="btn" onclick="ingest()">Analyze URLs</button>
+        <button class="btn" onclick="ingest()">Capture &amp; flag URLs</button>
         <button class="btn mute" onclick="loadSamples()">Load sample batch</button>
       </div>
       <div class="note">Pipeline per URL: capture → normalize → multi-modal signals → LLM contextual reasoning → risk score & category → evidence grade → <b>human review</b>. Predictions are leads, never verdicts.</div>
       <div class="photo">
-        <b style="font-size:13px">1b · Photo intake — upload a screenshot or image</b>
+        <b style="font-size:13px">1b · CAPTURE a screenshot — the Be Hunted feed (drop what the algorithm pushed to you)</b>
         <div style="margin-top:6px"><input type="file" id="photoFile" accept="image/*" multiple></div>
         <input id="photoPoster" placeholder="Poster handle (e.g. deathstar__88)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
         <input id="photoCaption" placeholder="Caption / audio credit / comments (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
@@ -270,7 +282,7 @@
       <div class="note">Location on the backend: <code>LIBRARY_DIR/docs/</code> (default <code>./library_data/docs</code>, git-ignored) via <code>POST /api/library/docs</code>. In demo mode documents live in memory for this session only.</div>
     </div>
     <div id="huntPane" style="display:none">
-      <h3>2e · Active Hunt — autonomous discovery crawler</h3>
+      <h3>2e · HUNT — active discovery crawler</h3>
       <div class="box" style="border-left:4px solid #B42318;background:#FDECEA">
         <b>What this does:</b> instead of you pasting URLs, the crawler actively goes and finds the material. It hunts two ways at once: <b>(1) text</b> — search queries built from your watchlist + high-severity codebook terms; and <b>(2) image-first</b> — reverse-image / perceptual-hash matching that finds <b>re-posts of a known-bad image</b> (a flag, a media-affiliate logo, a corner watermark) across many accounts, even cropped or re-saved. It scores each candidate and drops threats into the review queue for a human. <b>Nothing is auto-reported or auto-actioned.</b> Connectors use official platform APIs / approved access only — no private content, no credential stuffing. Your own model can be plugged in as the finder. Demo mode uses a synthetic connector (no live calls).
       </div>
@@ -357,7 +369,7 @@
       <div class="netlegend">● squares = posters/accounts · ● circles = URLs (colored by category, sized by risk) · ◆ diamonds = shared links/wallets/merch · lines = same poster, shared link, or reposted content. Click a node to open it in the detail panel. This is the Relationship layer (AI² layer 2): categorizing URLs is step one; connecting them is what reveals coordination.</div>
     </div>
     <div id="queuePane">
-    <h3>2 · Review queue — categorized by URL</h3>
+    <h3>2 · FLAG — review queue (categorized &amp; scored)</h3>
     <div class="row" style="margin-bottom:8px;gap:8px;align-items:center;background:#EAF3F8;border:1px solid #CDE4EE;border-radius:8px;padding:8px 10px">
       <b style="font-size:13px">Batch export</b>
       <span class="note" id="expCount" style="margin:0"></span>
