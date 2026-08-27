@@ -38,7 +38,7 @@
   .card h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
   .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:16px 24px 0}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
-  .kpi .n{font-size:26px;font-weight:700;color:var(--navy)} .kpi .l{font-size:12px;color:var(--muted)}
+  .kpi .n{font-size:30px;font-weight:800;color:var(--navy)} .kpi .l{font-size:13px;color:var(--muted);font-weight:500}
   .kpi.c .n{color:var(--crit)} .kpi.h .n{color:var(--high)}
   textarea,input,select,button{font:inherit}
   textarea{width:100%;min-height:96px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
@@ -125,8 +125,10 @@
 .form label{font-size:11px;color:var(--muted);display:block;margin-top:6px}
 .form textarea{min-height:52px}
 .kind{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
-.scopebar{background:#0F2038;color:#fff;padding:10px 24px 12px;border-bottom:2px solid var(--cyan)}
-  .scopetitle{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#9FE0F2;font-weight:700;margin-bottom:8px}
+.scopebar{background:#0F2038;color:#fff;padding:11px 24px 13px;border-bottom:2px solid var(--cyan)}
+  .scopetitle{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#9FE0F2;font-weight:700;margin-bottom:6px}
+  .scopeline{font-size:14.5px;line-height:1.6;color:#E4F0F8;font-weight:500}
+  .scopeline .emerge{color:#FFD37A;font-weight:700}
   .scopechips{display:flex;flex-wrap:wrap;gap:6px}
   .scopechip{font-size:12px;font-weight:600;color:#fff;background:var(--c);padding:3px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.18);white-space:nowrap}
 
@@ -136,6 +138,12 @@
     header{padding:10px 14px;gap:10px;flex-wrap:wrap}
     header .brand{font-size:16px}
     header .sub{font-size:11px}
+    .hleft{gap:12px}
+    .gword{font-size:24px;letter-spacing:1px}
+    .globe{--gsz:42px}
+    .brandmeta{padding-left:12px}
+    .brand-title{font-size:15px}
+    .scopeline{font-size:13px;line-height:1.55}
     header .right{width:100%;margin-left:0;justify-content:space-between;gap:10px;text-align:left;flex-wrap:wrap}
     .tally{min-width:0;padding:6px 12px}
     .tally .tallyn{font-size:22px}
@@ -179,13 +187,45 @@
   .spin{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:9px}
   @keyframes spin{to{transform:rotate(360deg)}}
   .btn.working{opacity:.7;pointer-events:none}
+
+  /* ---- GIPEC AI² brand lockup + spinning globe ---- */
+  .hleft{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .gipec-lockup{display:flex;align-items:center;gap:14px}
+  .gword{font-size:34px;font-weight:800;letter-spacing:1.5px;color:#fff;line-height:1;font-family:'Segoe UI',Arial,Helvetica,sans-serif}
+  .gword.cyan{color:#5CD0F2}
+  .gword sup{font-size:.5em;font-weight:700;margin-left:1px;top:-.7em;position:relative}
+  .brandmeta{border-left:1px solid rgba(255,255,255,.22);padding-left:20px}
+  .brand-title{font-size:18px;font-weight:700;color:#fff;letter-spacing:.3px}
+  .brandmeta .sub{font-size:13px;opacity:.85;margin-top:2px}
+  .globe{--gsz:56px;position:relative;width:var(--gsz);height:var(--gsz);border-radius:50%;flex:0 0 auto;cursor:pointer;
+    background:
+      radial-gradient(circle at 32% 28%, rgba(150,235,255,.60), rgba(20,60,110,.12) 44%, transparent 62%),
+      repeating-linear-gradient(90deg, rgba(120,225,255,.42) 0 1px, transparent 1px 9px),
+      repeating-linear-gradient(0deg, rgba(120,225,255,.26) 0 1px, transparent 1px 9px),
+      radial-gradient(circle at 50% 45%, #17457f 0%, #0a1f3d 72%);
+    background-size:auto, 90px 100%, 100% 100%, auto;
+    background-position:0 0,0 0,0 0,0 0;
+    box-shadow:0 0 0 2px rgba(120,225,255,.38), 0 0 20px rgba(60,190,240,.55), inset -6px -6px 15px rgba(0,0,0,.55), inset 6px 6px 15px rgba(120,225,255,.14);
+    animation:globespin 9s linear infinite;overflow:hidden}
+  @keyframes globespin{to{background-position:0 0,-90px 0,0 0,0 0}}
+  .globe::before{content:'';position:absolute;inset:-8px;border-radius:50%;border:1.5px solid rgba(120,225,255,.22);border-top-color:rgba(160,240,255,.95);border-right-color:rgba(120,225,255,.55);animation:spin 6s linear infinite;pointer-events:none}
+  .globe::after{content:'';position:absolute;inset:22%;border-radius:50%;background:radial-gradient(circle,rgba(160,240,255,.9),rgba(160,240,255,0) 70%);animation:pulse 2.4s ease-in-out infinite;pointer-events:none}
+  .globe:hover{animation-duration:3s}
+  .globe:hover::before{animation-duration:2s}
 </style>
 </head>
 <body>
 <header>
-  <div>
-    <div class="brand">PROJECT <span>SPEAR</span> · Threat Categorization Dashboard</div>
-    <div class="sub">GIPEC AI² · Anticipatory, human-in-the-loop detection · Patent pending (U.S. Prov. App. 64/135,028)</div>
+  <div class="hleft">
+    <div class="gipec-lockup" title="GIPEC AI² — Anticipatory Intelligence">
+      <span class="gword">GIPEC</span>
+      <span class="globe" aria-hidden="true"></span>
+      <span class="gword cyan">AI<sup>2</sup></span>
+    </div>
+    <div class="brandmeta">
+      <div class="brand-title">Threat Detection Dashboard</div>
+      <div class="sub">Anticipatory Intelligence · AI + human-in-the-loop · Patent pending</div>
+    </div>
   </div>
   <div class="right">
     <div class="tally" id="tally" title="Running tally of everything the system has found and is tracking — review-queue items, live-hunt findings and brand-safety incidents. Updates live as the self-expanding hunt keeps compiling.">
@@ -198,23 +238,8 @@
 </header>
 
 <div class="scopebar">
-  <div class="scopetitle">Issues this system is designed to analyze</div>
-  <div class="scopechips">
-    <span class="scopechip" style="--c:#7C3AED">Violent extremism — propaganda</span>
-    <span class="scopechip" style="--c:#D9480F">Recruitment</span>
-    <span class="scopechip" style="--c:#B7791F">Glorification</span>
-    <span class="scopechip" style="--c:#B42318">Incitement to violence</span>
-    <span class="scopechip" style="--c:#0F766E">Financing / material support</span>
-    <span class="scopechip" style="--c:#1D4ED8">Operational planning</span>
-    <span class="scopechip" style="--c:#9B1C1C">Domestic terrorism</span>
-    <span class="scopechip" style="--c:#047857">Narcotics — illegal drug sales</span>
-    <span class="scopechip" style="--c:#B45309">Counterfeit / dangerous meds</span>
-    <span class="scopechip" style="--c:#BE123C">Public-safety threats</span>
-    <span class="scopechip" style="--c:#701A75">Child safety (detect &amp; route)</span>
-    <span class="scopechip" style="--c:#7C2D12">Self-harm / suicide promotion</span>
-    <span class="scopechip" style="--c:#0891B2">Inauthentic AI accounts (bots targeting teens)</span>
-    <span class="scopechip" style="--c:#B7791F;--bg:#FFF7E6">⚡ Emerging threats (new patterns)</span>
-  </div>
+  <div class="scopetitle">What this system detects</div>
+  <div class="scopeline">Violent extremism · Domestic terrorism · Recruitment &amp; glorification · Incitement · Financing · Operational planning · Narcotics · Counterfeit &amp; dangerous meds · Public-safety threats · Child safety · Self-harm promotion · Inauthentic AI accounts · <span class="emerge">⚡ Emerging threats</span></div>
 </div>
 
 <div class="kpis">
