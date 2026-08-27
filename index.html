@@ -175,6 +175,10 @@
   .pstage.be{background:#B7791F}.pstage.hunt{background:#B42318}.pstage.cap{background:#1D4ED8}
   .pstage.flag{background:#7C3AED}.pstage.rep{background:#2F855A}
   .parrow{color:var(--muted);font-weight:800}
+  #busyBar{position:fixed;left:0;right:0;top:0;z-index:99998;background:#152A4E;color:#fff;font-size:17px;font-weight:700;padding:14px 20px;text-align:center;box-shadow:0 3px 14px rgba(0,0,0,.35)}
+  .spin{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:9px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .btn.working{opacity:.7;pointer-events:none}
 </style>
 </head>
 <body>
@@ -540,11 +544,14 @@ function explain(it){
 }
 
 // ---------- backend wiring (optional): set API_BASE to the Project Spear backend; falls back to demo analyzer ----------
-const API_BASE=(new URLSearchParams(location.search).get('api')||'').replace(/\/$/,'');
+const API_BASE=(function(){let a=(new URLSearchParams(location.search).get('api')||'').replace(/\/$/,'');
+  try{if(a){localStorage.setItem('spear_api',a);}else{a=(localStorage.getItem('spear_api')||'').replace(/\/$/,'');}}catch(e){}
+  return a;})();  // remembers the backend so the installed app + share-target stay connected
 async function analyzeRemote(url){
   if(!API_BASE)return null;
-  try{const id='url_'+btoa(url).replace(/[^a-z0-9]/gi,'').slice(0,24);
-    const r=await fetch(`${API_BASE}/api/analyze/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,text:url,post_url:url})});
+  try{const id='url_'+btoa(unescape(encodeURIComponent(url))).replace(/[^a-z0-9]/gi,'').slice(0,24);
+    const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),20000); // 20s — first call may cold-start a sleeping free server
+    const r=await fetch(`${API_BASE}/api/analyze/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,text:url,post_url:url}),signal:ctl.signal}).finally(()=>clearTimeout(to));
     if(!r.ok)throw new Error(r.status);const j=await r.json();const a=j.analysis||{};
     const score=Math.max(1,Math.min(10,parseInt(a.risk_score)||1));const cat=CATS.includes(a.classification)?a.classification:'benign';
     return {category:cat,score,tier:tierOf(score),recommendation:a.recommendation||recOf(score),grade:score>=8?'Corroborated':score>=5?'Inferred':'Predicted',connection:CONN[0],indicators:a.key_indicators||[],reasoning:a.reasoning||a.summary||'',breakdown:[],hitWords:[],confidence:0.7};
@@ -628,9 +635,9 @@ function selectedLabels(){return [...document.querySelectorAll('#visChips .chip.
 async function ingestPhotos(){const inp=document.getElementById('photoFile');const files=[...inp.files];if(!files.length){toast('Choose an image first');return}
   const poster=document.getElementById('photoPoster').value.trim(),caption=document.getElementById('photoCaption').value.trim(),labels=selectedLabels();
   const st=document.getElementById('ocrStatus');let done=0;
-  for(const f of files){st.textContent=`Batch: analyzing ${done+1} of ${files.length} — ${f.name}`;await addPhoto(await readFile(f),{name:f.name,poster,caption,labels,platform:'upload'});done++;}
-  st.textContent=`Batch complete — ${done} image(s) analyzed and added to the queue`;
-  inp.value='';document.querySelectorAll('#visChips .chip.on').forEach(c=>c.classList.remove('on'));render()}
+  for(const f of files){st.textContent=`Batch: analyzing ${done+1} of ${files.length} — ${f.name}`;setBusy(true,`Analyzing image ${done+1} of ${files.length}…`);await addPhoto(await readFile(f),{name:f.name,poster,caption,labels,platform:'upload'});done++;}
+  setBusy(false);st.textContent=`Batch complete — ${done} image(s) analyzed and added to the queue`;
+  inp.value='';document.querySelectorAll('#visChips .chip.on').forEach(c=>c.classList.remove('on'));render();showTab('queue')}
 async function addPhoto(dataUrl,o){
   const st=document.getElementById('ocrStatus');st.textContent='Fingerprinting…';const im=await loadImg(dataUrl);const dh=dHash(im);
   st.textContent='Reading text in image (OCR)…';const ocr=await ocrImage(dataUrl);document.getElementById('ocrBar').style.width='0';
@@ -1038,10 +1045,16 @@ async function loadCaseSamples(){try{const r=await fetch('samples/samples.json')
 // ---------- state (in memory only) ----------
 let items=[],selId=null,sortKey='score',sortDir=-1,audit=[],idc=1;
 const POSTERS=['Northgate Patriots','J. Doe (acct. 3f9c)','Sunbelt Active Club','anon-relay-7','Freedom Signal Media','citizen_watch_tx','Iron Front Supply','Reclaim Now Podcast'];
+function setBusy(on,msg){let el=document.getElementById('busyBar');
+  if(on){if(!el){el=document.createElement('div');el.id='busyBar';document.body.appendChild(el);}el.innerHTML='<span class="spin"></span> '+(msg||'Working…');el.style.display='block';}
+  else if(el){el.style.display='none';}}
 async function ingest(){
   const lines=document.getElementById('urls').value.split('\n').map(x=>x.trim()).filter(Boolean);
-  if(!lines.length)return;
-  document.getElementById('urls').value='';for(const u of lines){await addItem(u)}render();
+  if(!lines.length){toast('Paste a link first');return;}
+  document.getElementById('urls').value='';
+  let n=0;for(const u of lines){setBusy(true,`Analyzing ${++n} of ${lines.length}…`);await addItem(u);}
+  setBusy(false);render();showTab('queue');
+  toast(lines.length+' item'+(lines.length>1?'s':'')+' captured & flagged');
 }
 async function addItem(u){
   let a=await analyzeRemote(u);if(!a)a=analyze(u);let h=0;for(const c of u)h=(h*7+c.charCodeAt(0))>>>0;
@@ -1209,6 +1222,35 @@ function drawCharts(){
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
 document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer (add ?api=http://localhost:8000 to use the backend)';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();loadHuntAllowlist();
+// ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
+async function handleSharedContent(){
+  try{
+    const p=new URLSearchParams(location.search);
+    let url=(p.get('share_url')||'').trim();
+    const text=(p.get('share_text')||'').trim(), title=(p.get('share_title')||'').trim();
+    if(!url){const m=(text||title).match(/https?:\/\/[^\s]+/);if(m)url=m[0];}
+    if(!url) return;
+    const b=document.createElement('div');b.id='shareBanner';
+    b.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;background:#2F855A;color:#fff;font-size:19px;font-weight:800;padding:18px 20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.35);letter-spacing:.2px';
+    b.textContent='✓ Captured from Facebook — analyzing…';document.body.appendChild(b);
+    await addItem(url + (text&&text!==url?(' '+text):''));
+    const it=items[0];const col=it?(TIERHEX[it.tier]||'#2F855A'):'#2F855A';
+    b.style.background=col;
+    // FISHING EXPEDITION: a flagged shared item seeds the cross-platform Hunt to find more like it
+    let fished=0;
+    if(it && it.score>=5 && typeof huntSeedFrom==='function'){
+      fished=huntSeedFrom({poster:it.poster,text:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,hits:it.indicators||[],image_hash:it.dhash||'',category:it.category});
+      if(API_BASE){try{fetch(`${API_BASE}/api/hunt/seed`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({poster:it.poster,text:(it.ocr||'')+' '+it.url,image_hash:it.dhash||'',codebook_hits:it.indicators||[],label:it.category})});}catch(e){}}
+    }
+    showTab(fished?'hunt':'queue');
+    b.innerHTML='✓ Captured &amp; analyzed: <b>'+(it?it.category.replace(/_/g,' ').toUpperCase():'')+'</b> · '+(it?it.score:'')+'/10 '+(it?it.tier:'')+
+      (fished?' &nbsp;—&nbsp; now <b>fishing across platforms</b> for more like it ('+fished+' new targets).':' &nbsp;—&nbsp; it is now in your review queue below.');
+    setTimeout(()=>{b.style.transition='opacity .7s';b.style.opacity='0';setTimeout(()=>b.remove(),700);},7000);
+    const keep=new URLSearchParams(location.search);['share_url','share_text','share_title'].forEach(k=>keep.delete(k));
+    history.replaceState(null,'',location.pathname+(keep.toString()?('?'+keep.toString()):''));
+  }catch(e){}
+}
+handleSharedContent();
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){})});}
 </script>
 </body>
