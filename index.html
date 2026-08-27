@@ -39,6 +39,15 @@
   .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:16px 24px 0}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
   .kpi .n{font-size:30px;font-weight:800;color:var(--navy)} .kpi .l{font-size:13px;color:var(--muted);font-weight:500}
+  /* ---- 3-step guide + step badges ---- */
+  .stepsguide{display:flex;align-items:stretch;gap:10px;padding:16px 24px 0;flex-wrap:wrap}
+  .stepcard{flex:1 1 0;min-width:210px;display:flex;align-items:center;gap:13px;background:linear-gradient(180deg,#ffffff,#eef5fb);border:1px solid var(--line);border-left:5px solid var(--cyan);border-radius:11px;padding:13px 16px}
+  .stepnum{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--navy);color:#fff;font-size:21px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(47,168,204,.28)}
+  .stepcard b{display:block;font-size:16px;color:var(--navy);line-height:1.2}
+  .stepcard div span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+  .steparrow{display:flex;align-items:center;font-size:26px;color:var(--cyan);font-weight:800}
+  .hstep{display:inline-block;background:var(--navy);color:#fff;border-radius:6px;padding:2px 10px;margin-right:9px;font-size:13px;font-weight:800;letter-spacing:.6px;vertical-align:middle}
+  @media(max-width:760px){.steparrow{display:none}.stepcard{min-width:0;flex-basis:100%}.stepsguide{padding:12px 14px 0}}
   .kpi.c .n{color:var(--crit)} .kpi.h .n{color:var(--high)}
   textarea,input,select,button{font:inherit}
   textarea{width:100%;min-height:96px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
@@ -197,21 +206,10 @@
   .brandmeta{border-left:1px solid rgba(255,255,255,.22);padding-left:20px}
   .brand-title{font-size:18px;font-weight:700;color:#fff;letter-spacing:.3px}
   .brandmeta .sub{font-size:13px;opacity:.85;margin-top:2px}
-  .globe{--gsz:56px;position:relative;width:var(--gsz);height:var(--gsz);border-radius:50%;flex:0 0 auto;cursor:pointer;
-    background:
-      radial-gradient(circle at 32% 28%, rgba(150,235,255,.60), rgba(20,60,110,.12) 44%, transparent 62%),
-      repeating-linear-gradient(90deg, rgba(120,225,255,.42) 0 1px, transparent 1px 9px),
-      repeating-linear-gradient(0deg, rgba(120,225,255,.26) 0 1px, transparent 1px 9px),
-      radial-gradient(circle at 50% 45%, #17457f 0%, #0a1f3d 72%);
-    background-size:auto, 90px 100%, 100% 100%, auto;
-    background-position:0 0,0 0,0 0,0 0;
-    box-shadow:0 0 0 2px rgba(120,225,255,.38), 0 0 20px rgba(60,190,240,.55), inset -6px -6px 15px rgba(0,0,0,.55), inset 6px 6px 15px rgba(120,225,255,.14);
-    animation:globespin 9s linear infinite;overflow:hidden}
-  @keyframes globespin{to{background-position:0 0,-90px 0,0 0,0 0}}
-  .globe::before{content:'';position:absolute;inset:-8px;border-radius:50%;border:1.5px solid rgba(120,225,255,.22);border-top-color:rgba(160,240,255,.95);border-right-color:rgba(120,225,255,.55);animation:spin 6s linear infinite;pointer-events:none}
-  .globe::after{content:'';position:absolute;inset:22%;border-radius:50%;background:radial-gradient(circle,rgba(160,240,255,.9),rgba(160,240,255,0) 70%);animation:pulse 2.4s ease-in-out infinite;pointer-events:none}
-  .globe:hover{animation-duration:3s}
-  .globe:hover::before{animation-duration:2s}
+  .globe{--gsz:60px;position:relative;width:var(--gsz);height:var(--gsz);flex:0 0 auto;cursor:pointer;filter:drop-shadow(0 0 11px rgba(70,200,245,.6))}
+  .globe .globesvg{width:100%;height:100%;display:block}
+  .globe::before{content:'';position:absolute;inset:-7px;border-radius:50%;border:1.5px solid rgba(120,225,255,.20);border-top-color:rgba(160,240,255,.95);border-right-color:rgba(120,225,255,.5);animation:spin 7s linear infinite;pointer-events:none}
+  .globe:hover::before{animation-duration:2.5s}
 </style>
 </head>
 <body>
@@ -219,7 +217,28 @@
   <div class="hleft">
     <div class="gipec-lockup" title="GIPEC AI² — Anticipatory Intelligence">
       <span class="gword">GIPEC</span>
-      <span class="globe" aria-hidden="true"></span>
+      <span class="globe" aria-hidden="true"><svg class="globesvg" viewBox="0 0 100 100">
+        <defs><radialGradient id="gsph" cx="38%" cy="30%" r="75%">
+          <stop offset="0%" stop-color="#3a7cc0"/><stop offset="45%" stop-color="#123a6b"/><stop offset="100%" stop-color="#07152b"/>
+        </radialGradient></defs>
+        <circle cx="50" cy="50" r="46" fill="url(#gsph)" stroke="#7fe0f7" stroke-width="1.5" stroke-opacity=".85"/>
+        <g fill="none" stroke="#8be7fb" stroke-width="1" stroke-opacity=".5">
+          <ellipse cx="50" cy="50" rx="46" ry="15"/>
+          <ellipse cx="50" cy="31" rx="40" ry="11"/>
+          <ellipse cx="50" cy="69" rx="40" ry="11"/>
+          <ellipse cx="50" cy="18" rx="27" ry="7"/>
+          <ellipse cx="50" cy="82" rx="27" ry="7"/>
+        </g>
+        <g fill="none" stroke="#9beeff" stroke-width="1" stroke-opacity=".72">
+          <ellipse cx="50" cy="50" ry="46" rx="46"><animate attributeName="rx" dur="7s" repeatCount="indefinite" values="46;0;46" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></ellipse>
+          <ellipse cx="50" cy="50" ry="46" rx="30"><animate attributeName="rx" dur="7s" begin="-1.75s" repeatCount="indefinite" values="46;0;46" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></ellipse>
+          <ellipse cx="50" cy="50" ry="46" rx="15"><animate attributeName="rx" dur="7s" begin="-3.5s" repeatCount="indefinite" values="46;0;46" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></ellipse>
+          <ellipse cx="50" cy="50" ry="46" rx="30"><animate attributeName="rx" dur="7s" begin="-5.25s" repeatCount="indefinite" values="46;0;46" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></ellipse>
+        </g>
+        <circle cx="50" cy="50" r="2.3" fill="#d3f6ff"><animate attributeName="r" dur="2.6s" values="1.9;3.2;1.9" repeatCount="indefinite"/></circle>
+        <circle cx="66" cy="34" r="1.5" fill="#bff2ff" fill-opacity=".9"><animate attributeName="fill-opacity" dur="3s" values=".3;1;.3" repeatCount="indefinite"/></circle>
+        <circle cx="36" cy="62" r="1.4" fill="#bff2ff" fill-opacity=".8"><animate attributeName="fill-opacity" dur="2.2s" values=".2;.9;.2" repeatCount="indefinite"/></circle>
+      </svg></span>
       <span class="gword cyan">AI<sup>2</sup></span>
     </div>
     <div class="brandmeta">
@@ -250,6 +269,14 @@
   <div class="kpi"><div class="n" id="k-esc">0</div><div class="l">Reported to platform</div></div>
 </div>
 
+<div class="stepsguide">
+  <div class="stepcard"><span class="stepnum">1</span><div><b>Capture a post</b><span>Paste a link or drop a screenshot — left panel</span></div></div>
+  <div class="steparrow">→</div>
+  <div class="stepcard"><span class="stepnum">2</span><div><b>Review &amp; flag</b><span>See it scored in the queue — center panel</span></div></div>
+  <div class="steparrow">→</div>
+  <div class="stepcard"><span class="stepnum">3</span><div><b>Decide &amp; report</b><span>Confirm and generate the report — right panel</span></div></div>
+</div>
+
 <div class="wrap">
   <!-- LEFT: intake + charts -->
   <div>
@@ -261,7 +288,7 @@
         <span class="pstage rep">REPORT</span>
       </div>
       <div class="note" style="margin:0 0 8px">Two ways content comes in: <b>Be Hunted</b> — the platform's algorithm pushes nefarious content to the investigator's feed (paste the URL or drop the screenshot it served); and <b>Hunt</b> — the system actively goes and finds it (the Active Hunt tab). Both flow into <b>Capture</b> → <b>Flag</b> → <b>Report</b>.</div>
-      <h3>1 · CAPTURE — Be Hunted (paste what the feed served you)</h3>
+      <h3><span class="hstep">STEP 1</span>Capture a post — paste what the feed served you</h3>
       <textarea id="urls" placeholder="Paste one or more post / profile / group / video URLs, one per line…"></textarea>
       <div class="row" style="margin-top:8px">
         <button class="btn" onclick="ingest()">Capture &amp; flag URLs</button>
@@ -269,7 +296,7 @@
       </div>
       <div class="note">Pipeline per URL: capture → normalize → multi-modal signals → LLM contextual reasoning → risk score & category → evidence grade → <b>human review</b>. Predictions are leads, never verdicts.</div>
       <div class="photo">
-        <b style="font-size:13px">1b · CAPTURE a screenshot — the Be Hunted feed (drop what the algorithm pushed to you)</b>
+        <b style="font-size:13px">Step 1 — or drop a screenshot instead (what the algorithm pushed to you)</b>
         <div style="margin-top:6px"><input type="file" id="photoFile" accept="image/*" multiple></div>
         <input id="photoPoster" placeholder="Poster handle (e.g. deathstar__88)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
         <input id="photoCaption" placeholder="Caption / audio credit / comments (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
@@ -295,7 +322,7 @@
   <div class="card">
     <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt" id="tabH" onclick="showTab('hunt')">Active Hunt</div><div class="tab bg" id="tabBG" onclick="showTab('bg')">BrandGuard™</div><span class="mode" id="modeTag">demo analyzer</span></div>
     <div id="libPane" style="display:none">
-      <h3>2d · Library — upload context to help the AI learn</h3>
+      <h3>Library — upload context to help the AI learn</h3>
       <div class="box">
         <b>Upload files</b> <span class="note" style="margin:0">— glossaries / codebook spreadsheets, reports &amp; briefs, example posts, chat exports, reference symbol images. Text is chunked and indexed so it is retrieved into the model's prompt when an item shares vocabulary with it; CSV/JSON with <code>term, meaning</code> columns are turned into codebook <i>proposals</i>; images become reference fingerprints for near-duplicate matching.</span>
         <div class="form" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:6px">
@@ -312,7 +339,7 @@
       <div class="note">Location on the backend: <code>LIBRARY_DIR/docs/</code> (default <code>./library_data/docs</code>, git-ignored) via <code>POST /api/library/docs</code>. In demo mode documents live in memory for this session only.</div>
     </div>
     <div id="huntPane" style="display:none">
-      <h3>2e · HUNT — active discovery crawler</h3>
+      <h3>Active Hunt — discovery crawler</h3>
       <div class="box" style="border-left:4px solid #B42318;background:#FDECEA">
         <b>What this does:</b> instead of you pasting URLs, the crawler actively goes and finds the material. It hunts two ways at once: <b>(1) text</b> — search queries built from your watchlist + high-severity codebook terms; and <b>(2) image-first</b> — reverse-image / perceptual-hash matching that finds <b>re-posts of a known-bad image</b> (a flag, a media-affiliate logo, a corner watermark) across many accounts, even cropped or re-saved. It scores each candidate and drops threats into the review queue for a human. <b>Nothing is auto-reported or auto-actioned.</b> Connectors use official platform APIs / approved access only — no private content, no credential stuffing. Your own model can be plugged in as the finder. Demo mode uses a synthetic connector (no live calls).
       </div>
@@ -346,7 +373,7 @@
       <div class="note">Backend endpoints: <code>PUT /api/hunt/watchlist</code>, <code>PUT /api/hunt/exclude</code>, <code>POST /api/hunt/sweep</code>, <code>POST /api/hunt/start|stop</code>, <code>GET /api/hunt/queue</code>. In demo mode the crawler runs in this browser against a synthetic connector.</div>
     </div>
     <div id="bgPane" style="display:none">
-      <h3>2f · BrandGuard™ — advertiser brand-safety adjacency</h3>
+      <h3>BrandGuard™ — advertiser brand-safety adjacency</h3>
       <div class="box" style="border-left:4px solid #2FA8CC;background:#F0F9FC">
         <b>For licensing advertisers &amp; agencies:</b> when an advertiser connects their ad account and turns monitoring on, BrandGuard continuously scans the public content in their ad context and flags every case where their brand runs beside content Project Spear categorizes as harmful — extremism, drugs, child-safety, and the rest. This is the licensable brand-safety search over the same intelligence base.
       </div>
@@ -361,7 +388,7 @@
         <div class="note" style="margin-top:6px">Authorization is via the advertiser's <b>ad-account OAuth / the platform's marketing API</b> — the system learns where their ads run. <b>No password is handled and the system never logs in as them.</b> Public content only.</div>
         <div class="row" style="margin-top:8px">
           <button class="btn sec" id="bgAuthBtn" onclick="bgAuthorize()">1 · Connect ad account (authorize)</button>
-          <button class="btn" id="bgSignInBtn" onclick="bgToggleMonitor()" disabled>2 · Sign in &amp; start monitoring</button>
+          <button class="btn" id="bgSignInBtn" onclick="bgToggleMonitor()" disabled>Sign in &amp; start monitoring</button>
           <span class="note" id="bgTenantStatus" style="margin:0"><span class="huntdot"></span>not connected</span>
         </div>
       </div>
@@ -374,7 +401,7 @@
       <div class="note">Capability #11 (Brand Adjacency Monitoring) in the business plan. Sold as a white-label self-service search for ad companies; findings can also feed the advertiser's own dashboards.</div>
     </div>
     <div id="cbPane" style="display:none">
-      <h3>2c · Codebook — living library of codes, symbols &amp; nuance the AI learns from</h3>
+      <h3>Codebook — living library of codes, symbols &amp; nuance the AI learns from</h3>
       <div class="row" style="margin-bottom:8px"><input id="cbq" placeholder="Search term, meaning, variant…" oninput="renderCodebook()" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:6px 8px"><select id="cbKind" onchange="renderCodebook()" style="border:1px solid var(--line);border-radius:8px;padding:6px 8px"><option value="">All kinds</option><option>term</option><option>numeric_code</option><option>symbol</option><option>emoji</option><option>pattern</option><option>visual</option><option>hashtag</option></select><span class="note" id="cbStats" style="margin:0"></span></div>
       <div style="max-height:380px;overflow:auto"><table id="cbTable"><thead><tr><th>Term / variants</th><th>Meaning</th><th>Category</th><th>Sev.</th><th>Status</th></tr></thead><tbody></tbody></table></div>
       <div class="box" style="margin-top:12px">
@@ -394,12 +421,12 @@
       </div>
     </div>
     <div id="netPane" style="display:none">
-      <h3>2b · Network — URLs, posters, and shared links connected</h3>
+      <h3>Network — URLs, posters, and shared links connected</h3>
       <svg id="netSvg" viewBox="0 0 760 520"></svg>
       <div class="netlegend">● squares = posters/accounts · ● circles = URLs (colored by category, sized by risk) · ◆ diamonds = shared links/wallets/merch · lines = same poster, shared link, or reposted content. Click a node to open it in the detail panel. This is the Relationship layer (AI² layer 2): categorizing URLs is step one; connecting them is what reveals coordination.</div>
     </div>
     <div id="queuePane">
-    <h3>2 · FLAG — review queue (categorized &amp; scored)</h3>
+    <h3><span class="hstep">STEP 2</span>Review &amp; flag — the scored queue</h3>
     <div class="row" style="margin-bottom:8px;gap:8px;align-items:center;background:#EAF3F8;border:1px solid #CDE4EE;border-radius:8px;padding:8px 10px">
       <b style="font-size:13px">Batch export</b>
       <span class="note" id="expCount" style="margin:0"></span>
@@ -436,7 +463,7 @@
 
   <!-- RIGHT: detail -->
   <div class="card detail" id="detail">
-    <h3>3 · Item detail & analyst decision</h3>
+    <h3><span class="hstep">STEP 3</span>Decide &amp; report</h3>
     <div class="empty">Select an item in the queue.</div>
   </div>
 </div>
@@ -738,7 +765,7 @@ function bgToggleMonitor(){if(!BGTENANT||!BGTENANT.authorized){toast('Authorize 
  BGTENANT.active=!BGTENANT.active;const b=document.getElementById('bgSignInBtn');
  if(BGTENANT.active){b.textContent='Stop monitoring';b.classList.remove('btn');b.classList.add('btn','mute');bgMonitorPass();bgMonTimer=setInterval(bgMonitorPass,12000);
    if(API_BASE){try{fetch(`${API_BASE}/api/brandguard/tenant/${BGTENANT.brand.toLowerCase().replace(/[^a-z0-9]+/g,'-')}/activate`,{method:'POST'})}catch(e){}}}
- else{b.textContent='2 · Sign in & start monitoring';clearInterval(bgMonTimer);document.getElementById('bgTenantStatus').innerHTML='<span class="huntdot"></span>monitoring stopped';}}
+ else{b.textContent='Sign in & start monitoring';clearInterval(bgMonTimer);document.getElementById('bgTenantStatus').innerHTML='<span class="huntdot"></span>monitoring stopped';}}
 function bgTenantMatch(text){const hay=text.toLowerCase();const keys=[...(BGTENANT.brand_terms||[]),...(BGTENANT.handles||[]),...(BGTENANT.campaign_hashtags||[]).map(h=>'#'+h)];return keys.filter(k=>{const kk=k.toLowerCase().replace(/^[@#]/,'');return kk&&hay.includes(kk)})}
 function bgMonitorPass(){if(!BGTENANT||!BGTENANT.active)return;let n=0;
  for(const [plat,handle,text] of BG_ADSAMPLE){const key=plat+':'+handle;if(BGTENANT.seen.has(key))continue;BGTENANT.seen.add(key);
@@ -1187,10 +1214,10 @@ function openNCMEC(){const ref=window._ncmecRef||ncmecReferral(items.find(i=>i.i
   const w=window.open('','_blank');w.document.write('<pre style="font:13px ui-monospace,Menlo,monospace;padding:20px;white-space:pre-wrap">'+ref.body.replace(/</g,'&lt;')+'</pre>');w.document.title=ref.rid}
 function renderDetail(){
   const d=document.getElementById('detail');const it=items.find(i=>i.id===selId);
-  if(!it){d.innerHTML='<h3>3 · Item detail & analyst decision</h3><div class="empty">Select an item in the queue.</div>';return}
+  if(!it){d.innerHTML='<h3><span class="hstep">STEP 3</span>Decide &amp; report</h3><div class="empty">Select an item in the queue.</div>';return}
   if(it.category==='child_safety'){
     const ref=it.ncmec?null:ncmecReferral(it);const url=(it.url||'').split(' ')[0];
-    d.innerHTML=`<h3>3 · Item detail & analyst decision</h3>
+    d.innerHTML=`<h3><span class="hstep">STEP 3</span>Decide &amp; report</h3>
      <h2 style="color:#701A75">child safety <span class="badge tier-${it.tier}">${it.tier}</span></h2>
      <div class="box" style="border:2px solid #701A75;background:#FBF1FA">
        <b style="color:#701A75">⛔ Contained — detect-and-route only</b><br>
@@ -1213,7 +1240,7 @@ function renderDetail(){
      <div class="audit">${audit.filter(a=>a.id===it.id).map(a=>`<div><b>${a.t}</b> · ${a.who} · ${a.action} — ${a.detail}</div>`).join('')||'<div>—</div>'}</div>`;
     return;
   }
-  d.innerHTML=`<h3>3 · Item detail & analyst decision</h3>
+  d.innerHTML=`<h3><span class="hstep">STEP 3</span>Decide &amp; report</h3>
    <h2>${it.category.replace('_',' ')} <span class="badge tier-${it.tier}">${it.tier}</span> <span style="font-size:13px;color:var(--muted)">${it.score}/10</span></h2>
    <div class="meta">${it.type==='image'?`<img class="bigthumb" src="${it.thumb}" alt="uploaded image">${/^https?:/.test(it.url)?`<a class="url" style="max-width:100%;color:#1D4ED8;text-decoration:underline" href="${it.url}" target="_blank" rel="noopener noreferrer">${it.url} ↗</a>`:`<span class="url">${it.name}</span>`}${it.ocr?`<div class="ocr">${it.ocr.replace(/</g,'&lt;')}</div>`:''}`:`<a class="url" style="max-width:100%;color:#1D4ED8;text-decoration:underline" href="${it.url.split(' ')[0]}" target="_blank" rel="noopener noreferrer" title="Open source in new tab">${it.url.split(' ')[0]} ↗</a>`}${it.platform} · ${it.poster} · captured ${it.captured} · status <b>${it.status}</b>${it.type==='image'?` · dHash <code>${it.dhash}</code>`:''}</div>
    ${explain(it)}
