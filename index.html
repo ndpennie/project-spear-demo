@@ -210,6 +210,15 @@
   .globe .globesvg{width:100%;height:100%;display:block}
   .globe::before{content:'';position:absolute;inset:-7px;border-radius:50%;border:1.5px solid rgba(120,225,255,.20);border-top-color:rgba(160,240,255,.95);border-right-color:rgba(120,225,255,.5);animation:spin 7s linear infinite;pointer-events:none}
   .globe:hover::before{animation-duration:2.5s}
+  /* ---- evidence preview in the takedown report window ---- */
+  #repModal .modalbox{max-height:88vh;overflow:auto}
+  #repPreview{margin-top:12px}
+  #repPreview .evimg{max-width:100%;max-height:340px;border:1px solid var(--line);border-radius:8px;display:block;margin-bottom:12px}
+  #repPreview .evsec{margin-top:10px}
+  #repPreview .evsec h4{margin:0 0 3px;color:var(--navy);font-size:14.5px}
+  #repPreview .evsec p{margin:0;font-size:13.5px;line-height:1.55;color:var(--ink)}
+  #repPreview .evnotice{border:2px solid #b42318;background:#fff5f5;color:#7a1c12;padding:12px;border-radius:8px;font-weight:700;margin-bottom:12px}
+  #repPreview .evnoimg{border:1px dashed #9aa7b4;padding:16px;border-radius:8px;color:var(--muted);margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -824,6 +833,11 @@ STATUS: HUMAN-APPROVED — ready to submit. Project Spear does not auto-submit; 
    Indicators: ${(it.indicators||[]).join(', ')||'—'}
    Reasoning: ${(it.reasoning||'').replace(/\s+/g,' ')}
 
+2b. WHAT THE FLAGGED IMAGE SHOWS & WHY IT MATTERS
+   Shows: ${evDescShows(it)}
+   Means: ${evDescMeans(it)}
+   Image: ${it.thumb?(it.category==='child_safety'?'WITHHELD — routed to NCMEC/PhotoDNA; media never attached':'embedded in the visual Evidence report (.html — print to PDF to send to the platform)'):'no image attached — use "Attach post image" in the report window to include the visual'}
+
 3. POLICY MAPPING
    Platform policy clause: ${pm.clause}
    In-product report reason: "${pm.reason}"
@@ -846,10 +860,90 @@ function reportMetadata(it){const pm=POLICY_MAP[it.category]||POLICY_MAP.benign;
 function dl(name,text,mime){const b=new Blob([text],{type:mime||'text/plain'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);}
 function downloadReportMd(){const it=items.find(i=>i.id===selId);if(!it)return;const rid='SPEAR-'+String(it.id).padStart(5,'0');dl(rid+'_report.md',buildReport(it),'text/markdown');toast('Report downloaded (.md)')}
 function downloadReportJson(){const it=items.find(i=>i.id===selId);if(!it)return;const rid='SPEAR-'+String(it.id).padStart(5,'0');dl(rid+'_metadata.json',JSON.stringify(reportMetadata(it),null,2),'application/json');toast('Metadata downloaded (.json)')}
+// written description of WHAT THE IMAGE SHOWS (from OCR text, visible-element labels, caption)
+function evDescShows(it){const b=[];
+ b.push(`This is a ${it.platform} ${it.thumb||it.type==='image'?'post captured as an image':'post'} from ${it.poster}.`);
+ if(it.ocr) b.push(`Text visible in the image reads: "${it.ocr.replace(/\s+/g,' ').trim().slice(0,600)}".`);
+ if(it.labels&&it.labels.length) b.push(`Visible elements identified: ${it.labels.join(', ')}.`);
+ if(it.caption) b.push(`Caption / audio credit: "${it.caption}".`);
+ if(!it.ocr&&!(it.labels||[]).length&&!it.caption) b.push(it.thumb?'No readable text or visual labels were extracted from the image.':'This item was captured from a link only — no image is attached yet. Use "Attach post image" to add the visual.');
+ return b.join(' ');}
+// written description of WHAT IT MEANS (category harm, framework layer, coded terms, policy)
+function evDescMeans(it){const pm=POLICY_MAP[it.category]||POLICY_MAP.benign;const p=[];
+ p.push(`Assessed as ${it.category.replace(/_/g,' ')} — ${it.score}/10 (${it.tier}), evidence grade ${it.grade}.`);
+ if(HARM[it.category]) p.push(HARM[it.category]);
+ if(LAYER[it.category]) p.push(`Framework position: ${LAYER[it.category]}.`);
+ const hits=(it.cbHits||[]).filter(h=>h.meaning);
+ if(hits.length) p.push('Coded terms / symbols recognized: '+hits.map(h=>`"${h.term}" — ${h.meaning}`).join('; ')+'.');
+ else if((it.indicators||[]).length) p.push('Signals weighted: '+it.indicators.join(', ')+'.');
+ p.push(`Platform policy: ${pm.clause}. Report reason: "${pm.reason}". Requested action: remove content${it.tier==='CRITICAL'?' (priority, 15-min SLA)':''}.`);
+ return p.join(' ');}
+// full visual evidence report — embeds the image + written description; print to PDF to send to the platform
+function buildEvidenceHTML(it){const pm=POLICY_MAP[it.category]||POLICY_MAP.benign;const rid='SPEAR-'+String(it.id).padStart(5,'0');
+ const cs=it.category==='child_safety';const src=/^https?:/.test(it.url)?it.url.split(' ')[0]:(it.name||it.url);
+ const hits=(it.cbHits||[]).filter(h=>h.meaning);const H='#152A4E',C='#2FA8CC';
+ const img=cs?`<div style="border:2px solid #b42318;background:#fff5f5;color:#7a1c12;padding:16px;border-radius:8px;font-weight:700">MEDIA WITHHELD — child-safety item. The image is not attached. Route to NCMEC CyberTipline / PhotoDNA via a cleared reviewer.</div>`
+  :(it.thumb?`<img src="${it.thumb}" alt="flagged content" style="max-width:100%;border:1px solid #ccd5e0;border-radius:8px">`
+   :`<div style="border:1px dashed #9aa7b4;padding:20px;border-radius:8px;color:#6b7785">No image attached (link-only capture). In the dashboard report window, click "Attach post image" to include the visual.</div>`);
+ return `<!doctype html><html><head><meta charset="utf-8"><title>${rid} — Evidence report</title></head>
+<body style="font-family:Segoe UI,Arial,sans-serif;color:#1f2933;max-width:820px;margin:24px auto;padding:0 20px;line-height:1.55">
+<div style="background:${H};color:#fff;padding:16px 20px;border-radius:10px;display:flex;align-items:center;gap:14px">
+ <div style="font-size:26px;font-weight:800;letter-spacing:1px">GIPEC <span style="color:#5CD0F2">AI&sup2;</span></div>
+ <div style="border-left:1px solid rgba(255,255,255,.3);padding-left:14px">
+  <div style="font-weight:700;font-size:16px">Platform Takedown — Evidence Report</div>
+  <div style="font-size:12px;opacity:.85">${rid} · Prepared ${new Date().toISOString().slice(0,16).replace('T',' ')} UTC · Analyst: Strategic (human-reviewed)</div></div></div>
+<p style="background:#e9f7ef;border:1px solid #b7e4c7;color:#1b5e33;padding:9px 13px;border-radius:6px;font-weight:600">STATUS: HUMAN-APPROVED — ready to submit. Project Spear does not auto-submit; a person files this with the platform.</p>
+<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">1 · The flagged content</h2>
+${img}
+<table style="width:100%;font-size:14px;margin-top:10px;border-collapse:collapse">
+ <tr><td style="padding:3px 8px;color:#6b7785;width:150px">Platform</td><td style="padding:3px 8px"><b>${it.platform}</b></td></tr>
+ <tr><td style="padding:3px 8px;color:#6b7785">Poster / account</td><td style="padding:3px 8px">${it.poster}</td></tr>
+ <tr><td style="padding:3px 8px;color:#6b7785">Source</td><td style="padding:3px 8px"><a href="${src}">${src}</a></td></tr>
+ <tr><td style="padding:3px 8px;color:#6b7785">Captured</td><td style="padding:3px 8px">${it.captured}</td></tr>
+ ${it.dhash?`<tr><td style="padding:3px 8px;color:#6b7785">Media fingerprint</td><td style="padding:3px 8px"><code>${it.dhash}</code></td></tr>`:''}</table>
+<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">2 · What this image shows</h2>
+<p>${evDescShows(it)}</p>
+<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">3 · What it means &amp; why it violates policy</h2>
+<p>${evDescMeans(it)}</p>
+${hits.length?`<ul>${hits.map(h=>`<li><b>${h.term}</b> — ${h.meaning}${h.context_required?' <i>(context-dependent)</i>':''}</li>`).join('')}</ul>`:''}
+<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">4 · Requested action</h2>
+<p>Policy clause: <b>${pm.clause}</b>. In-product report reason: "${pm.reason}". Requested action: <b>REMOVE content</b>${it.tier==='CRITICAL'?' — priority (15-min SLA)':''}.${cs?' <b>Child-safety: route to NCMEC/PhotoDNA — do not attach media.</b>':''}</p>
+<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">5 · Chain of custody</h2>
+<div style="font-size:12px;color:#556">${(audit.filter(a=>a.id===it.id).map(a=>`${a.t} · ${a.who} · ${a.action} — ${a.detail}`).join('<br>'))||'(see audit log)'}</div>
+<p style="margin-top:20px;font-size:12px;color:#889;border-top:1px solid #e1e7ee;padding-top:10px">Generated by GIPEC AI&sup2; · Project Spear (patent pending). Predictions are leads; this report reflects a human analyst decision. To send to the platform: open this file, then File → Print → Save as PDF.</p>
+</body></html>`;}
+function downloadEvidenceHTML(){const it=items.find(i=>i.id===selId);if(!it)return;const rid='SPEAR-'+String(it.id).padStart(5,'0');dl(rid+'_evidence_report.html',buildEvidenceHTML(it),'text/html');toast('Evidence report (image + description) downloaded — open it, then Print → Save as PDF')}
+function attachEvidenceImage(){const it=items.find(i=>i.id===selId);if(!it)return;
+ const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+ inp.onchange=async()=>{const f=inp.files&&inp.files[0];if(!f)return;
+  const du=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)});
+  it.thumb=du;toast('Image attached — reading text (OCR)…');
+  try{const im=await loadImg(du);it.w=im.naturalWidth;it.h=im.naturalHeight;it.dhash=dHash(im);}catch(e){}
+  try{const t=await ocrImage(du);if(t&&!(it.ocr||'').includes(t.slice(0,20)))it.ocr=(it.ocr?it.ocr+' ':'')+t;}catch(e){}
+  log(it,'evidence image attached','post image added to the item for the takedown report');
+  render();openReport();toast('Image + description added to the report');};
+ inp.click();}
 function openReport(){const it=items.find(i=>i.id===selId);if(!it)return;const rep=buildReport(it);
- let m=document.getElementById('repModal');if(!m){m=document.createElement('div');m.id='repModal';m.className='modal';m.innerHTML='<div class="modalbox"><div class="row" style="justify-content:space-between"><b>Platform takedown report</b><span><button class="btn" id="repDl" style="background:var(--cyan);color:#062230">⬇ Download report (.md)</button> <button class="btn sec" id="repDlJson">⬇ .json</button> <button class="btn sec" id="repCopy">Copy</button> <button class="btn mute" id="repClose">Close</button></span></div><pre id="repText"></pre><div class="note">Human-approved report packet — download and submit to the platform (Meta, etc.), or the platform pulls it via API. Nothing is auto-submitted. For child-safety items media is never attached; route to NCMEC.</div></div>';document.body.appendChild(m);
-   m.querySelector('#repClose').onclick=()=>m.style.display='none';m.querySelector('#repCopy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('repText').textContent);toast('Report copied')};
-   m.querySelector('#repDl').onclick=downloadReportMd;m.querySelector('#repDlJson').onclick=downloadReportJson;}
+ let m=document.getElementById('repModal');
+ if(!m){m=document.createElement('div');m.id='repModal';m.className='modal';
+  m.innerHTML='<div class="modalbox"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>Platform takedown report</b><span>'
+   +'<button class="btn" id="repDlHtml" style="background:#2F855A;border-color:#2F855A;color:#fff">⬇ Evidence report (image + description)</button> '
+   +'<button class="btn sec" id="repAttach">📎 Attach post image</button> '
+   +'<button class="btn sec" id="repDl">⬇ .md</button> <button class="btn sec" id="repDlJson">⬇ .json</button> '
+   +'<button class="btn sec" id="repCopy">Copy</button> <button class="btn mute" id="repClose">Close</button></span></div>'
+   +'<div id="repPreview"></div>'
+   +'<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600;color:#152A4E">Show full text report (.md)</summary><pre id="repText"></pre></details>'
+   +'<div class="note">The <b>Evidence report</b> embeds the image and the written description of what it shows and what it means — download it and File → Print → Save as PDF to send to the platform. For child-safety items media is never attached; route to NCMEC.</div></div>';
+  document.body.appendChild(m);
+  m.querySelector('#repClose').onclick=()=>m.style.display='none';
+  m.querySelector('#repCopy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('repText').textContent);toast('Report copied')};
+  m.querySelector('#repDl').onclick=downloadReportMd;m.querySelector('#repDlJson').onclick=downloadReportJson;
+  m.querySelector('#repDlHtml').onclick=downloadEvidenceHTML;m.querySelector('#repAttach').onclick=attachEvidenceImage;}
+ const cs=it.category==='child_safety';
+ const prev=cs?`<div class="evnotice">Child-safety item — media withheld. Route to NCMEC / PhotoDNA.</div>`
+  :(it.thumb?`<img src="${it.thumb}" class="evimg" alt="flagged content">`
+   :`<div class="evnoimg">No image attached to this item yet. Click <b>📎 Attach post image</b> above to include the visual in the report.</div>`);
+ m.querySelector('#repPreview').innerHTML=`${prev}<div class="evsec"><h4>What this image shows</h4><p>${evDescShows(it)}</p></div><div class="evsec"><h4>What it means &amp; why it violates policy</h4><p>${evDescMeans(it)}</p></div>`;
  document.getElementById('repText').textContent=rep;m.style.display='flex'}
 // ---------- batch export (compile many incidents at once — the throughput accelerator) ----------
 function queueFilterPredicate(){const q=(document.getElementById('q').value||'').toLowerCase(),ft=fTier.value,fc=fCat.value,fp=fPlat.value,fs=fStatus.value;
