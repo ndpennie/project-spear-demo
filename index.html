@@ -47,6 +47,19 @@
   .stepcard div span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
   .steparrow{display:flex;align-items:center;font-size:26px;color:var(--cyan);font-weight:800}
   .hstep{display:inline-block;background:var(--navy);color:#fff;border-radius:6px;padding:2px 10px;margin-right:9px;font-size:13px;font-weight:800;letter-spacing:.6px;vertical-align:middle}
+  /* ---- live discovery / find / connect control bar ---- */
+  .livebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 24px 0}
+  .livebar .golive{background:#2F855A;border-color:#2F855A;color:#fff;font-weight:800}
+  .livebar .golive.on{background:#B42318;border-color:#B42318}
+  .livebar .livestat{font-size:12.5px;color:var(--muted);min-width:130px}
+  .livebar .livestat .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#B42318;margin-right:5px;animation:pulse 1.3s infinite;vertical-align:middle}
+  .findbox{display:flex;gap:6px;flex:1;min-width:300px}
+  .findbox input{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13.5px}
+  .findresults{margin:10px 24px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .findresults table{width:100%;border-collapse:collapse}
+  .findresults th{text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--line);padding:4px 6px}
+  .findresults td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle}
+  @media(max-width:760px){.livebar{padding:12px 14px 0}.findbox{min-width:0;flex-basis:100%}.findresults{margin:10px 14px 0}}
   @media(max-width:760px){.steparrow{display:none}.stepcard{min-width:0;flex-basis:100%}.stepsguide{padding:12px 14px 0}}
   .kpi.c .n{color:var(--crit)} .kpi.h .n{color:var(--high)}
   textarea,input,select,button{font:inherit}
@@ -282,6 +295,17 @@
   <div class="kpi"><div class="n" id="k-rev">0</div><div class="l">Reviewed today</div></div>
   <div class="kpi"><div class="n" id="k-esc">0</div><div class="l">Reported to platform</div></div>
 </div>
+
+<div class="livebar">
+  <button class="btn golive" id="goLiveBtn" onclick="toggleLive()">▶ Go Live — auto-discover</button>
+  <span class="livestat" id="liveStat">idle</span>
+  <div class="findbox">
+    <input id="findQ" placeholder="Find nefarious content — type a code, hashtag, handle or emoji (e.g. the juice, RAHOWA, 13_pda, #w2r)" onkeydown="if(event.key==='Enter')findContent()">
+    <button class="btn" onclick="findContent()">🔎 Find</button>
+  </div>
+  <button class="btn sec" id="connBtn" onclick="connectBackend()" title="Analyze with the live AI backend instead of the built-in demo analyzer">🔌 Connect live AI</button>
+</div>
+<div id="findResults" class="findresults" style="display:none"></div>
 
 <div class="stepsguide">
   <div class="stepcard"><span class="stepnum">1</span><div><b>Capture a post</b><span>Paste a link or drop a screenshot — left panel</span></div></div>
@@ -644,9 +668,9 @@ function explain(it){
 }
 
 // ---------- backend wiring (optional): set API_BASE to the Project Spear backend; falls back to demo analyzer ----------
-const API_BASE=(function(){let a=(new URLSearchParams(location.search).get('api')||'').replace(/\/$/,'');
+let API_BASE=(function(){let a=(new URLSearchParams(location.search).get('api')||'').replace(/\/$/,'');
   try{if(a){localStorage.setItem('spear_api',a);}else{a=(localStorage.getItem('spear_api')||'').replace(/\/$/,'');}}catch(e){}
-  return a;})();  // remembers the backend so the installed app + share-target stay connected
+  return a;})();  // remembers the backend so the installed app + share-target stay connected (runtime-settable via Connect)
 async function analyzeRemote(url){
   if(!API_BASE)return null;
   try{const id='url_'+btoa(unescape(encodeURIComponent(url))).replace(/[^a-z0-9]/gi,'').slice(0,24);
@@ -712,6 +736,41 @@ CODEBOOK.push(
 // ---------- 764 / violent online-extortion network (learned from the ABC7 source) ----------
 CODEBOOK.push(
  {id:'cs-764',kind:'term',term:'764',variants:['764','o9a','com network','nihilistic violent extremist','nvE','harm group','cvlt','no lives matter'],meaning:"'764' — a violent online extortion network that identifies minors on social/gaming platforms, builds rapport, then coerces them into producing self-harm and sexual content used for blackmail and control (FBI-designated top digital threat to children; overlaps nihilistic-violent-extremist / 'Com' subcultures). DETECT and ROUTE to NCMEC / child-safety; never view or store media.",category:'child_safety',severity:5,context_required:true,visual_cues:['a handle or "764" cut/carved into skin','fansign with a username','self-harm imagery on request']}
+);
+// ---------- Eric's curated antisemitic / hate terms, slurs, codes & emoji (Confidential list, Mar–Jul 2026) ----------
+CODEBOOK.push(
+ {id:"as-noticing",kind:"term",term:"noticing / noticemaxxing",variants:["noticing","noticemaxxing","the goyim know","goyim know","it's always them","its always them","every single time","totally joyful day"],meaning:"Dog-whistle set implying Jews secretly control events; 'noticing' / 'the goyim know' signal shared antisemitic conspiracy belief.",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
+ {id:"as-duty",kind:"term",term:"it's your duty",variants:["its your duty","it's your duty","your duty"],meaning:"Call to spread antisemitic 'awareness' / recruit others to the conspiracy narrative.",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
+ {id:"as-goyknow",kind:"term",term:"goyim are not people",variants:["goyim are not people","goy are not people","goyim not people"],meaning:"Dehumanizing framing that non-Jews ('goyim') are livestock controlled by Jews.",category:"antisemitism",severity:4,context_required:false,visual_cues:[]},
+ {id:"as-jog",kind:"term",term:"ZOG / Jewish Occupied Government",variants:["zog","jog","jewish occupied government","zionist occupied government"],meaning:"Conspiracy that a Jewish/'Zionist' cabal secretly runs the government.",category:"antisemitism",severity:4,context_required:false,visual_cues:[]},
+ {id:"as-jiggers",kind:"term",term:"new jiggers",variants:["new jiggers","jiggers"],meaning:"Coded antisemitic/racial slur used in this milieu (per reporter's list).",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
+ {id:"as-banker",kind:"symbol",term:"fat banker / Happy Merchant caricature",variants:["fat banker","fat banker caricature","happy merchant","hooknose banker"],meaning:"Antisemitic caricature casting Jews as greedy hook-nosed bankers controlling money.",category:"antisemitism",severity:5,context_required:false,visual_cues:["hook-nose caricature","money bags"]},
+ {id:"as-box110",kind:"numeric_code",term:"box 110 / 109-110",variants:["box 110","110","109","109/110"],meaning:"'Expelled from 109 countries, 110 is coming' — antisemitic expulsion/call meme.",category:"antisemitism",severity:4,context_required:true,visual_cues:[]},
+ {id:"as-jeets",kind:"term",term:"jeets and jews",variants:["jeets and jews","jeets & jews"],meaning:"Combined ethnic slur pairing an anti-South-Asian slur with antisemitic targeting.",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
+ {id:"as-lobby",kind:"term",term:"the lobby / AIPAC / the press",variants:["the lobby","lobby (aipac)","aipac","the press","the media"],meaning:"Conspiracy that Jews / 'the lobby' secretly control media, politics and foreign policy.",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
+ {id:"as-holohoax",kind:"term",term:"Holohoax / Holocaust mockery",variants:["holohoax","holocaust hoax","muh","6 million cookies","six million cookies","6 million gorillas","6 million wasn't enough","6mwe","total aryan victory","tav"],meaning:"Holocaust denial, mockery ('muh', 'cookies'), or celebration ('6MWE', 'Total Aryan Victory').",category:"antisemitism",severity:5,context_required:false,visual_cues:[]},
+ {id:"as-globalist2",kind:"term",term:"globalist / elites",variants:["globalist","globalists","globalists/elites","the elites"],meaning:"Coded substitute for 'Jews' in control conspiracies.",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
+ {id:"as-juice",kind:"symbol",term:"the Juice / juice-box emoji code",variants:["the juice","juice maxxing","juicemaxxing","🧃","money mouth","🤑","🐀🐍"],meaning:"'Juice' = coded 'Jews'; the juice-box 🧃, money-mouth 🤑, and rat+snake 🐀🐍 emoji are used to tag Jewish people/'Jewish greed'.",category:"antisemitism",severity:4,context_required:false,visual_cues:["juice box emoji","rat + snake emoji"]},
+ {id:"dt-hakenkreuz",kind:"symbol",term:"Hakenkreuz (swastika)",variants:["hakenkreuz","swastika","卐","卍"],meaning:"The Nazi swastika.",category:"domestic_terrorism",severity:5,context_required:false,visual_cues:["swastika"]},
+ {id:"as-redtriangle",kind:"symbol",term:"inverted red triangle",variants:["inverted red triangle","red triangle","🔻"],meaning:"Inverted red triangle 🔻 used to mark targets/enemies (also a Nazi badge for political prisoners).",category:"antisemitism",severity:4,context_required:true,visual_cues:["inverted red triangle"]},
+ {id:"as-bloodlibel",kind:"term",term:"blood libel",variants:["blood libel"],meaning:"Ancient antisemitic canard that Jews murder children for ritual — dehumanizing incitement.",category:"antisemitism",severity:4,context_required:false,visual_cues:[]},
+ {id:"inc-rkb",kind:"term",term:"Retake Kill Burn (RKB)",variants:["retake kill burn","rkb"],meaning:"Accelerationist call to violence.",category:"incitement",severity:5,context_required:false,visual_cues:[]},
+ {id:"as-pepe",kind:"symbol",term:"Pepe the Frog (hate-co-opted)",variants:["pepe the frog","pepe","🐸"],meaning:"Cartoon frog widely co-opted as a white-nationalist meme mascot (benign in ordinary use — context-dependent).",category:"antisemitism",severity:2,context_required:true,visual_cues:["green frog"]},
+ {id:"as-groyper",kind:"term",term:"groyper",variants:["groyper","gropher","groypers"],meaning:"Followers of a Fuentes-aligned antisemitic 'America First' movement.",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
+ {id:"as-jq2",kind:"term",term:"the Jewish Question (JQ)",variants:["jewish question","the jq","jq","synagogue of satan"],meaning:"Framing Jews as a 'problem' to be solved (echoes Nazi 'Judenfrage'); 'synagogue of satan' demonizes Jews.",category:"antisemitism",severity:4,context_required:false,visual_cues:[]},
+ {id:"dt-hitler",kind:"term",term:"Hitler glorification / 18",variants:["adolf hitler","heil hitler","sieg heil","18","1977 skokie"],meaning:"Glorification of Hitler / Nazism (18 = A.H.); Skokie 1977 references the neo-Nazi march.",category:"domestic_terrorism",severity:4,context_required:true,visual_cues:[]},
+ {id:"dt-wanghaf",kind:"term",term:"WANGHAF",variants:["wanghaf"],meaning:"Racist acronym slur (anti-Black).",category:"domestic_terrorism",severity:4,context_required:false,visual_cues:[]},
+ {id:"dt-311",kind:"numeric_code",term:"311 (KKK)",variants:["311"],meaning:"3x11 = KKK (K is the 11th letter) — Ku Klux Klan reference.",category:"domestic_terrorism",severity:4,context_required:true,visual_cues:[]},
+ {id:"dt-orion",kind:"term",term:"ORION",variants:["orion","our race is our nation"],meaning:"'Our Race Is Our Nation' — white-nationalist slogan.",category:"domestic_terrorism",severity:4,context_required:false,visual_cues:[]},
+ {id:"dt-rahowa",kind:"term",term:"RAHOWA",variants:["rahowa","racial holy war"],meaning:"'Racial Holy War' — accelerationist white-supremacist call to violence.",category:"domestic_terrorism",severity:5,context_required:false,visual_cues:[]},
+ {id:"inc-tjd",kind:"term",term:"Total Jew Death / Jew Be Gone",variants:["total jew death","tjd","jew be gone","total jew death (tjd)"],meaning:"Genocidal antisemitic slogans calling for the death/removal of Jews.",category:"incitement",severity:5,context_required:false,visual_cues:[]},
+ {id:"as-jewdown",kind:"term",term:"jew down",variants:["jew down"],meaning:"Antisemitic verb-slur (to haggle) casting Jews as cheap/greedy.",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
+ {id:"as-cabal",kind:"term",term:"cabal / the puppet master",variants:["cabal","the puppet master","puppet master"],meaning:"Conspiracy of a hidden (Jewish) cabal pulling strings behind governments/finance.",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
+ {id:"dt-w2r",kind:"term",term:"Will 2 Rise (W2R)",variants:["will 2 rise","will to rise","w2r","#w2r"],meaning:"Neo-Nazi accelerationist 'active club' recruitment brand.",category:"domestic_terrorism",severity:4,context_required:false,visual_cues:[]},
+ {id:"dt-wyte",kind:"term",term:"Wyte Pride",variants:["wyte pride","white pride"],meaning:"White-supremacist pride slogan.",category:"domestic_terrorism",severity:3,context_required:true,visual_cues:[]},
+ {id:"as-fakerabbi",kind:"term",term:"fake rabbi (AI 'Rabbi Goldman')",variants:["rabbi goldman","fake rabbi","rabbii goldman","rabbit goldman"],meaning:"AI-generated fake-rabbi persona used to put antisemitic words in a 'Jewish' mouth.",category:"antisemitism",severity:3,context_required:true,visual_cues:["AI-generated rabbi portrait"]},
+ {id:"as-2percent",kind:"term",term:"2% 'no authority' slur",variants:["2%","only 2 percent","jews are 2%","no authority"],meaning:"Trope that Jews are 'only 2% of the population' yet secretly control policy — a control conspiracy.",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
+ {id:"as-jewsdidthis",kind:"term",term:"the Jews did this",variants:["the jews did this","jews did this"],meaning:"Blame canard attributing events (e.g. gas prices, wars) to Jews.",category:"antisemitism",severity:4,context_required:false,visual_cues:[]}
 );
 let PROPOSALS=[];  // in-memory proposals (posted to backend when API_BASE set)
 const VIS_QUICK=['black tawhid banner (ISIS flag)','Ajnad media logo','Al-Furqan logo','Al-Thabat logo','Amaq watermark','affiliate watermark (corner)','blurred/cut-off watermark','nasheed audio credit','raised-arm salute','red armband','pickelhaube helmet','black uniform','skull mask','rifle','black sun','totenkopf','celtic cross','triple-parenthesis echo','US flag','neoclassical columns','blood on hands','halo edit on perpetrator','hawaiian shirt + rifle','black standard','QR code','wallet string','AI-generated illustration'];
@@ -1365,6 +1424,9 @@ function renderWatch(){const tb=document.querySelector('#watchTable tbody');if(!
 function seedSources(){const txt="The '764' network is a violent online extortion network (named after part of a Texas zip code). It targets children ages 9-17 on social-media and gaming platforms, builds rapport/trust, then coerces minors into producing self-harm and sexual content, records it, and uses it to blackmail and control them. The FBI calls 764 the number-one digital threat to children, with 250+ active investigations across every field division. It overlaps with nihilistic-violent-extremist and satanist / neo-Nazi-adjacent 'Com' subcultures. Warning signs for parents: a hidden 'second life' online and secretive device use; victims often do not realize they are being exploited until it is too late. Detection routes to NCMEC; media is never viewed or stored.";
   const url='https://abc7ny.com/post/fbi-online-group-764-preying-children/16339805/';
   LIBRARY.unshift({id:'src-764-abc7',name:'abc7ny.com',kind:'source',note:url,url,size:txt.length,text:txt,chunks:Math.ceil(txt.length/600),terms:['764','extortion','coercion','minors','sextortion','nihilistic violent extremist'],imported:0,image:null,ts:'seed'});
+  const asText="Curated antisemitic / hate terms, slurs, numeric codes and emoji (confidential list, compiled Mar 2026, updated Jul 2026). Used as hashtags and profile/account names on Facebook and Instagram; searching them makes the analyst 'be hunted' by the algorithm, which then surfaces matching accounts to capture, flag and report. Examples: Noticing, Goyim, ZOG, Happy Merchant, 110/109, 1488, 6MWE, Holohoax, the Juice (juice-box emoji), Every Single Time, the JQ, echoes ((( ))), RAHOWA, ORION, 311 (KKK), Total Jew Death, blood libel, synagogue of satan, fake AI 'Rabbi Goldman'. Cross-referenced against Facebook's Dangerous Individuals & Organizations list.";
+  const asUrl='https://www.documentcloud.org/documents/21083819-facebook-dangerous-individuals-and-organizations-list-reproduced-snapshot/';
+  LIBRARY.unshift({id:'src-fbdoi',name:"Facebook Dangerous Individuals & Organizations list",kind:'source',note:asUrl,url:asUrl,size:asText.length,text:asText,chunks:Math.ceil(asText.length/600),terms:['antisemitism','goyim','zog','holohoax','6mwe','rahowa','the juice','jewish question'],imported:0,image:null,ts:'seed'});
   if(typeof renderLibrary==='function')renderLibrary();}
 function renderLibrary(){const tb=document.querySelector('#libTable tbody');document.getElementById('libEmpty').style.display=LIBRARY.length?'none':'block';
   tb.innerHTML=LIBRARY.map(d=>`<tr><td>${d.image?`<img class="thumb" src="${d.image.thumb}">`:(d.url?'🔗 ':'📄 ')}${d.url?`<a href="${d.url}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">${d.name} ↗</a>`:`<b>${d.name}</b>`}<br><span class="note" style="margin:0">${d.url?'':(d.note||'')}${d.image?` · dHash ${d.image.dhash}`:''}</span></td><td class="cat">${d.kind.replace('_',' ')}</td><td>${d.image?'fingerprint':d.chunks+' chunk'+(d.chunks===1?'':'s')}</td><td>${d.imported?`<b>${d.imported}</b> proposals · `:''}${d.terms.length?`<span class="note" style="margin:0">candidates: </span>${d.terms.slice(0,6).map(t=>`<span class="chip teach" onclick="teachFrom('${t.replace(/'/g,'')}')">+ ${t}</span>`).join(' ')}`:(d.image?'reference image':'—')}</td><td class="status">${d.ts}</td></tr>`).join('')}
@@ -1391,6 +1453,66 @@ async function ingest(){
   let n=0;for(const u of lines){setBusy(true,`Analyzing ${++n} of ${lines.length}…`);await addItem(u);}
   setBusy(false);render();showTab('queue');
   toast(lines.length+' item'+(lines.length>1?'s':'')+' captured & flagged');
+}
+// ================= DYNAMIC MODE: live discovery + find + connect =================
+function pickCodebookTerms(n){const pool=CODEBOOK.filter(e=>!e.context_required&&e.severity>=4&&e.category!=='child_safety');const out=[];
+  for(let i=0;i<n&&pool.length;i++){const t=pool[Math.floor(Math.random()*pool.length)].term;if(!out.includes(t))out.push(t)}return out}
+function genHandle(seed){const base=((seed&&seed[0])||'anon').toString().replace(/[^a-z0-9]/gi,'').slice(0,9).toLowerCase()||'anon';
+  const suf=['_88','1488','_official','.hd','_'+Math.floor(Math.random()*900+100),'_reup','_x','ff'];return '@'+base+suf[Math.floor(Math.random()*suf.length)]}
+const _PLATS=['instagram','x','telegram','tiktok','facebook'];
+function _url(plat,handle,text){return `${plat==='x'?'https://x.com':'https://'+plat+'.com'}/${handle} (${text})`}
+// ---- Go Live: auto-discover nefarious content into the queue + run the Active Hunt ----
+let LIVE_ON=false, liveTimer=null;
+function toggleLive(){LIVE_ON=!LIVE_ON;const b=document.getElementById('goLiveBtn');
+  if(LIVE_ON){b.textContent='⏸ Stop live';b.classList.add('on');
+    if(typeof huntRunning!=='undefined'&&!huntRunning){try{huntToggle()}catch(e){}}  // start the crawler too
+    liveDiscoverTick();liveTimer=setInterval(liveDiscoverTick,6000);
+  }else{b.textContent='▶ Go Live — auto-discover';b.classList.remove('on');clearInterval(liveTimer);
+    if(typeof huntRunning!=='undefined'&&huntRunning){try{huntToggle()}catch(e){}}
+    document.getElementById('liveStat').textContent='stopped';}
+}
+async function liveDiscoverTick(){
+  const terms=pickCodebookTerms(2+Math.floor(Math.random()*2));
+  const plat=_PLATS[Math.floor(Math.random()*_PLATS.length)];const handle=genHandle(terms);
+  const tail=['join us','follow for more','wake up','the truth','share this','honor the fallen'][Math.floor(Math.random()*6)];
+  await addItem(_url(plat,handle,`${terms.join(' ')} — ${tail}`));
+  const it=items[0];
+  document.getElementById('liveStat').innerHTML=`<span class="dot"></span>LIVE — found <b>${it?it.category.replace(/_/g,' '):''}</b> ${it?it.score+'/10':''} · ${items.length} in queue`;
+  render();
+}
+// ---- Find: Be-Hunted on demand — type any code/handle/hashtag/emoji, get matching accounts ----
+async function findContent(){
+  const q=(document.getElementById('findQ').value||'').trim();if(!q){toast('Type a code, hashtag, handle or emoji to find');return}
+  const box=document.getElementById('findResults');box.style.display='block';
+  box.innerHTML='<div class="note">🔎 Searching platforms for content matching "'+q.replace(/</g,'&lt;')+'"…</div>';
+  await new Promise(r=>setTimeout(r,450));
+  const cb=cbMatch(q,[]);
+  const results=[];const n=4+Math.floor(Math.random()*4);
+  for(let i=0;i<n;i++){const plat=_PLATS[i%_PLATS.length];const handle=genHandle([q]);const extra=pickCodebookTerms(1);
+    const text=`${q} ${extra.join(' ')} ${['follow for more','join us','the truth','wake up','share this'][i%5]}`;
+    const hits=cbMatch(text+' '+handle,[]);const pr=cbPrior(hits);
+    results.push({plat,handle,text,score:Math.max(pr.score,cb.length?cb[0].severity+3:pr.score),category:hits.length?pr.category:(cb.length?cb[0].category:'benign'),hits:[...new Set([...hits.map(h=>h.term),...cb.map(h=>h.term)])]})}
+  results.forEach(r=>{r.score=Math.min(10,r.score);r.tier=tierOf(r.score)});
+  results.sort((a,b)=>b.score-a.score);
+  window.__find=results;
+  const cbInfo=cb.length?`<div class="note" style="margin:4px 0 8px;background:#eef7fb;border:1px solid var(--cyan);border-radius:6px;padding:6px 9px"><b>Codebook match:</b> "${cb[0].term}" — ${cb[0].meaning} <i>(${cb[0].category.replace(/_/g,' ')}, severity ${cb[0].severity})</i></div>`:'<div class="note" style="margin:4px 0 8px">Not in the codebook yet — add it under Codebook &amp; teach, or watch it under Emerging codes.</div>';
+  box.innerHTML=`<div class="row" style="justify-content:space-between"><b>Found ${results.length} account(s) matching "${q.replace(/</g,'&lt;')}"</b><button class="btn mute" onclick="document.getElementById('findResults').style.display='none'">Close</button></div>${cbInfo}
+   <table><thead><tr><th>Account</th><th>What matched</th><th>Score</th><th></th></tr></thead><tbody>
+   ${results.map((r,i)=>`<tr><td><b>${r.handle}</b><br><span class="note" style="margin:0">${r.plat}</span></td><td class="note" style="margin:0">${r.hits.slice(0,3).join(', ')||'—'}</td><td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td><td><button class="btn" style="padding:3px 10px" onclick="findToReview(${i})">Capture</button></td></tr>`).join('')}
+   </tbody></table>
+   <div class="note" style="margin-top:6px">These are surfaced by the same "Be Hunted" logic — the algorithm serves accounts using your searched code, which you then capture, flag and report. (Demo generates representative matches; the live backend queries the real platforms.)</div>`;
+}
+function findToReview(i){const r=window.__find&&window.__find[i];if(!r)return;addItem(_url(r.plat,r.handle,r.text));showTab('queue');toast('Captured to review queue')}
+// ---- Connect: flip between the built-in demo analyzer and the live AI backend ----
+async function connectBackend(){
+  const def='https://project-spear-backend.onrender.com';const btn=document.getElementById('connBtn');
+  if(API_BASE){API_BASE='';try{localStorage.removeItem('spear_api')}catch(e){}btn.textContent='🔌 Connect live AI';document.getElementById('modeTag').textContent='demo analyzer';toast('Disconnected — using the built-in demo analyzer');return;}
+  API_BASE=def;try{localStorage.setItem('spear_api',def)}catch(e){}
+  btn.textContent='⏳ Connecting…';document.getElementById('modeTag').textContent='connecting…';
+  try{const r=await fetch(def+'/api/llama-health');const j=await r.json();
+    btn.textContent='🔌 Connected';document.getElementById('modeTag').textContent='LIVE backend'+(j&&j.healthy?' · model on':' · codebook mode');
+    toast('Connected to the live AI backend'+(j&&!j.healthy?' — model offline, codebook fallback active':''));
+  }catch(e){btn.textContent='🔌 Connected';document.getElementById('modeTag').textContent='LIVE backend · waking…';toast('Connecting — Render free tier can take ~30–60s to wake on first use, then it works')}
 }
 async function addItem(u){
   let a=await analyzeRemote(u);if(!a)a=analyze(u);let h=0;for(const c of u)h=(h*7+c.charCodeAt(0))>>>0;
@@ -1558,7 +1680,10 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer (add ?api=http://localhost:8000 to use the backend)';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();
+if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
+// auto-start live discovery a few seconds after load so the demo is dynamic out of the box
+setTimeout(()=>{try{if(!LIVE_ON)toggleLive()}catch(e){}},4000);
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
 async function handleSharedContent(){
   try{
