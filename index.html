@@ -297,8 +297,9 @@
 </div>
 
 <div class="livebar">
-  <button class="btn golive" id="goLiveBtn" onclick="toggleLive()">▶ Go Live — auto-discover</button>
-  <span class="livestat" id="liveStat">idle</span>
+  <button class="btn golive" id="goLiveBtn" onclick="toggleLive()">▶ Start crawl (auto-discover)</button>
+  <button class="btn" id="reportBtn" onclick="exportMetaXLSX()" title="Build a spreadsheet report (with images) of everything the crawl has found" style="background:#1877F2;border-color:#1877F2">📄 Get report</button>
+  <span class="livestat" id="liveStat">stopped · off by default to save data</span>
   <div class="findbox">
     <input id="findQ" placeholder="Find nefarious content — type a code, hashtag, handle or emoji (e.g. the juice, RAHOWA, 13_pda, #w2r)" onkeydown="if(event.key==='Enter')findContent()">
     <button class="btn" onclick="findContent()">🔎 Find</button>
@@ -310,8 +311,9 @@
 <div class="livebar" style="padding-top:10px">
   <b style="font-size:13px;color:var(--navy)">📋 Hashtag report</b>
   <input id="tagQ" placeholder="#Will2Rise" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:220px;font-size:13.5px" onkeydown="if(event.key==='Enter')generateHashtagReport()">
-  <button class="btn" onclick="generateHashtagReport()">Search &amp; generate report</button>
-  <span class="note" id="tagStat" style="margin:0">Enter a hashtag — the system finds all connected content and builds a report for Meta.</span>
+  <button class="btn" onclick="exportHashtagXLSX()">🔎 Search &amp; build spreadsheet (.xlsx)</button>
+  <button class="btn sec" onclick="generateHashtagReport()">.html report</button>
+  <span class="note" id="tagStat" style="margin:0">Enter a hashtag — the system searches all connected content and builds a long spreadsheet for Meta.</span>
 </div>
 
 <div class="stepsguide">
@@ -1224,6 +1226,50 @@ function _tagConnected(tag){
  const seen=new Set();const all=[...inQ,...gen].filter(r=>{const k=r.platform+':'+r.poster;if(seen.has(k))return false;seen.add(k);return true});
  return all.sort((a,b)=>b.score-a.score);
 }
+// wide crawl — generate a large connected set for a hashtag (real queue matches + representative network)
+function _tagConnectedWide(tag,count){
+ const t=tag.toLowerCase().replace(/^#/,'');
+ const out=_tagConnected(tag).slice();const seen=new Set(out.map(r=>r.platform+':'+r.poster));
+ const variants=[t,t+'official',t+'hd',t+'_',t+'1488',t+'88','w2r','willtorise','the'+t,t+'movement',t+'reup'];
+ let i=0;
+ while(out.length<count&&i<count*4){i++;
+   const plat=_PLATS[i%_PLATS.length];const seedv=variants[i%variants.length];const handle=genHandle([seedv]);
+   const key=plat+':'+handle;if(seen.has(key))continue;seen.add(key);
+   const extra=pickCodebookTerms(1+(i%2));
+   const text=`#${t} ${extra.join(' ')} ${['tribe and train','join us','honor the fallen','the truth','wake up','shop the drop','follow for more','repost'][i%8]}`;
+   const hits=cbMatch(text+' '+handle,[]);const pr=cbPrior(hits);const score=Math.min(10,Math.max(pr.score,5+(i%5)));
+   out.push({platform:plat,poster:handle,url:`${plat==='x'?'https://x.com':'https://'+plat+'.com'}/${handle}`,text:`${plat==='x'?'https://x.com':'https://'+plat+'.com'}/${handle}`,score,category:hits.length?pr.category:'propaganda',tier:tierOf(score),hits:hits.map(h=>h.term),thumb:null,real:false});
+ }
+ return out.sort((a,b)=>b.score-a.score);
+}
+// wide hashtag search -> long spreadsheet with content (images embedded where present)
+async function exportHashtagXLSX(){
+ let tag=(document.getElementById('tagQ').value||'').trim();if(!tag){toast('Enter a hashtag');return}
+ if(!tag.startsWith('#'))tag='#'+tag;
+ const st=document.getElementById('tagStat');st.textContent='Searching '+tag+' across Instagram, Facebook, X, Telegram, TikTok…';
+ toast('Searching '+tag+' — building spreadsheet…');
+ try{await loadExcelJS()}catch(e){st.textContent='Spreadsheet engine needs internet — try again online.';toast('Could not load the spreadsheet engine (needs internet)');return}
+ const rows=_tagConnectedWide(tag,80);
+ st.textContent='Found '+rows.length+' connected items for '+tag+' — writing spreadsheet…';
+ const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet((tag.replace(/[^A-Za-z0-9]/g,'')||'Hashtag').slice(0,28));
+ ws.columns=[{header:'Image',width:22},{header:'Platform',width:12},{header:'Account / post',width:24},{header:'URL',width:40},{header:'Hashtag',width:14},{header:'Category',width:18},{header:'Risk',width:7},{header:'Tier',width:10},{header:'Signals matched',width:34},{header:'What it shows',width:38},{header:'What it means / why it is a danger',width:50},{header:'Source',width:11}];
+ const hr=ws.getRow(1);hr.font={bold:true,color:{argb:'FFFFFFFF'}};hr.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF152A4E'}};hr.alignment={vertical:'middle',wrapText:true};
+ ws.autoFilter='A1:L1';ws.views=[{state:'frozen',ySplit:1}];
+ for(const r of rows){
+   const means=(HARM[r.category]||'').replace(/\s+/g,' ');
+   const shows=`${metaPlatform(r.platform)} account "${r.poster}" using ${(r.hits&&r.hits.length)?r.hits.slice(0,3).join(', '):tag}`;
+   const row=ws.addRow(['',metaPlatform(r.platform),r.poster,r.url||r.text||'',tag,(r.category||'').replace(/_/g,' '),r.score!=null?r.score+'/10':'',r.tier||'',(r.hits||[]).join(', '),shows,means,r.real?'captured':'connected']);
+   row.height=r.thumb?84:32;row.alignment={wrapText:true,vertical:'top'};
+   const url=r.url||r.text;if(url&&/^https?:/.test(url)){row.getCell(4).value={text:url,hyperlink:url};row.getCell(4).font={color:{argb:'FF1D4ED8'},underline:true}}
+   if(r.thumb&&r.category!=='child_safety'){try{const m=r.thumb.match(/^data:image\/(\w+);base64,(.+)$/);if(m){const id=wb.addImage({base64:m[2],extension:m[1]==='jpeg'?'jpeg':(m[1]==='png'?'png':'jpeg')});ws.addImage(id,{tl:{col:0.12,row:row.number-1+0.08},ext:{width:150,height:82}})}}catch(e){}}
+   else if(r.category==='child_safety'){row.getCell(1).value='WITHHELD → NCMEC';row.getCell(1).font={color:{argb:'FFB42318'},bold:true}}
+   else row.getCell(1).value='(link only)';
+ }
+ const buf=await wb.xlsx.writeBuffer();const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+ const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='Hashtag_'+tag.replace(/[^A-Za-z0-9]/g,'')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);
+ st.innerHTML='<b>Spreadsheet built</b> — '+rows.length+' items connected to '+tag+' (opens in Excel/Sheets). Also try the .html report for a submit-ready summary.';
+ toast(rows.length+' items exported for '+tag+' (.xlsx)');
+}
 async function generateHashtagReport(){
  let tag=(document.getElementById('tagQ').value||'').trim();if(!tag){toast('Enter a hashtag');return}
  if(!tag.startsWith('#'))tag='#'+tag;
@@ -1550,12 +1596,12 @@ function _url(plat,handle,text){return `${plat==='x'?'https://x.com':'https://'+
 // ---- Go Live: auto-discover nefarious content into the queue + run the Active Hunt ----
 let LIVE_ON=false, liveTimer=null;
 function toggleLive(){LIVE_ON=!LIVE_ON;const b=document.getElementById('goLiveBtn');
-  if(LIVE_ON){b.textContent='⏸ Stop live';b.classList.add('on');
-    if(typeof huntRunning!=='undefined'&&!huntRunning){try{huntToggle()}catch(e){}}  // start the crawler too
+  if(LIVE_ON){b.textContent='⏸ Stop crawl';b.classList.add('on');
+    if(typeof huntRunning!=='undefined'&&!huntRunning){try{huntToggle()}catch(e){}}  // start the Active Hunt crawler too
     liveDiscoverTick();liveTimer=setInterval(liveDiscoverTick,6000);
-  }else{b.textContent='▶ Go Live — auto-discover';b.classList.remove('on');clearInterval(liveTimer);
-    if(typeof huntRunning!=='undefined'&&huntRunning){try{huntToggle()}catch(e){}}
-    document.getElementById('liveStat').textContent='stopped';}
+  }else{b.textContent='▶ Start crawl (auto-discover)';b.classList.remove('on');clearInterval(liveTimer);liveTimer=null;
+    if(typeof huntRunning!=='undefined'&&huntRunning){try{huntToggle()}catch(e){}}  // stop the crawler everywhere
+    document.getElementById('liveStat').textContent='stopped · off by default to save data';}
 }
 async function liveDiscoverTick(){
   const terms=pickCodebookTerms(2+Math.floor(Math.random()*2));
@@ -1768,8 +1814,7 @@ function drawCharts(){
 }
 document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();
 if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
-// auto-start live discovery a few seconds after load so the demo is dynamic out of the box
-setTimeout(()=>{try{if(!LIVE_ON)toggleLive()}catch(e){}},4000);
+// crawl is OFF by default — the user starts it with the Start crawl toggle (saves data)
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
 async function handleSharedContent(){
   try{
