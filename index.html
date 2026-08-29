@@ -316,6 +316,14 @@
   <span class="note" id="tagStat" style="margin:0">Enter a hashtag — the system searches all connected content and builds a long spreadsheet for Meta.</span>
 </div>
 
+<div class="livebar" style="padding-top:10px">
+  <b style="font-size:13px;color:var(--navy)">👁 Follow</b>
+  <input id="followHandles" placeholder="handles to follow (comma or newline): @handle1, @handle2" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:280px;font-size:13.5px">
+  <input id="followTags" placeholder="hashtags to follow: #tag1, #tag2" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:220px;font-size:13.5px">
+  <button class="btn" onclick="followHandles()">Follow &amp; surface content</button>
+  <span class="note" id="followStat" style="margin:0">The crawl surfaces content that flows from these; only codebook matches are flagged — <b>you</b> decide what's newsworthy vs. reportable (human-in-the-loop).</span>
+</div>
+
 <div class="stepsguide">
   <div class="stepcard"><span class="stepnum">1</span><div><b>Capture a post</b><span>Paste a link or drop a screenshot — left panel</span></div></div>
   <div class="steparrow">→</div>
@@ -1679,6 +1687,24 @@ async function findHashtag(tag,box){
    `</tbody></table><div class="note" style="margin-top:6px">Every search identifies <b>new</b> accounts. <b>Build spreadsheet</b> compiles these for Meta; <b>Capture</b> sends one to the review queue.</div>`;
 }
 function reportFromFind(){if(!window.__findRows||!window.__findRows.length){toast('Nothing to report yet');return}const html=buildHashtagReportHTML(window.__findTag||'#tag',window.__findRows);dl('Network_Report_'+(window.__findTag||'tag').replace(/[^a-z0-9]/gi,'')+'_'+new Date().toISOString().slice(0,10)+'.html',html,'text/html');toast('Report generated — open it, then Print → Save as PDF')}
+// ---- FOLLOW engine: monitor the handles/hashtags the analyst enters and surface the content that flows from them
+// (conduct-based + human-in-the-loop: the account/tag itself never scores — only content matching the codebook is
+//  flagged, and the analyst decides what is newsworthy vs. reportable to Meta/other platforms.)
+function followHandles(){
+ const parse=id=>((document.getElementById(id).value||'').split(/[\n,]+/).map(x=>x.trim()).filter(Boolean));
+ const handles=parse('followHandles'),tags=parse('followTags');
+ if(!handles.length&&!tags.length){toast('Enter handles and/or hashtags to follow');return}
+ const hA=document.getElementById('hAccts'),hT=document.getElementById('hTags');
+ if(handles.length){hA.value=[...new Set([...(hA.value||'').split('\n').map(x=>x.trim()).filter(Boolean),...handles])].join('\n');
+   handles.forEach(h=>HUNTSEEDS.accounts.add((h.startsWith('@')?h:'@'+h).toLowerCase()));}
+ if(tags.length){hT.value=[...new Set([...(hT.value||'').split('\n').map(x=>x.trim()).filter(Boolean),...tags])].join('\n');
+   tags.forEach(t=>HUNTSEEDS.hashtags.add((t.startsWith('#')?t:'#'+t).toLowerCase()));}
+ document.getElementById('followStat').innerHTML=`Now following <b>${handles.length}</b> handle(s) and <b>${tags.length}</b> hashtag(s). The crawl surfaces the content that flows from them; only codebook matches are flagged, and <b>you</b> decide what to send to Meta.`;
+ document.getElementById('followHandles').value='';document.getElementById('followTags').value='';
+ if(typeof LIVE_ON!=='undefined'&&!LIVE_ON){toggleLive();}else if(typeof huntSweep==='function'){huntSweep();}
+ showTab('hunt');try{renderSeeds()}catch(e){}
+ toast('Following '+(handles.length+tags.length)+' target(s) — content surfaces in the review queue for your decision');
+}
 // ---- Connect: flip between the built-in demo analyzer and the live AI backend ----
 async function connectBackend(){
   const def='https://project-spear-backend.onrender.com';const btn=document.getElementById('connBtn');
