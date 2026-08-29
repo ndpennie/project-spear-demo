@@ -353,6 +353,13 @@
           <div style="display:flex;align-items:flex-end"><button class="btn" onclick="ingestLibrary()">Add to library</button></div>
         </div>
         <div class="note" id="libMsg"></div>
+        <div style="border-top:1px dashed var(--line);margin-top:10px;padding-top:8px">
+          <b style="font-size:13px">Or add a link (source URL)</b>
+          <div class="note" style="margin:2px 0">Paste a link to a source — a news article, report, or reference page — to teach the system context and nuance. Press <b>Add link</b>. (Optional: paste key text so it is searchable right away; with the backend the page is fetched and indexed automatically.)</div>
+          <input id="libLink" placeholder="https://…" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px">
+          <textarea id="libLinkText" placeholder="Optional — paste the key text or a summary from the page…" style="width:100%;min-height:44px;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px"></textarea>
+          <div class="row" style="margin-top:6px"><button class="btn" onclick="ingestLibraryLink()">Add link</button></div>
+        </div>
       </div>
       <div style="max-height:360px;overflow:auto;margin-top:10px"><table id="libTable"><thead><tr><th>Document</th><th>Kind</th><th>Indexed</th><th>Extracted</th><th>Added</th></tr></thead><tbody></tbody></table></div>
       <div class="empty" id="libEmpty">No library documents yet. Upload context above — it is used the next time an item is analyzed and shown as “Related library context” in the explanation.</div>
@@ -439,6 +446,13 @@
           <div style="grid-column:1/3"><label>Example (URL/text/photo where you saw it)</label><input id="tEx" placeholder="optional"></div>
         </div>
         <div class="row" style="margin-top:8px"><button class="btn" onclick="proposeTerm()">Submit proposal</button><button class="btn sec" onclick="approveAll()" title="Owner only — moves proposals into the active codebook">Approve pending (owner)</button><span class="note" id="tMsg" style="margin:0"></span></div>
+      </div>
+      <div class="box" style="margin-top:12px">
+        <b>Emerging codes — track a code before it goes mainstream</b>
+        <div class="note" style="margin-top:2px">Type a code, symbol, hashtag or phrase you are just starting to see. It goes on a watchlist, and the system counts how often it shows up across captured items — so you watch the trend build <i>before</i> it becomes popular.</div>
+        <div class="row" style="margin-top:6px"><input id="watchTerm" placeholder="emerging code / phrase / hashtag" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:6px 8px"><input id="watchNote" placeholder="what you think it means (optional)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:6px 8px"><button class="btn" onclick="addWatch()">Watch</button></div>
+        <div style="max-height:240px;overflow:auto;margin-top:8px"><table id="watchTable"><thead><tr><th>Emerging code</th><th>Your note</th><th>Seen in items</th><th>Trend</th><th>First seen</th></tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="watchEmpty">No emerging codes yet. Add one above to start tracking it.</div>
       </div>
     </div>
     <div id="netPane" style="display:none">
@@ -694,6 +708,10 @@ CODEBOOK.push(
  {id:'as-sturmer',kind:'symbol',term:'Der Stürmer-style blood-libel cartoon',variants:['der sturmer','sturmer','jews crucified','serpent with star of david','snake with star of david','this is the enemy'],meaning:"Nazi Der Stürmer-style propaganda — Jew-as-serpent, blood-libel, knife-through-Bible, 'the Jews crucified…' — dehumanizing incitement imagery.",category:'antisemitism',severity:5,context_required:false,visual_cues:['serpent with Star of David','knife through a Bible','WWII-era Nazi cartoon']},
  {id:'ext-nsawp',kind:'affiliate_watermark',term:'NSAWP (National Socialist American Workers Party)',variants:['nsawp','national socialist american workers',"national socialist american workers' party"],meaning:"Self-described American neo-Nazi 'National Socialist' party; its three-downward-chevron roundel is the group logo.",category:'domestic_terrorism',severity:5,context_required:false,visual_cues:['three downward chevrons/arrows in a roundel','ring of stars']},
  {id:'ext-ns',kind:'term',term:'National Socialism (neo-Nazi revival)',variants:['national socialism','national socialist','join the movement','sieg heil','sonnenrad','black sun'],meaning:"Contemporary neo-Nazi 'National Socialism' branding and recruitment.",category:'domestic_terrorism',severity:4,context_required:true,visual_cues:['SS runes','swastika','sonnenrad']}
+);
+// ---------- 764 / violent online-extortion network (learned from the ABC7 source) ----------
+CODEBOOK.push(
+ {id:'cs-764',kind:'term',term:'764',variants:['764','o9a','com network','nihilistic violent extremist','nvE','harm group','cvlt','no lives matter'],meaning:"'764' — a violent online extortion network that identifies minors on social/gaming platforms, builds rapport, then coerces them into producing self-harm and sexual content used for blackmail and control (FBI-designated top digital threat to children; overlaps nihilistic-violent-extremist / 'Com' subcultures). DETECT and ROUTE to NCMEC / child-safety; never view or store media.",category:'child_safety',severity:5,context_required:true,visual_cues:['a handle or "764" cut/carved into skin','fansign with a username','self-harm imagery on request']}
 );
 let PROPOSALS=[];  // in-memory proposals (posted to backend when API_BASE set)
 const VIS_QUICK=['black tawhid banner (ISIS flag)','Ajnad media logo','Al-Furqan logo','Al-Thabat logo','Amaq watermark','affiliate watermark (corner)','blurred/cut-off watermark','nasheed audio credit','raised-arm salute','red armband','pickelhaube helmet','black uniform','skull mask','rifle','black sun','totenkopf','celtic cross','triple-parenthesis echo','US flag','neoclassical columns','blood on hands','halo edit on perpetrator','hawaiian shirt + rifle','black standard','QR code','wallet string','AI-generated illustration'];
@@ -1288,8 +1306,40 @@ async function ingestLibrary(){const inp=document.getElementById('libFiles');con
     if(API_BASE){try{const fd=new FormData();fd.append('file',f);fd.append('kind',rec.kind);fd.append('note',note);fd.append('label',note);fd.append('added_by','Strategic');const r=await fetch(`${API_BASE}/api/library/docs`,{method:'POST',body:fd});if(r.ok){const j=await r.json();rec.backend_id=j.id;rec.chunks=j.chunks||rec.chunks;rec.imported=j.imported_proposals||rec.imported;if(j.terms&&j.terms.length)rec.terms=j.terms}}catch(e){toast('Backend unavailable — stored in session only')}}
     LIBRARY.unshift(rec);added++;audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'library upload',detail:`${f.name} (${rec.kind}, ${rec.chunks} chunks, ${rec.imported} proposals)`,who:'Strategic'})}
   inp.value='';document.getElementById('libNote').value='';document.getElementById('libMsg').textContent=`${added} file(s) added${props?` · ${props} codebook proposal(s) created — review in Codebook & teach`:''}. Retrieval is live for the next analysis.`;renderLibrary();renderCodebook();render()}
+// add a LINK (source URL) to the library — teaches the system context/nuance
+async function ingestLibraryLink(){
+  const u=(document.getElementById('libLink').value||'').trim();
+  if(!u||!/^https?:\/\//i.test(u)){toast('Paste a full URL (https://…)');return}
+  const txt=(document.getElementById('libLinkText').value||'').trim();
+  let host=u;try{host=new URL(u).hostname.replace(/^www\./,'')}catch(e){}
+  const rec={id:'src-'+Date.now(),name:host,kind:'source',note:u,url:u,size:txt.length,text:txt,chunks:Math.ceil(txt.length/600),terms:txt?candidateTerms(txt):[],imported:0,image:null,ts:new Date().toLocaleString()};
+  if(API_BASE){try{const r=await fetch(`${API_BASE}/api/library/link`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:u,note:txt})});if(r.ok){const j=await r.json();if(j.title)rec.name=j.title;if(j.text){rec.text=j.text;rec.chunks=Math.ceil(j.text.length/600);rec.terms=candidateTerms(j.text)}}}catch(e){toast('Backend unavailable — link stored; page text not fetched')}}
+  else if(!txt)rec.note=u+' · stored as a source (the backend fetches & indexes the page text; in demo mode paste key text to make it searchable)';
+  LIBRARY.unshift(rec);audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'library link added',detail:`${host}${rec.chunks?` — ${rec.chunks} chunk(s)`:''}`,who:'Strategic'});
+  document.getElementById('libLink').value='';document.getElementById('libLinkText').value='';
+  document.getElementById('libMsg').textContent=`Link added: ${host}. ${txt?'Text indexed — retrievable in the next analysis.':'Stored as a source (paste text, or connect the backend to auto-index the page).'}`;
+  renderLibrary();render();
+}
+// ---------- emerging-codes watchlist: type a code before it is popular, watch the trend build ----------
+let WATCH=[];
+function watchCount(term){const t=term.toLowerCase();return items.filter(i=>((i.ocr||'')+' '+(i.url||'')+' '+(i.caption||'')+' '+(i.indicators||[]).join(' ')).toLowerCase().includes(t)).length}
+function addWatch(){const t=(document.getElementById('watchTerm').value||'').trim();if(!t){toast('Type a code to watch');return}
+  const note=(document.getElementById('watchNote').value||'').trim();
+  if(!WATCH.some(w=>w.term.toLowerCase()===t.toLowerCase()))WATCH.unshift({term:t,note,added:new Date().toLocaleString(),firstSeen:null});
+  document.getElementById('watchTerm').value='';document.getElementById('watchNote').value='';
+  audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'emerging code watched',detail:t,who:'Strategic'});
+  renderWatch();toast('Now watching "'+t+'"')}
+function renderWatch(){const tb=document.querySelector('#watchTable tbody');if(!tb)return;const emp=document.getElementById('watchEmpty');if(emp)emp.style.display=WATCH.length?'none':'block';
+  tb.innerHTML=WATCH.map(w=>{const n=watchCount(w.term);if(n>0&&!w.firstSeen)w.firstSeen=new Date().toLocaleString();
+    const trend=n>=3?'<b style="color:#B42318">trending ↑</b>':n>=1?'<span style="color:#B7791F">developing</span>':'<span class="note" style="margin:0">new — not seen yet</span>';
+    return `<tr><td><b>${w.term.replace(/</g,'&lt;')}</b></td><td class="note" style="margin:0">${(w.note||'').replace(/</g,'&lt;')}</td><td><b>${n}</b></td><td>${trend}</td><td class="note" style="margin:0">${w.firstSeen||'—'}</td></tr>`}).join('')}
+// seed the source Eric shared + teach the system the "764" network from it
+function seedSources(){const txt="The '764' network is a violent online extortion network (named after part of a Texas zip code). It targets children ages 9-17 on social-media and gaming platforms, builds rapport/trust, then coerces minors into producing self-harm and sexual content, records it, and uses it to blackmail and control them. The FBI calls 764 the number-one digital threat to children, with 250+ active investigations across every field division. It overlaps with nihilistic-violent-extremist and satanist / neo-Nazi-adjacent 'Com' subcultures. Warning signs for parents: a hidden 'second life' online and secretive device use; victims often do not realize they are being exploited until it is too late. Detection routes to NCMEC; media is never viewed or stored.";
+  const url='https://abc7ny.com/post/fbi-online-group-764-preying-children/16339805/';
+  LIBRARY.unshift({id:'src-764-abc7',name:'abc7ny.com',kind:'source',note:url,url,size:txt.length,text:txt,chunks:Math.ceil(txt.length/600),terms:['764','extortion','coercion','minors','sextortion','nihilistic violent extremist'],imported:0,image:null,ts:'seed'});
+  if(typeof renderLibrary==='function')renderLibrary();}
 function renderLibrary(){const tb=document.querySelector('#libTable tbody');document.getElementById('libEmpty').style.display=LIBRARY.length?'none':'block';
-  tb.innerHTML=LIBRARY.map(d=>`<tr><td>${d.image?`<img class="thumb" src="${d.image.thumb}">`:'📄 '}<b>${d.name}</b><br><span class="note" style="margin:0">${d.note||''}${d.image?` · dHash ${d.image.dhash}`:''}</span></td><td class="cat">${d.kind.replace('_',' ')}</td><td>${d.image?'fingerprint':d.chunks+' chunk'+(d.chunks===1?'':'s')}</td><td>${d.imported?`<b>${d.imported}</b> proposals · `:''}${d.terms.length?`<span class="note" style="margin:0">candidates: </span>${d.terms.slice(0,6).map(t=>`<span class="chip teach" onclick="teachFrom('${t.replace(/'/g,'')}')">+ ${t}</span>`).join(' ')}`:(d.image?'reference image':'—')}</td><td class="status">${d.ts}</td></tr>`).join('')}
+  tb.innerHTML=LIBRARY.map(d=>`<tr><td>${d.image?`<img class="thumb" src="${d.image.thumb}">`:(d.url?'🔗 ':'📄 ')}${d.url?`<a href="${d.url}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">${d.name} ↗</a>`:`<b>${d.name}</b>`}<br><span class="note" style="margin:0">${d.url?'':(d.note||'')}${d.image?` · dHash ${d.image.dhash}`:''}</span></td><td class="cat">${d.kind.replace('_',' ')}</td><td>${d.image?'fingerprint':d.chunks+' chunk'+(d.chunks===1?'':'s')}</td><td>${d.imported?`<b>${d.imported}</b> proposals · `:''}${d.terms.length?`<span class="note" style="margin:0">candidates: </span>${d.terms.slice(0,6).map(t=>`<span class="chip teach" onclick="teachFrom('${t.replace(/'/g,'')}')">+ ${t}</span>`).join(' ')}`:(d.image?'reference image':'—')}</td><td class="status">${d.ts}</td></tr>`).join('')}
 function libRetrieve(query,k=3){const q=new Set(tokz(query));if(!q.size)return[];const out=[];LIBRARY.forEach(d=>{if(!d.text)return;for(let i=0;i<d.text.length;i+=600){const ch=d.text.slice(i,i+600);const ct=new Set(tokz(ch));let ov=0;q.forEach(t=>{if(ct.has(t))ov++});if(ov>=2)out.push({doc:d.name,kind:d.kind,ov,text:ch.trim()})}});return out.sort((a,b)=>b.ov-a.ov).slice(0,k)}
 function libRefImages(dh){return LIBRARY.filter(d=>d.image&&ham(d.image.dhash,dh)<=8).map(d=>({label:d.note||d.name,distance:ham(d.image.dhash,dh)}))}
 async function loadSeedLibrary(){try{const r=await fetch('samples/library/manifest.json');if(!r.ok)return;const m=await r.json();
@@ -1353,6 +1403,7 @@ function updateTally(){
   _tallyLast=found;
 }
 function render(){
+  renderWatch();
   fill('fCat',CATS);fill('fPlat',[...new Set(items.map(i=>i.platform))].sort());
   const q=document.getElementById('q').value.toLowerCase(),ft=fTier.value,fc=fCat.value,fp=fPlat.value,fs=fStatus.value;
   let rows=items.filter(i=>(!q||i.url.toLowerCase().includes(q)||i.poster.toLowerCase().includes(q)||(i.ocr||'').toLowerCase().includes(q)||(i.caption||'').toLowerCase().includes(q))&&(!ft||i.tier===ft)&&(!fc||i.category===fc)&&(!fp||i.platform===fp)&&(!fs||i.status===fs));
@@ -1479,7 +1530,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer (add ?api=http://localhost:8000 to use the backend)';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();loadHuntAllowlist();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer (add ?api=http://localhost:8000 to use the backend)';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
 async function handleSharedContent(){
   try{
