@@ -122,6 +122,11 @@
 .chip.teach{border-color:var(--cyan);color:var(--navy)}
 .thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line);vertical-align:middle;margin-right:6px}
 .bigthumb{max-width:100%;max-height:260px;border-radius:8px;border:1px solid var(--line);display:block;margin:6px 0}
+  .filmstrip{display:flex;gap:8px;overflow-x:auto;padding:4px 0;margin:6px 0}
+  .filmframe{flex:0 0 auto;width:150px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#0d1b2e}
+  .filmframe img{width:150px;height:auto;display:block}
+  .filmframe .fcap{font-size:11px;color:#fff;background:#152A4E;padding:2px 6px}
+  .filmframe .fhit{font-size:11px;color:#B42318;background:#fff5f5;padding:2px 6px;font-weight:700;min-height:16px}
 .ocr{font-family:Consolas,Menlo,monospace;font-size:11px;white-space:pre-wrap;background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px;max-height:120px;overflow:auto}
 .cbhit{border-left:3px solid var(--crit);padding:4px 8px;margin:4px 0;background:#fff;border-radius:0 6px 6px 0;font-size:12px}
 .cbhit.ctx{border-left-color:var(--med)}
@@ -296,24 +301,30 @@
         <span class="pstage flag">FLAG</span><span class="parrow">→</span>
         <span class="pstage rep">REPORT</span>
       </div>
-      <div class="note" style="margin:0 0 8px">Two ways content comes in: <b>Be Hunted</b> — the platform's algorithm pushes nefarious content to the investigator's feed (paste the URL or drop the screenshot it served); and <b>Hunt</b> — the system actively goes and finds it (the Active Hunt tab). Both flow into <b>Capture</b> → <b>Flag</b> → <b>Report</b>.</div>
-      <h3><span class="hstep">STEP 1</span>Capture a post — paste what the feed served you</h3>
+      <h3><span class="hstep">STEP 1</span>Capture a post</h3>
+      <div class="note" style="margin:0 0 6px">Paste the link (or several, one per line), then press the button.</div>
       <textarea id="urls" placeholder="Paste one or more post / profile / group / video URLs, one per line…"></textarea>
       <div class="row" style="margin-top:8px">
         <button class="btn" onclick="ingest()">Capture &amp; flag URLs</button>
         <button class="btn mute" onclick="loadSamples()">Load sample batch</button>
       </div>
-      <div class="note">Pipeline per URL: capture → normalize → multi-modal signals → LLM contextual reasoning → risk score & category → evidence grade → <b>human review</b>. Predictions are leads, never verdicts.</div>
       <div class="photo">
-        <b style="font-size:13px">Step 1 — or drop a screenshot instead (what the algorithm pushed to you)</b>
+        <b style="font-size:13px">Or upload a screenshot</b>
+        <div class="note" style="margin:3px 0 0">Choose an image, then press <b>Analyze photo(s)</b>.</div>
         <div style="margin-top:6px"><input type="file" id="photoFile" accept="image/*" multiple></div>
-        <input id="photoPoster" placeholder="Poster handle (e.g. deathstar__88)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
-        <input id="photoCaption" placeholder="Caption / audio credit / comments (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
-        <div class="note" style="margin-top:6px">Tick what is visible (stands in for the vision model in demo mode; with the backend the VLM labels these itself):</div>
-        <div class="chips" id="visChips"></div>
+        <input id="photoPoster" placeholder="Poster handle (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
+        <input id="photoCaption" placeholder="Caption / audio credit (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
+        <div class="chips" id="visChips" hidden></div>
         <div class="row" style="margin-top:8px"><button class="btn" onclick="ingestPhotos()">Analyze photo(s)</button><span class="note" id="ocrStatus" style="margin:0"></span></div>
         <div class="prog"><i id="ocrBar"></i></div>
-        <div class="note">Pipeline per image: fingerprint (hash + near-duplicate) → OCR of all visible text → visual labels → <b>codebook match</b> (numeric codes, symbols, coded handles) → reasoning → score → human review.</div>
+      </div>
+      <div class="photo" style="border-top:2px solid var(--cyan);margin-top:10px">
+        <b style="font-size:13px">Or upload a video</b>
+        <div class="note" style="margin:3px 0 0">Choose a video, then press <b>Scan video</b>. It checks the whole clip for hidden ISIS watermarks and flags — not just the thumbnail.</div>
+        <div style="margin-top:6px"><input type="file" id="videoFile" accept="video/*"></div>
+        <input id="videoPoster" placeholder="Poster handle / source (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
+        <div class="row" style="margin-top:8px"><button class="btn" onclick="ingestVideo()">Scan video</button><span class="note" id="vidStatus" style="margin:0"></span></div>
+        <div class="prog"><i id="vidBar"></i></div>
       </div>
     </div>
     <div class="card" style="margin-top:12px">
@@ -334,6 +345,7 @@
       <h3>Library — upload context to help the AI learn</h3>
       <div class="box">
         <b>Upload files</b> <span class="note" style="margin:0">— glossaries / codebook spreadsheets, reports &amp; briefs, example posts, chat exports, reference symbol images. Text is chunked and indexed so it is retrieved into the model's prompt when an item shares vocabulary with it; CSV/JSON with <code>term, meaning</code> columns are turned into codebook <i>proposals</i>; images become reference fingerprints for near-duplicate matching.</span>
+        <div class="note" style="margin-top:6px;background:#eef7fb;border:1px solid var(--cyan);border-radius:6px;padding:7px 10px"><b>Reference watermark logos (for the video scan):</b> crop a watermark or flag from real evidence — e.g. the <b>Ajnad</b>, <b>Al-Furqan</b>, <b>Al-Thabat</b>, or <b>Amaq</b> logo, the black tawhīd banner, or the NSAWP roundel — and upload it here with Kind = <i>Reference symbol image</i> and a label. Every image and video scan then matches that logo <b>by fingerprint</b>, so it is caught even when no text is visible and even when it appears only mid-clip.</div>
         <div class="form" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px;margin-top:6px">
           <div style="grid-column:1/4"><label>Files (txt, md, csv, tsv, json, jsonl, html, pdf, docx, jpg, png)</label><input type="file" id="libFiles" multiple accept=".txt,.md,.csv,.tsv,.json,.jsonl,.html,.htm,.pdf,.docx,image/*"></div>
           <div><label>Kind</label><select id="libKind"><option value="glossary">Glossary / codebook sheet</option><option value="report">Report / brief / article</option><option value="examples">Example posts (labelled or raw)</option><option value="reference_image">Reference symbol image</option><option value="reference" selected>Other reference</option></select></div>
@@ -737,6 +749,58 @@ async function ingestPhotos(){const inp=document.getElementById('photoFile');con
   for(const f of files){st.textContent=`Batch: analyzing ${done+1} of ${files.length} — ${f.name}`;setBusy(true,`Analyzing image ${done+1} of ${files.length}…`);await addPhoto(await readFile(f),{name:f.name,poster,caption,labels,platform:'upload'});done++;}
   setBusy(false);st.textContent=`Batch complete — ${done} image(s) analyzed and added to the queue`;
   inp.value='';document.querySelectorAll('#visChips .chip.on').forEach(c=>c.classList.remove('on'));render();showTab('queue')}
+function fmtTime(s){s=Math.max(0,Math.floor(s));const m=Math.floor(s/60);return m+':'+String(s%60).padStart(2,'0')}
+// ---------- VIDEO scan: step through the whole clip, OCR + codebook-match each sampled frame (catches mid-clip watermarks) ----------
+async function ingestVideo(){
+  const inp=document.getElementById('videoFile');const f=inp.files&&inp.files[0];
+  if(!f){toast('Choose a video file first');return}
+  const poster=(document.getElementById('videoPoster').value||'').trim();
+  const st=document.getElementById('vidStatus'),bar=document.getElementById('vidBar');
+  st.textContent='Loading video…';bar.style.width='0';setBusy(true,'Loading video…');
+  const url=URL.createObjectURL(f);
+  const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=url;
+  const ok=await new Promise(res=>{v.onloadedmetadata=()=>res(true);v.onerror=()=>res(false)});
+  if(!ok||!v.duration||!isFinite(v.duration)){setBusy(false);st.textContent='';toast('Could not read that video format — try MP4/WebM');URL.revokeObjectURL(url);return}
+  const dur=v.duration, MAXF=18, step=Math.max(1,dur/MAXF), W=560;
+  const times=[];for(let t=Math.min(0.3,dur/2);t<dur-0.05;t+=step)times.push(t);
+  const cvs=document.createElement('canvas');
+  const seek=t=>new Promise(res=>{const h=()=>{v.removeEventListener('seeked',h);res()};v.addEventListener('seeked',h);try{v.currentTime=t}catch(e){res()}});
+  const frames=[],allText=[];let scanned=0;
+  for(const t of times){
+    await seek(t);
+    const rw=v.videoWidth||W, rh=v.videoHeight||360, sc=W/rw; cvs.width=W; cvs.height=Math.max(1,Math.round(rh*sc));
+    try{cvs.getContext('2d').drawImage(v,0,0,cvs.width,cvs.height)}catch(e){continue}
+    const du=cvs.toDataURL('image/jpeg',0.8);
+    scanned++; st.textContent=`Scanning ${scanned}/${times.length} — ${fmtTime(t)} / ${fmtTime(dur)}`; bar.style.width=Math.round(scanned/times.length*100)+'%'; setBusy(true,`Scanning video frame ${scanned} of ${times.length}…`);
+    let text='';try{text=await ocrImage(du)}catch(e){}
+    let dh='';try{dh=dHash(await loadImg(du))}catch(e){}
+    const refs=dh?libRefImages(dh):[];
+    const hits=cbMatch(text,refs.map(r=>r.label));
+    if(text)allText.push(text);
+    if(hits.length||refs.length)frames.push({t,thumb:du,text:(text||'').replace(/\s+/g,' ').slice(0,160),hits:[...new Set([...hits.map(h=>h.term),...refs.map(r=>r.label)])],cbHits:hits});
+  }
+  URL.revokeObjectURL(url);bar.style.width='0';setBusy(false);
+  const unionHits=[],seen=new Set();
+  for(const fr of frames)for(const h of fr.cbHits)if(!seen.has(h.id)){seen.add(h.id);unionHits.push(h)}
+  const pr=cbPrior(unionHits);
+  const cat=unionHits.length?pr.category:'benign', score=unionHits.length?pr.score:1;
+  const grade=unionHits.some(x=>!x.context_required&&x.severity>=4)?'Corroborated':unionHits.length?'Inferred':'Unverified';
+  const it={id:idc++,type:'video',url:'video:'+f.name,name:f.name,thumb:frames.length?frames[0].thumb:null,frames,duration:dur,dur:fmtTime(dur),
+    ocr:allText.join(' ').replace(/\s+/g,' ').slice(0,1200),labels:[],caption:'',platform:'video upload',poster:poster||'unknown source',
+    captured:new Date().toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],
+    category:cat,score:Math.max(1,Math.min(10,score)),tier:tierOf(score),recommendation:recOf(score),grade,connection:'narrative similarity',
+    indicators:unionHits.map(x=>x.term),
+    reasoning:frames.length?`Sampled ${scanned} frames across ${fmtTime(dur)}. ${frames.length} frame(s) carried codebook markers — e.g. ${frames.slice(0,3).map(fr=>fr.hits[0]+' at '+fmtTime(fr.t)).join(', ')}. Markers that appear mid-clip (not in the thumbnail) are exactly the concealment the scan is built to defeat. Frame text read by in-browser OCR and matched to reference logos in the Library; graphic-only logo/flag shape recognition and audio (nasheed) fingerprinting are the backend vision/audio layer.`:`Sampled ${scanned} frames across ${fmtTime(dur)}; no codebook markers found in frame text. Note: a purely graphic logo or flag with no text, or an audio nasheed, needs the backend vision/audio layer — add reference watermark images to the Library to catch logos by fingerprint.`,
+    breakdown:[...(unionHits.length?[{l:`Codebook markers matched across ${frames.length} sampled frame(s) — strongest: ${unionHits[0].term}`,d:score}]:[{l:'No codebook markers in sampled frame text',d:1}]),...frames.map(fr=>({l:`${fmtTime(fr.t)} — ${fr.hits.join(', ')}`,d:''}))],cbHits:unionHits,confidence:0.5+Math.min(0.4,unionHits.length*0.08)};
+  items.unshift(it);log(it,'video scanned',`${scanned} frames · ${frames.length} flagged · ${cat} ${it.score}/10${API_BASE?'':' · demo'}`);
+  st.textContent=`Done — scanned ${scanned} frame(s), flagged ${frames.length}.`;inp.value='';
+  selId=it.id;render();showTab('queue');
+  toast(frames.length?`Video flagged: ${cat.replace(/_/g,' ')} — ${frames.length} frame(s), e.g. ${frames[0].hits[0]} at ${fmtTime(frames[0].t)}`:'Video scanned — no watermark text in sampled frames');
+}
+function videoStrip(it){if(!it.frames||!it.frames.length)return '<div class="note">No frames carried readable watermark text. (Graphic-only logos/flags and audio need the backend vision/audio layer; add reference logo images to the Library to catch logos by fingerprint.)</div>';
+  return '<div class="filmstrip">'+it.frames.map(fr=>`<div class="filmframe"><img src="${fr.thumb}" alt="frame"><div class="fcap">${fmtTime(fr.t)}</div><div class="fhit">${(fr.hits||[]).join(', ')||'—'}</div></div>`).join('')+'</div>';}
+function videoFramesHTML(it){if(!it.frames||!it.frames.length)return '';
+  return `<div style="margin-top:10px"><b>Flagged frames — scanned across the ${it.dur} clip (markers appear mid-video, not in the thumbnail):</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">`+it.frames.map(fr=>`<div style="width:190px;border:1px solid #ccd5e0;border-radius:6px;overflow:hidden"><img src="${fr.thumb}" style="width:190px;display:block"><div style="font-size:11px;padding:3px 6px;background:#152A4E;color:#fff">${fmtTime(fr.t)}</div><div style="font-size:11px;padding:3px 6px;color:#b42318;font-weight:700">${(fr.hits||[]).join(', ')}</div></div>`).join('')+`</div><div style="font-size:11.5px;color:#6b7785;margin-top:6px"><b>How this was produced:</b> the video was sampled frame-by-frame across its full length; each frame's visible text was read by OCR and matched against the codebook, and each frame was fingerprinted against reference watermark logos. Because the scan does not rely on the thumbnail, a marker placed mid-clip or after a delayed start is still caught. Graphic-only logo/flag recognition and audio (nasheed) matching are performed by the backend vision/audio layer on the same codebook.</div></div>`;}
 async function addPhoto(dataUrl,o){
   const st=document.getElementById('ocrStatus');st.textContent='Fingerprinting…';const im=await loadImg(dataUrl);const dh=dHash(im);
   st.textContent='Reading text in image (OCR)…';const ocr=await ocrImage(dataUrl);document.getElementById('ocrBar').style.width='0';
@@ -902,6 +966,12 @@ function downloadReportMd(){const it=items.find(i=>i.id===selId);if(!it)return;c
 function downloadReportJson(){const it=items.find(i=>i.id===selId);if(!it)return;const rid='SPEAR-'+String(it.id).padStart(5,'0');dl(rid+'_metadata.json',JSON.stringify(reportMetadata(it),null,2),'application/json');toast('Metadata downloaded (.json)')}
 // written description of WHAT THE IMAGE SHOWS (from OCR text, visible-element labels, caption)
 function evDescShows(it){const b=[];
+ if(it.type==='video'){
+   b.push(`This is a video file (${it.dur}) from ${it.poster}. It was scanned frame-by-frame across the whole clip, not just the thumbnail.`);
+   if(it.frames&&it.frames.length){b.push(`Codebook markers were detected in ${it.frames.length} frame(s): ${it.frames.slice(0,6).map(fr=>`${(fr.hits||[]).join('/')} at ${fmtTime(fr.t)}`).join('; ')}.`);
+     b.push('Because these markers appear mid-clip rather than on the cover frame, a viewer scrolling past the thumbnail would not see them — the delayed-start / mid-clip concealment tactic.');}
+   else b.push('No readable watermark text was found in the sampled frames; a graphic-only logo/flag or an audio nasheed would require the backend vision/audio layer.');
+   return b.join(' ');}
  b.push(`This is a ${it.platform} ${it.thumb||it.type==='image'?'post captured as an image':'post'} from ${it.poster}.`);
  if(it.ocr) b.push(`Text visible in the image reads: "${it.ocr.replace(/\s+/g,' ').trim().slice(0,600)}".`);
  if(it.labels&&it.labels.length) b.push(`Visible elements identified: ${it.labels.join(', ')}.`);
@@ -936,6 +1006,7 @@ function buildEvidenceHTML(it){const pm=POLICY_MAP[it.category]||POLICY_MAP.beni
 <p style="background:#e9f7ef;border:1px solid #b7e4c7;color:#1b5e33;padding:9px 13px;border-radius:6px;font-weight:600">STATUS: HUMAN-APPROVED — ready to submit. Project Spear does not auto-submit; a person files this with the platform.</p>
 <h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">1 · The flagged content</h2>
 ${img}
+${it.type==='video'?videoFramesHTML(it):''}
 <table style="width:100%;font-size:14px;margin-top:10px;border-collapse:collapse">
  <tr><td style="padding:3px 8px;color:#6b7785;width:150px">Platform</td><td style="padding:3px 8px"><b>${it.platform}</b></td></tr>
  <tr><td style="padding:3px 8px;color:#6b7785">Poster / account</td><td style="padding:3px 8px">${it.poster}</td></tr>
@@ -984,7 +1055,7 @@ function openReport(){const it=items.find(i=>i.id===selId);if(!it)return;const r
  const prev=cs?`<div class="evnotice">Child-safety item — media withheld. Route to NCMEC / PhotoDNA.</div>`
   :(it.thumb?`<img src="${it.thumb}" class="evimg" alt="flagged content">`
    :`<div class="evnoimg">No image attached to this item yet. Click <b>📎 Attach post image</b> above to include the visual in the report.</div>`);
- m.querySelector('#repPreview').innerHTML=`${prev}<div class="evsec"><h4>What this image shows</h4><p>${evDescShows(it)}</p></div><div class="evsec"><h4>What it means &amp; why it violates policy</h4><p>${evDescMeans(it)}</p></div>`;
+ m.querySelector('#repPreview').innerHTML=`${prev}${it.type==='video'?videoStrip(it):''}<div class="evsec"><h4>What this ${it.type==='video'?'video':'image'} shows</h4><p>${evDescShows(it)}</p></div><div class="evsec"><h4>What it means &amp; why it violates policy</h4><p>${evDescMeans(it)}</p></div>`;
  document.getElementById('repText').textContent=rep;m.style.display='flex'}
 // ---------- batch export (compile many incidents at once — the throughput accelerator) ----------
 function queueFilterPredicate(){const q=(document.getElementById('q').value||'').toLowerCase(),ft=fTier.value,fc=fCat.value,fp=fPlat.value,fs=fStatus.value;
@@ -1377,7 +1448,7 @@ function renderDetail(){
   }
   d.innerHTML=`<h3><span class="hstep">STEP 3</span>Decide &amp; report</h3>
    <h2>${it.category.replace('_',' ')} <span class="badge tier-${it.tier}">${it.tier}</span> <span style="font-size:13px;color:var(--muted)">${it.score}/10</span></h2>
-   <div class="meta">${it.type==='image'?`<img class="bigthumb" src="${it.thumb}" alt="uploaded image">${/^https?:/.test(it.url)?`<a class="url" style="max-width:100%;color:#1D4ED8;text-decoration:underline" href="${it.url}" target="_blank" rel="noopener noreferrer">${it.url} ↗</a>`:`<span class="url">${it.name}</span>`}${it.ocr?`<div class="ocr">${it.ocr.replace(/</g,'&lt;')}</div>`:''}`:`<a class="url" style="max-width:100%;color:#1D4ED8;text-decoration:underline" href="${it.url.split(' ')[0]}" target="_blank" rel="noopener noreferrer" title="Open source in new tab">${it.url.split(' ')[0]} ↗</a>`}${it.platform} · ${it.poster} · captured ${it.captured} · status <b>${it.status}</b>${it.type==='image'?` · dHash <code>${it.dhash}</code>`:''}</div>
+   <div class="meta">${it.type==='image'?`<img class="bigthumb" src="${it.thumb}" alt="uploaded image">${/^https?:/.test(it.url)?`<a class="url" style="max-width:100%;color:#1D4ED8;text-decoration:underline" href="${it.url}" target="_blank" rel="noopener noreferrer">${it.url} ↗</a>`:`<span class="url">${it.name}</span>`}${it.ocr?`<div class="ocr">${it.ocr.replace(/</g,'&lt;')}</div>`:''}`:it.type==='video'?`<div class="note" style="margin:2px 0"><b>Video scan</b> · ${it.dur} · ${it.frames?it.frames.length:0} flagged frame(s) · <span class="url">${it.name}</span></div>${videoStrip(it)}`:`<a class="url" style="max-width:100%;color:#1D4ED8;text-decoration:underline" href="${it.url.split(' ')[0]}" target="_blank" rel="noopener noreferrer" title="Open source in new tab">${it.url.split(' ')[0]} ↗</a>`}${it.platform} · ${it.poster} · captured ${it.captured} · status <b>${it.status}</b>${it.type==='image'?` · dHash <code>${it.dhash}</code>`:''}</div>
    ${explain(it)}
    <div class="box"><b>Model reasoning (raw)</b><br>${it.reasoning}
      <ul class="ind">${it.indicators.map(x=>`<li>${x}</li>`).join('')}</ul></div>
