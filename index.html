@@ -1200,6 +1200,8 @@ ${'='.repeat(72)}\n\n`;
 
 // ---------- Active Hunt (autonomous discovery crawler) ----------
 let HUNTQ=[], huntTimer=null, huntRunning=false;
+let HUNT_SEEN=new Set();   // candidate keys already surfaced or reviewed — never pulled again
+let HUNT_SWEEPN=0;         // sweep counter, drives fresh variations each run
 const HUNT_SAMPLE=[
  // wave 1 — surfaced by the analyst's own watchlist / codebook terms
  ['instagram','deathstar__88','WHITE MEN THE NEW WORLD ORDER IS AT OUR DOORSTEP JOIN THE NATIONAL SOCIALIST MOVEMENT #willtorise'],
@@ -1245,15 +1247,41 @@ function huntSeedFrom(o){ // o: {poster,text,post_url,hits,image_hash,excluded,c
   if(o.image_hash)HUNTHASHES.add(o.image_hash);
   if(API_BASE){try{fetch(`${API_BASE}/api/hunt/seed`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({poster:o.poster||'',text:o.text||'',image_hash:o.image_hash||'',codebook_hits:o.hits||[]})})}catch(e){}}
   return huntSeedCount()-before}
+// generate NEW candidates each sweep from the tracked seeds — the self-expanding discovery
+function huntGenerateCandidates(w){
+ HUNT_SWEEPN++;const n=HUNT_SWEEPN;
+ const seedAccts=[...HUNTSEEDS.accounts];
+ const kws=[...new Set([...HUNTSEEDS.keywords,...w.keywords.map(k=>k.toLowerCase())])].filter(Boolean);
+ const tags=[...new Set([...HUNTSEEDS.hashtags,...w.hashtags.map(h=>(h.startsWith('#')?h:'#'+h).toLowerCase())])].filter(Boolean);
+ const plats=['instagram','x','telegram','tiktok','facebook'];
+ const out=[];const pushC=(plat,handle,text)=>{const key=plat+':'+handle.toLowerCase();if(!HUNT_SEEN.has(key))out.push([plat,handle,text])};
+ const ctx=`${tags.slice(0,2).join(' ')} ${kws.slice(0,2).join(' ')}`.trim()||'tribe and train #w2r';
+ // 1) rotated ban-evasion handles off tracked accounts (13_pda → 13_pod / 13_pda2 / 13_pda_bak …)
+ seedAccts.slice(0,5).forEach((a,i)=>{const base=a.replace(/^@/,'').replace(/[._]?\d+$/,'');const rot=['_'+n,(n+i),'_bak'+n,'.'+n,'_alt'+n,'x'+n,'_'+String.fromCharCode(97+((n+i)%26))];const s=rot[(n+i)%rot.length];
+   pushC(plats[(n+i)%plats.length],'@'+base+s,`${ctx} — new backup account, old one got actioned, follow here`)});
+ // 2) reposters / mirrors around top keywords
+ kws.slice(0,3).forEach((k,i)=>{const clean=(k.replace(/[^a-z0-9]/g,'').slice(0,10))||'cell';
+   pushC(plats[(n+i+1)%plats.length],'@'+clean+'_mirror'+n,`mirror of ${k} content ${tags[0]||''} #repost ${ctx}`);
+   pushC(plats[(n+i+3)%plats.length],'@'+clean+'reup'+n,`reupload — ${ctx}`)});
+ // 3) new chapters/cells around hashtags
+ tags.slice(0,3).forEach((t,i)=>{const tag=t.replace(/^#/,'');
+   pushC(plats[(n+i+2)%plats.length],'@'+tag+'_'+String.fromCharCode(97+((n+i)%26))+n,`${t} new chapter forming — ${kws.slice(0,1).join(' ')||'day of the rope'} ${ctx}`)});
+ return out.slice(0,8);
+}
 async function huntSweepDemo(){const w=huntWatchlist();const qs=huntQueries(w);let excluded=0;const found={};
+ // base pool: fixed samples matching the watchlist — but skip anything already surfaced
  for(const q of qs){const ql=q.toLowerCase().replace(/^[@#]/,'');for(const [plat,handle,text] of HUNT_SAMPLE){
    if((text.toLowerCase()+' '+handle.toLowerCase()).split(/\W+/).some(tok=>tok&&ql.split(/\s+/).includes(tok))){
      if(huntExcluded(handle,w)){excluded++;continue}
-     const key=plat+':'+handle;if(!found[key])found[key]={plat,handle,text,q}}}}
+     const key=plat+':'+handle.toLowerCase();if(HUNT_SEEN.has(key)||found[key])continue;found[key]={plat,handle,text,q}}}}
+ // NEW leads generated from the tracked seeds — different every sweep, never repeats a surfaced one
+ for(const [plat,handle,text] of huntGenerateCandidates(w)){
+   if(huntExcluded(handle,w)){excluded++;continue}
+   const key=plat+':'+handle.toLowerCase();if(HUNT_SEEN.has(key)||found[key])continue;found[key]={plat,handle,text,q:'expanded from seeds'}}
  const rows=[];for(const k in found){const {plat,handle,text,q}=found[k];const hits=cbMatch([text,handle].join(' '),[]);const pr=cbPrior(hits);
-   if(pr.score>=(window.HUNT_MIN||5)){rows.push({platform:plat,poster:handle,text,query:q,score:pr.score,category:pr.category,tier:tierOf(pr.score),hits:hits.map(h=>h.term)});
+   if(pr.score>=(window.HUNT_MIN||5)){HUNT_SEEN.add(k);rows.push({platform:plat,poster:handle,text,query:q,score:pr.score,category:pr.category,tier:tierOf(pr.score),hits:hits.map(h=>h.term)});
      huntSeedFrom({poster:handle,text,hits:hits.map(h=>h.term)})}}  // self-expand
- return {rows:rows.sort((a,b)=>b.score-a.score),excluded,queries:qs.length,seeds:huntSeedCount()}}
+ return {rows:rows.sort((a,b)=>b.score-a.score),excluded,queries:qs.length,seeds:huntSeedCount(),newFound:rows.length}}
 async function huntSweep(){document.getElementById('hStatus').innerHTML='<span class="huntdot on"></span>sweeping…';
  let res;
  if(API_BASE){try{const w=huntWatchlist();
@@ -1265,14 +1293,14 @@ async function huntSweep(){document.getElementById('hStatus').innerHTML='<span c
  }catch(e){toast('Backend unavailable — running demo crawler');res=await huntSweepDemo()}}
  else res=await huntSweepDemo();
  res.rows.forEach(r=>{if(!HUNTQ.some(x=>x.poster===r.poster&&x.platform===r.platform))HUNTQ.push(r)});
- document.getElementById('hStatus').innerHTML=`<span class="huntdot ${huntRunning?'on':''}"></span>${huntRunning?'<b style="color:#9AE6B4">LIVE — continuously compiling</b>':'idle'} · swept ${res.queries} queries · ${res.rows.length} hits · ${res.excluded} skipped · <b>${huntSeedCount()} live targets tracked</b>`;
+ document.getElementById('hStatus').innerHTML=`<span class="huntdot ${huntRunning?'on':''}"></span>${huntRunning?'<b style="color:#9AE6B4">LIVE — continuously compiling</b>':'idle'} · swept ${res.queries} queries · <b>${res.rows.length} new this sweep</b> · ${res.excluded} skipped · ${HUNT_SEEN.size} already surfaced · <b>${huntSeedCount()} live targets tracked</b>`;
  renderSeeds();
  renderHunt();audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'hunt sweep',detail:`${res.rows.length} candidates queued, ${res.excluded} allowlisted accounts skipped`,who:'Strategic'})}
 function huntToggle(){huntRunning=!huntRunning;const b=document.getElementById('hToggle');
  if(huntRunning){b.textContent='Stop crawler';b.classList.remove('warn');b.classList.add('mute');huntSweep();huntTimer=setInterval(huntSweep,15000)}
  else{b.textContent='Start crawler';b.classList.add('warn');b.classList.remove('mute');clearInterval(huntTimer);document.getElementById('hStatus').innerHTML='<span class="huntdot"></span>idle'}}
 function huntClear(){HUNTQ=[];renderHunt()}
-function huntToReview(i){const r=HUNTQ[i];if(!r)return;addItem(`${r.platform==='x'?'https://x.com':'https://'+r.platform+'.com'}/${r.poster} (${r.text})`);showTab('queue');toast('Sent to review queue')}
+function huntToReview(i){const r=HUNTQ[i];if(!r)return;HUNT_SEEN.add(r.platform+':'+r.poster.toLowerCase());addItem(`${r.platform==='x'?'https://x.com':'https://'+r.platform+'.com'}/${r.poster} (${r.text})`);HUNTQ.splice(i,1);renderHunt();showTab('queue');toast('Sent to review queue')}
 async function loadHuntAllowlist(){try{const r=await fetch('samples/hunt_allowlist.json');if(!r.ok)return;const j=await r.json();
   const el=document.getElementById('hExclude');if(el&&!el.value.trim())el.value=(j.exclude_accounts||[]).join('\n');}catch(e){}}
 function renderSeeds(){
