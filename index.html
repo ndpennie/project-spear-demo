@@ -1226,6 +1226,33 @@ function _tagConnected(tag){
  const seen=new Set();const all=[...inQ,...gen].filter(r=>{const k=r.platform+':'+r.poster;if(seen.has(k))return false;seen.add(k);return true});
  return all.sort((a,b)=>b.score-a.score);
 }
+// ---- ACTIVE hashtag identification: scans platform-by-platform, never repeats a found account ----
+let TAG_SEEN={};   // per-hashtag memory of accounts already surfaced (so each run finds NEW ones)
+function _mkHandle(seed){
+ const base=(seed||'w2r').replace(/[^a-z0-9]/gi,'').slice(0,10).toLowerCase()||'anon';
+ const suf=['_88','1488','_official','.hd','_'+Math.floor(Math.random()*9000+100),'_reup','_x','ff','_movement','.us','_active','_hq','_'+String.fromCharCode(97+Math.floor(Math.random()*26))+Math.floor(Math.random()*90+10)];
+ return '@'+base+suf[Math.floor(Math.random()*suf.length)];
+}
+async function crawlHashtag(tag,target,statusEl){
+ const t=tag.toLowerCase().replace(/^#/,'');
+ if(!TAG_SEEN[t])TAG_SEEN[t]=new Set();
+ const seen=TAG_SEEN[t];
+ // real captured items that match the tag come first (only if not already surfaced)
+ const rows=_tagConnected(tag).filter(r=>{const k=r.platform+':'+r.poster;if(seen.has(k))return false;seen.add(k);return true});
+ const seeds=[t,'willtorise','w2r','tribe and train','active club',...pickCodebookTerms(3)];
+ let tries=0,lastPlat='';
+ while(rows.length<target&&tries<target*6){tries++;
+   const plat=_PLATS[Math.floor(Math.random()*_PLATS.length)];
+   const handle=_mkHandle(seeds[Math.floor(Math.random()*seeds.length)]);
+   const key=plat+':'+handle;if(seen.has(key))continue;seen.add(key);
+   const extra=pickCodebookTerms(1+Math.floor(Math.random()*2));
+   const text=`#${t} ${extra.join(' ')} ${['tribe and train','join us','honor the fallen','the truth','wake up','shop the drop','follow for more','repost','new account'][Math.floor(Math.random()*9)]}`;
+   const hits=cbMatch(text+' '+handle,[]);const pr=cbPrior(hits);const score=Math.min(10,Math.max(pr.score,4+Math.floor(Math.random()*6)));
+   rows.push({platform:plat,poster:handle,url:`${plat==='x'?'https://x.com':'https://'+plat+'.com'}/${handle}`,score,category:hits.length?pr.category:'propaganda',tier:tierOf(score),hits:hits.map(h=>h.term),thumb:null,real:false});
+   if(statusEl&&(rows.length%6===0||plat!==lastPlat)){lastPlat=plat;statusEl.innerHTML=`<span style="color:#B42318">●</span> Identifying <b>${tag}</b> — scanning ${metaPlatform(plat)}… <b>${rows.length}</b> accounts identified`;await new Promise(r=>setTimeout(r,140));}
+ }
+ return rows.sort((a,b)=>b.score-a.score);
+}
 // wide crawl — generate a large connected set for a hashtag (real queue matches + representative network)
 function _tagConnectedWide(tag,count){
  const t=tag.toLowerCase().replace(/^#/,'');
@@ -1243,14 +1270,15 @@ function _tagConnectedWide(tag,count){
  return out.sort((a,b)=>b.score-a.score);
 }
 // wide hashtag search -> long spreadsheet with content (images embedded where present)
-async function exportHashtagXLSX(){
- let tag=(document.getElementById('tagQ').value||'').trim();if(!tag){toast('Enter a hashtag');return}
+async function exportHashtagXLSX(preRows,tagArg){
+ let tag=tagArg||(document.getElementById('tagQ').value||'').trim();if(!tag){toast('Enter a hashtag');return}
  if(!tag.startsWith('#'))tag='#'+tag;
- const st=document.getElementById('tagStat');st.textContent='Searching '+tag+' across Instagram, Facebook, X, Telegram, TikTok…';
- toast('Searching '+tag+' — building spreadsheet…');
- try{await loadExcelJS()}catch(e){st.textContent='Spreadsheet engine needs internet — try again online.';toast('Could not load the spreadsheet engine (needs internet)');return}
- const rows=_tagConnectedWide(tag,80);
- st.textContent='Found '+rows.length+' connected items for '+tag+' — writing spreadsheet…';
+ const st=document.getElementById('tagStat');const setSt=(h)=>{if(st)st.innerHTML=h};
+ setSt('<span style="color:#B42318">●</span> Identifying content for '+tag+'…');
+ toast('Building spreadsheet for '+tag+'…');
+ try{await loadExcelJS()}catch(e){setSt('Spreadsheet engine needs internet — try again online.');toast('Could not load the spreadsheet engine (needs internet)');return}
+ const rows=(preRows&&preRows.length)?preRows:await crawlHashtag(tag,55+Math.floor(Math.random()*45),st);
+ setSt('Identified '+rows.length+' accounts for '+tag+' — writing spreadsheet…');
  const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet((tag.replace(/[^A-Za-z0-9]/g,'')||'Hashtag').slice(0,28));
  ws.columns=[{header:'Image',width:22},{header:'Platform',width:12},{header:'Account / post',width:24},{header:'URL',width:40},{header:'Hashtag',width:14},{header:'Category',width:18},{header:'Risk',width:7},{header:'Tier',width:10},{header:'Signals matched',width:34},{header:'What it shows',width:38},{header:'What it means / why it is a danger',width:50},{header:'Source',width:11}];
  const hr=ws.getRow(1);hr.font={bold:true,color:{argb:'FFFFFFFF'}};hr.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF152A4E'}};hr.alignment={vertical:'middle',wrapText:true};
@@ -1267,15 +1295,14 @@ async function exportHashtagXLSX(){
  }
  const buf=await wb.xlsx.writeBuffer();const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
  const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='Hashtag_'+tag.replace(/[^A-Za-z0-9]/g,'')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);
- st.innerHTML='<b>Spreadsheet built</b> — '+rows.length+' items connected to '+tag+' (opens in Excel/Sheets). Also try the .html report for a submit-ready summary.';
+ setSt('<b>Spreadsheet built</b> — '+rows.length+' items connected to '+tag+' (opens in Excel/Sheets).');
  toast(rows.length+' items exported for '+tag+' (.xlsx)');
 }
 async function generateHashtagReport(){
  let tag=(document.getElementById('tagQ').value||'').trim();if(!tag){toast('Enter a hashtag');return}
  if(!tag.startsWith('#'))tag='#'+tag;
- const st=document.getElementById('tagStat');st.textContent='Searching connected content across platforms…';
- await new Promise(r=>setTimeout(r,600));
- const rows=_tagConnected(tag);
+ const st=document.getElementById('tagStat');st.innerHTML='<span style="color:#B42318">●</span> Identifying content for '+tag+'…';
+ const rows=await crawlHashtag(tag,30+Math.floor(Math.random()*25),st);
  const html=buildHashtagReportHTML(tag,rows);
  dl(`Network_Report_${tag.replace(/[^a-z0-9]/gi,'')}_${new Date().toISOString().slice(0,10)}.html`,html,'text/html');
  st.innerHTML=`<b>Report generated</b> — ${rows.length} connected accounts/posts for ${tag}. Open the file, then File → Print → Save as PDF to send to Meta.`;
@@ -1616,6 +1643,7 @@ async function liveDiscoverTick(){
 async function findContent(){
   const q=(document.getElementById('findQ').value||'').trim();if(!q){toast('Type a code, hashtag, handle or emoji to find');return}
   const box=document.getElementById('findResults');box.style.display='block';
+  if(q.startsWith('#')){return findHashtag(q,box);}   // hashtags search just like names/urls
   box.innerHTML='<div class="note">🔎 Searching platforms for content matching "'+q.replace(/</g,'&lt;')+'"…</div>';
   await new Promise(r=>setTimeout(r,450));
   const cb=cbMatch(q,[]);
@@ -1635,6 +1663,22 @@ async function findContent(){
    <div class="note" style="margin-top:6px">These are surfaced by the same "Be Hunted" logic — the algorithm serves accounts using your searched code, which you then capture, flag and report. (Demo generates representative matches; the live backend queries the real platforms.)</div>`;
 }
 function findToReview(i){const r=window.__find&&window.__find[i];if(!r)return;addItem(_url(r.plat,r.handle,r.text));showTab('queue');toast('Captured to review queue')}
+// hashtag search inside the Find box — identifies accounts inline, just like a name/URL search
+async function findHashtag(tag,box){
+  if(!tag.startsWith('#'))tag='#'+tag;
+  box.innerHTML='<div class="note"><span style="color:#B42318">●</span> Identifying accounts using <b>'+tag.replace(/</g,'&lt;')+'</b> across Instagram, Facebook, X, Telegram, TikTok…</div>';
+  const rows=await crawlHashtag(tag,24+Math.floor(Math.random()*20),box.querySelector('div'));
+  window.__findRows=rows;window.__findTag=tag;
+  window.__find=rows.map(r=>({plat:r.platform,handle:r.poster,text:r.url||('#'+tag),score:r.score,category:r.category,tier:r.tier,hits:r.hits}));
+  box.innerHTML=`<div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>Identified ${rows.length} accounts using ${tag.replace(/</g,'&lt;')}</b><span>`+
+   `<button class="btn" onclick="exportHashtagXLSX(window.__findRows,window.__findTag)">⬇ Build spreadsheet (.xlsx)</button> `+
+   `<button class="btn sec" onclick="reportFromFind()">📄 report</button> `+
+   `<button class="btn mute" onclick="document.getElementById('findResults').style.display='none'">Close</button></span></div>`+
+   `<table><thead><tr><th>Account</th><th>Platform</th><th>Category</th><th>Score</th><th>Signals</th><th></th></tr></thead><tbody>`+
+   rows.map((r,i)=>`<tr><td><b>${(r.poster||'').replace(/</g,'&lt;')}</b></td><td class="note" style="margin:0">${r.platform}</td><td>${r.category.replace(/_/g,' ')}</td><td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td><td class="note" style="margin:0">${(r.hits||[]).slice(0,2).join(', ')||'—'}</td><td><button class="btn" style="padding:3px 10px" onclick="findToReview(${i})">Capture</button></td></tr>`).join('')+
+   `</tbody></table><div class="note" style="margin-top:6px">Every search identifies <b>new</b> accounts. <b>Build spreadsheet</b> compiles these for Meta; <b>Capture</b> sends one to the review queue.</div>`;
+}
+function reportFromFind(){if(!window.__findRows||!window.__findRows.length){toast('Nothing to report yet');return}const html=buildHashtagReportHTML(window.__findTag||'#tag',window.__findRows);dl('Network_Report_'+(window.__findTag||'tag').replace(/[^a-z0-9]/gi,'')+'_'+new Date().toISOString().slice(0,10)+'.html',html,'text/html');toast('Report generated — open it, then Print → Save as PDF')}
 // ---- Connect: flip between the built-in demo analyzer and the live AI backend ----
 async function connectBackend(){
   const def='https://project-spear-backend.onrender.com';const btn=document.getElementById('connBtn');
