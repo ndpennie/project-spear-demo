@@ -314,7 +314,7 @@
         <div style="margin-top:6px"><input type="file" id="photoFile" accept="image/*" multiple></div>
         <input id="photoPoster" placeholder="Poster handle (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
         <input id="photoCaption" placeholder="Caption / audio credit (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
-        <div class="chips" id="visChips" hidden></div>
+        <div class="chips" id="visChips" style="display:none"></div>
         <div class="row" style="margin-top:8px"><button class="btn" onclick="ingestPhotos()">Analyze photo(s)</button><span class="note" id="ocrStatus" style="margin:0"></span></div>
         <div class="prog"><i id="ocrBar"></i></div>
       </div>
@@ -830,7 +830,7 @@ async function addPhoto(dataUrl,o){
   it.shared=sharedOf(text);items.unshift(it);log(it,'photo ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade} · OCR ${visible?visible.length+' chars':'none'} · ${labels.length} labels · ${hits.length} codebook hits${API_BASE?' · backend':' · demo'}`);
   st.textContent='';render();return it}
 // ---------- teach / feedback ----------
-function renderChips(){document.getElementById('visChips').innerHTML=VIS_QUICK.map(l=>`<span class="chip" data-l="${l}" onclick="this.classList.toggle('on')">${l}</span>`).join('');
+function renderChips(){/* visible-element tags run on the backend now — no manual ticking in the UI */const _vc=document.getElementById('visChips');if(_vc)_vc.innerHTML='';
   const sel=document.getElementById('tCat');if(sel&&!sel.options.length)sel.innerHTML=CATS.filter(c=>c!=='benign').map(c=>`<option>${c}</option>`).join('')}
 function renderCodebook(){const q=(document.getElementById('cbq').value||'').toLowerCase(),k=document.getElementById('cbKind').value;
   const rows=[...CODEBOOK.map(e=>({...e,status:'approved'})),...PROPOSALS].filter(e=>(!k||e.kind===k)&&(!q||e.term.toLowerCase().includes(q)||e.meaning.toLowerCase().includes(q)||(e.variants||[]).some(v=>v.toLowerCase().includes(q))));
