@@ -55,6 +55,16 @@
   .livebar .livestat .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#B42318;margin-right:5px;animation:pulse 1.3s infinite;vertical-align:middle}
   .realtoggle{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#1b5e33;background:#e9f7ef;border:1px solid #b7e4c7;border-radius:8px;padding:7px 11px;cursor:pointer;user-select:none}
   .realtoggle input{width:15px;height:15px;cursor:pointer}
+  .tab.ai{color:#1b4db3;font-weight:700}
+  .tab.ai.on{border-color:#1b4db3}
+  .aimsg{margin:0 0 10px;padding:9px 12px;border-radius:10px;font-size:13.5px;line-height:1.55}
+  .aimsg.u{background:#eef2fb;border:1px solid #d6e0f5;margin-left:12%}
+  .aimsg.a{background:#fff;border:1px solid var(--line)}
+  .aimsg .who{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .aimsg h4{margin:8px 0 3px;font-size:13px;color:var(--navy)}
+  .aicite{font-size:12px;color:#4a5560;background:#f3f6fb;border-left:3px solid var(--cyan);padding:5px 9px;border-radius:4px;margin:5px 0}
+  .aiassess{border:1px solid #e1e7ee;border-radius:8px;padding:8px 11px;margin:6px 0;background:#fbfcfe}
+  .aiempty{color:var(--muted);text-align:center;padding:26px 12px;font-size:13px}
   .findbox{display:flex;gap:6px;flex:1;min-width:300px}
   .findbox input{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13.5px}
   .findresults{margin:10px 24px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
@@ -401,7 +411,23 @@
 
   <!-- CENTER: queue -->
   <div class="card">
-    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt" id="tabH" onclick="showTab('hunt')">Active Hunt</div><div class="tab bg" id="tabBG" onclick="showTab('bg')">BrandGuard™</div><span class="mode" id="modeTag">demo analyzer</span></div>
+    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab ai" id="tabAI" onclick="showTab('ai')">💬 Analyst AI</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt" id="tabH" onclick="showTab('hunt')">Active Hunt</div><div class="tab bg" id="tabBG" onclick="showTab('bg')">BrandGuard™</div><span class="mode" id="modeTag">demo analyzer</span></div>
+    <div id="aiPane" style="display:none">
+      <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+        <h3 style="margin:0"><span class="hstep">ASK</span>Analyst AI — ask about a threat, or teach the system one</h3>
+        <span class="note" id="aiKB" style="margin:0"></span>
+      </div>
+      <div class="note" style="margin:2px 0 8px">Ask a question — <i>"what is 764?"</i>, <i>"is 'tribe and train' extremist?"</i>, <i>"who have we captured using #will2rise?"</i> — and the system searches the codebook, your Library and everything you've captured, then answers with the policy mapping and recommended action. Spotted something new that isn't public yet? Describe it and press <b>📚 Teach the system</b> so it becomes context for early warning. <b>You decide</b> what reaches law enforcement — the AI assembles the picture, you confirm it.</div>
+      <div id="aiThread" style="max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbfcfe"><div class="aiempty">Ask a question about a threat, or describe one you've identified. The assistant grounds every answer in the codebook, your Library and your captured evidence — and cites what it used.</div></div>
+      <textarea id="aiInput" placeholder="Ask about a threat, a code, a handle, a hashtag — or describe a new threat you've identified… (Ctrl/⌘-Enter to send)" style="width:100%;min-height:66px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;font-family:inherit;box-sizing:border-box;margin-top:8px" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))askAssistant()"></textarea>
+      <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn" onclick="askAssistant()">🔎 Ask the system</button>
+        <button class="btn sec" onclick="assistantIngest()" title="Add what you just described to the system's knowledge so it develops context and can flag it going forward">📚 Teach the system this</button>
+        <button class="btn sec" onclick="assistantBrief()" title="Draft a law-enforcement early-warning brief from this conversation and the system's findings">🚨 Draft LE early-warning brief</button>
+        <button class="btn mute" onclick="aiClear()">Clear</button>
+        <span class="note" id="aiStat" style="margin:0"></span>
+      </div>
+    </div>
     <div id="libPane" style="display:none">
       <h3>Library — upload context to help the AI learn</h3>
       <div class="box">
@@ -725,7 +751,7 @@ const SHARED=['iron-front-supply.store','btc:1A1zP…f9x','freedom-signal.link',
 function sharedOf(u){let h=0;for(const c of u)h=(h*13+c.charCodeAt(0))>>>0;const s=u.toLowerCase();const out=[];
   if(/merch|store|supply/.test(s))out.push(SHARED[0]);if(/btc|wallet|donate|crypto/.test(s))out.push(SHARED[1]);if(/signal|truth|manifesto|wake/.test(s))out.push(SHARED[2]);if(/flyer|poster|reclaim/.test(s))out.push(SHARED[3]);
   return out}
-function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');document.getElementById('huntPane').style.display=t==='hunt'?'':'none';document.getElementById('tabH').classList.toggle('on',t==='hunt');if(t==='net')drawNet();if(t==='cb')renderCodebook();if(t==='hunt')renderHunt();document.getElementById('bgPane').style.display=t==='bg'?'':'none';document.getElementById('tabBG').classList.toggle('on',t==='bg');if(t==='bg'){bgRender();if(typeof bgRenderTenant==='function')bgRenderTenant()}}
+function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('aiPane').style.display=t==='ai'?'':'none';document.getElementById('tabAI').classList.toggle('on',t==='ai');if(t==='ai')renderAIKB();document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');document.getElementById('huntPane').style.display=t==='hunt'?'':'none';document.getElementById('tabH').classList.toggle('on',t==='hunt');if(t==='net')drawNet();if(t==='cb')renderCodebook();if(t==='hunt')renderHunt();document.getElementById('bgPane').style.display=t==='bg'?'':'none';document.getElementById('tabBG').classList.toggle('on',t==='bg');if(t==='bg'){bgRender();if(typeof bgRenderTenant==='function')bgRenderTenant()}}
 function drawNet(){
   const svg=document.getElementById('netSvg');const W=760,H=520;const nodes=[],edges=[];const idx={};
   const add=(key,n)=>{if(idx[key]===undefined){idx[key]=nodes.length;nodes.push(n)}return idx[key]};
@@ -1839,6 +1865,132 @@ function followHandles(){
  else if(typeof LIVE_ON!=='undefined'&&!LIVE_ON){toggleLive();}else if(typeof huntSweep==='function'){huntSweep();}
  showTab('hunt');try{renderSeeds()}catch(e){}
  toast('Following '+(handles.length+tags.length)+' target(s)'+(REAL_ONLY?' — matches from your captured content surface for review':' — content surfaces in the review queue for your decision'));
+}
+// ================= ANALYST AI: comprehensive retrieval Q&A + teach + early-warning brief =================
+// The assistant answers ONLY from what the system knows — the codebook, the analyst's Library, captured
+// evidence and the emerging-codes watchlist — and cites what it used. It never auto-decides or auto-sends:
+// the analyst reads the assembled picture and decides what is newsworthy vs. reportable (human-in-the-loop).
+let AI_THREAD=[];
+function renderAIKB(){const el=document.getElementById('aiKB');if(!el)return;
+  el.innerHTML=`Knowledge: <b>${CODEBOOK.length}</b> codebook terms · <b>${LIBRARY.length}</b> Library sources · <b>${items.length}</b> captured · <b>${(typeof WATCH!=='undefined'?WATCH.length:0)}</b> watched`;}
+function aiPush(role,html,text){AI_THREAD.push({role,html,text:text||''});
+  const t=document.getElementById('aiThread');const who=role==='user'?'You':'GIPEC AI²';
+  t.insertAdjacentHTML('beforeend',`<div class="aimsg ${role==='user'?'u':'a'}"><div class="who">${who}</div>${html}</div>`);t.scrollTop=t.scrollHeight;}
+function aiClear(){AI_THREAD=[];document.getElementById('aiThread').innerHTML='<div class="aiempty">Ask a question about a threat, or describe one you\'ve identified. The assistant grounds every answer in the codebook, your Library and your captured evidence — and cites what it used.</div>';document.getElementById('aiStat').textContent='';renderAIKB();}
+function aiRetrieve(q){
+  const ql=q.toLowerCase();
+  const hits=cbMatch(q,[]);
+  const cbDirect=CODEBOOK.filter(e=>{const tm=(e.term||'').toLowerCase();
+    return tm&&(ql.includes(tm)||(tm.length>3&&tm.includes(ql)&&ql.length>3)||(e.variants||[]).some(v=>v&&v.length>2&&ql.includes(v.toLowerCase())));});
+  const map=new Map();[...hits,...cbDirect].forEach(e=>map.set(e.term,e));
+  const cbAll=[...map.values()].slice(0,10);
+  const lib=(typeof libRetrieve==='function')?libRetrieve(q,4):[];
+  const caps=items.filter(it=>{const hay=((it.url||'')+' '+(it.poster||'')+' '+(it.ocr||'')+' '+(it.caption||'')+' '+(it.indicators||[]).join(' ')).toLowerCase();
+    return hay.includes(ql)||(it.indicators||[]).some(x=>x&&ql.includes(x.toLowerCase()));}).slice(0,8);
+  const watch=(typeof WATCH!=='undefined'?WATCH:[]).filter(w=>ql.includes(w.term.toLowerCase())||w.term.toLowerCase().includes(ql));
+  return {hits,cbAll,lib,caps,watch};
+}
+async function aiBackendAnalyze(q){
+  if(!API_BASE)return null;
+  try{const id='ask-'+Date.now();
+    const r=await fetch(`${API_BASE}/api/analyze/${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,text:q})});
+    if(!r.ok)return null;const j=await r.json();return (j&&j.analysis)?j.analysis:null;
+  }catch(e){return null}
+}
+function aiSynthesize(q,R,backend){
+  const {hits,cbAll,lib,caps,watch}=R;
+  const found=cbAll.length||lib.length||caps.length||watch.length||backend;
+  let h='';
+  const basis=hits.length?hits:cbAll;
+  if(basis.length){const pr=cbPrior(basis);const cat=pr.category;const score=Math.min(10,pr.score);const tier=tierOf(score);const pm=POLICY_MAP[cat]||POLICY_MAP.benign;
+    h+=`<div class="aiassess"><b style="color:${CATCOLOR[cat]||'#333'}">● ${cat.replace(/_/g,' ').toUpperCase()}</b> · <b>${score}/10</b> <span class="badge tier-${tier}">${tier}</span>
+      <div style="margin-top:5px">${HARM[cat]||''}</div>
+      <div style="margin-top:6px;font-size:12.5px"><b>Platform policy:</b> ${pm.clause}. <b>Report reason:</b> "${pm.reason}".</div>
+      <div style="margin-top:4px;font-size:12.5px"><b>Analyst next step:</b> ${NEXT[cat]||''}</div></div>`;}
+  if(cbAll.length){h+=`<h4>Codebook — ${cbAll.length} matching indicator(s)</h4>`+
+    cbAll.map(e=>`<div class="aicite"><b>${(e.term||'').replace(/</g,'&lt;')}</b>${e.kind?` <i>(${e.kind})</i>`:''} — ${(e.meaning||'').replace(/</g,'&lt;')} <span style="color:#889">[${(e.category||'').replace(/_/g,' ')}, severity ${e.severity}]</span></div>`).join('');}
+  if(lib.length){h+=`<h4>From your Library (${lib.length})</h4>`+
+    lib.map(c=>`<div class="aicite"><b>${(c.doc||'source').replace(/</g,'&lt;')}</b> <i>(${(c.kind||'doc').replace(/_/g,' ')})</i>: “…${(c.text||'').slice(0,240).replace(/</g,'&lt;')}…”</div>`).join('');}
+  if(caps.length){h+=`<h4>Captured evidence (${caps.length})</h4>`+
+    caps.map(it=>{const u=(it.url||'').split(' ')[0];return `<div class="aicite"><b>${(it.poster||'?').replace(/</g,'&lt;')}</b> · ${it.platform} · ${(it.category||'').replace(/_/g,' ')} ${it.score}/10 ${/^https?:/.test(u)?`· <a href="${u}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8">open ↗</a>`:''}</div>`}).join('');}
+  if(watch.length){h+=`<h4>Emerging-codes watchlist</h4>`+
+    watch.map(w=>`<div class="aicite">Watching <b>${w.term.replace(/</g,'&lt;')}</b> — seen in <b>${(typeof watchCount==='function'?watchCount(w.term):0)}</b> captured item(s).</div>`).join('');}
+  if(backend){h+=`<h4>Live AI backend</h4><div class="aicite"><b>${(backend.classification||'').replace(/_/g,' ')}</b> ${backend.risk_score!=null?backend.risk_score+'/10':''} — ${(backend.reasoning||'').replace(/</g,'&lt;')}</div>`;}
+  if(!found){h+=`<div>I don't have this in the system's knowledge yet — no codebook term, Library source or captured item matches "<b>${q.replace(/</g,'&lt;')}</b>".</div>
+    <div style="margin-top:8px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px;padding:9px 11px;font-size:13px">🛰️ <b>This is exactly the early-warning case.</b> If you've spotted a nuanced threat that isn't public yet, describe it in the box — what it is, the signal/code/handle, why it's dangerous — and press <b>📚 Teach the system this</b>. It becomes searchable context and can be promoted into the codebook so the system flags it going forward.</div>`;}
+  else{h+=`<div class="note" style="margin-top:8px">Grounded in the system's current knowledge. <b>You decide</b> what's newsworthy vs. reportable — use <b>🚨 Draft LE early-warning brief</b> to hand it to law enforcement, or <b>📚 Teach the system</b> to add new context.</div>`;}
+  return h;
+}
+async function askAssistant(){
+  const inp=document.getElementById('aiInput');const q=(inp.value||'').trim();
+  if(!q){toast('Type a question or describe a threat');return}
+  const empty=document.querySelector('#aiThread .aiempty');if(empty)empty.remove();
+  window.__aiLastQ=q;aiPush('user',q.replace(/</g,'&lt;'),q);inp.value='';
+  const stat=document.getElementById('aiStat');stat.innerHTML='<span style="color:#B42318">●</span> Searching the codebook, Library and captured evidence…';
+  const R=aiRetrieve(q);let backend=null;
+  if(API_BASE){stat.innerHTML='<span style="color:#B42318">●</span> Querying the live AI backend…';backend=await aiBackendAnalyze(q);}
+  else{await new Promise(r=>setTimeout(r,220));}
+  aiPush('assistant',aiSynthesize(q,R,backend),'');
+  window.__aiLastFindings={q,R,backend};stat.textContent='';renderAIKB();
+}
+function assistantIngest(){
+  const inp=document.getElementById('aiInput');const typed=(inp.value||'').trim();
+  const src=typed||window.__aiLastQ||'';
+  if(!src){toast('Ask or describe a threat first, then Teach the system');return}
+  const empty=document.querySelector('#aiThread .aiempty');if(empty)empty.remove();
+  if(typed){aiPush('user',typed.replace(/</g,'&lt;'),typed);inp.value='';}
+  const terms=(typeof candidateTerms==='function')?candidateTerms(src):[];
+  const rec={id:'note-'+Date.now(),name:'Analyst note — '+new Date().toLocaleDateString(),kind:'analyst_note',note:'early-warning context added by analyst',url:'',size:src.length,text:src,chunks:Math.ceil(src.length/600),terms,imported:0,image:null,ts:new Date().toLocaleString()};
+  LIBRARY.unshift(rec);
+  let proposed=0;terms.slice(0,6).forEach(t=>{
+    if(CODEBOOK.some(e=>e.term.toLowerCase()===t.toLowerCase())||PROPOSALS.some(p=>p.term.toLowerCase()===t.toLowerCase()))return;
+    PROPOSALS.push({id:'prop-'+Date.now()+Math.random().toString(36).slice(2,5),term:t,meaning:'(analyst-supplied — from an early-warning note; edit the meaning under Codebook & teach before approving)',kind:'term',variants:[],category:'propaganda',severity:3,context_required:true,status:'proposed',proposed_by:'analyst_ai'});proposed++;});
+  if(terms.length&&typeof WATCH!=='undefined'&&!WATCH.some(w=>w.term.toLowerCase()===terms[0].toLowerCase()))WATCH.unshift({term:terms[0],note:'from analyst early-warning note',added:new Date().toLocaleString(),firstSeen:null});
+  audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'analyst AI: taught new context',detail:`${src.slice(0,60)}… · ${proposed} codebook proposal(s)`,who:'Strategic'});
+  try{renderLibrary()}catch(e){}try{renderWatch()}catch(e){}try{renderCodebook()}catch(e){}
+  aiPush('assistant',`📚 <b>Learned.</b> Saved as an <b>analyst note</b> in the Library — searchable in every future analysis and question${proposed?`, and proposed <b>${proposed}</b> new codebook term(s) for your approval under <b>Codebook &amp; teach</b>`:''}${terms.length?`, and now watching <b>${terms[0].replace(/</g,'&lt;')}</b> under Emerging codes`:''}. This is part of the system's early-warning context now — you stay in control of what gets promoted and what reaches law enforcement.`,'');
+  document.getElementById('aiStat').textContent='';renderAIKB();toast('Context ingested — the system will use it going forward');
+}
+function assistantBrief(){
+  if(!AI_THREAD.length){toast('Ask or teach something first');return}
+  const F=window.__aiLastFindings;const q=(F&&F.q)||window.__aiLastQ||'analyst inquiry';
+  const R=(F&&F.R)||aiRetrieve(q);
+  const basis=(R.hits&&R.hits.length)?R.hits:R.cbAll;
+  const pr=basis&&basis.length?cbPrior(basis):{score:1,category:'benign'};
+  const cat=pr.category,score=Math.min(10,pr.score),tier=tierOf(score),pm=POLICY_MAP[cat]||POLICY_MAP.benign;
+  const rid='EW-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+Math.floor(Math.random()*900+100);
+  const H='#152A4E',C='#2FA8CC';
+  const convo=AI_THREAD.map(m=>`<div style="margin:6px 0"><b style="color:${m.role==='user'?'#1b4db3':H}">${m.role==='user'?'Analyst':'GIPEC AI²'}:</b> ${m.role==='user'?(m.text||'').replace(/</g,'&lt;'):m.html}</div>`).join('');
+  const cbList=(R.cbAll||[]).map(e=>`<li><b>${(e.term||'').replace(/</g,'&lt;')}</b> — ${(e.meaning||'').replace(/</g,'&lt;')} <i>(${(e.category||'').replace(/_/g,' ')}, sev ${e.severity})</i></li>`).join('')||'<li>No codebook indicators — narrative lead only.</li>';
+  const capRows=(R.caps||[]).map(it=>{const u=(it.url||'').split(' ')[0];return `<tr><td>${it.platform}</td><td><b>${(it.poster||'').replace(/</g,'&lt;')}</b></td><td>${(it.category||'').replace(/_/g,' ')} ${it.score}/10</td><td style="font-size:11px">${/^https?:/.test(u)?`<a href="${u}">${u}</a>`:'—'}</td></tr>`}).join('');
+  const capTable=capRows?`<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">Captured evidence</h2><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:#eef5fb;text-align:left"><th style="padding:6px 8px">Platform</th><th style="padding:6px 8px">Account</th><th style="padding:6px 8px">Assessment</th><th style="padding:6px 8px">Link</th></tr></thead><tbody>${capRows}</tbody></table><style>td{padding:5px 8px;border-bottom:1px solid #eef2f6;vertical-align:top}</style>`:'';
+  const libList=(R.lib||[]).map(c=>`<li><b>${(c.doc||'source').replace(/</g,'&lt;')}</b>: …${(c.text||'').slice(0,200).replace(/</g,'&lt;')}…</li>`).join('');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${rid} — early-warning brief</title></head>
+<body style="font-family:Segoe UI,Arial,sans-serif;color:#1f2933;max-width:900px;margin:22px auto;padding:0 22px;line-height:1.55">
+<div style="background:${H};color:#fff;padding:18px 22px;border-radius:10px;display:flex;align-items:center;gap:14px">
+ <div style="font-size:28px;font-weight:800;letter-spacing:1px">GIPEC <span style="color:#5CD0F2">AI&sup2;</span></div>
+ <div style="border-left:1px solid rgba(255,255,255,.3);padding-left:14px">
+  <div style="font-weight:700;font-size:17px">Law-Enforcement Early-Warning Brief</div>
+  <div style="font-size:12.5px;opacity:.88">${rid} · Prepared ${new Date().toISOString().slice(0,16).replace('T',' ')} UTC · Analyst: Strategic (human-reviewed)</div></div></div>
+<p style="background:#fff7e6;border:1px solid #f5c77e;color:#8a5a00;padding:9px 13px;border-radius:6px;font-weight:600">EARLY-WARNING LEAD — not a determination of guilt. Machine-assisted analysis reviewed by a human analyst; provided so the recipient can independently assess and act. Project Spear does not auto-submit or auto-notify — a person chose to share this.</p>
+<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">Subject</h2>
+<p><b>Inquiry:</b> ${q.replace(/</g,'&lt;')}</p>
+<p><b>Assessment:</b> <b style="color:#B42318">${cat.replace(/_/g,' ').toUpperCase()}</b> — ${score}/10 (${tier}). <b>Policy basis:</b> ${pm.clause}. <b>Reason:</b> ${pm.reason}.</p>
+<p>${(HARM[cat]||'').replace(/</g,'&lt;')}</p>
+<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">Indicators (codebook)</h2><ul>${cbList}</ul>
+${capTable}
+${libList?`<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">Context sources</h2><ul>${libList}</ul>`:''}
+<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">Analyst working notes</h2>
+<div style="background:#fbfcfe;border:1px solid #e1e7ee;border-radius:8px;padding:10px 13px;font-size:12.5px">${convo}</div>
+<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">Recommended next step</h2>
+<p>${(NEXT[cat]||'Corroborate independently before acting.').replace(/</g,'&lt;')}</p>
+<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">Handling note</h2>
+<p>Defensive early-warning referral. Any child-safety indicator is routed to NCMEC and its media is never attached or described. This brief is a lead for corroboration, not evidence of a crime; verify independently before any enforcement action.</p>
+<p style="margin-top:20px;font-size:12px;color:#889;border-top:1px solid #e1e7ee;padding-top:10px">Generated by GIPEC AI&sup2; · Project Spear (patent pending). To submit: open this file, then File → Print → Save as PDF. Distribution is the analyst's decision.</p>
+</body></html>`;
+  dl(`Early_Warning_${rid}.html`,html,'text/html');
+  aiPush('assistant',`🚨 <b>Early-warning brief drafted</b> (${rid}). It downloaded as a file — open it, then File → Print → Save as PDF to hand to your law-enforcement contact. <b>Nothing was sent automatically</b>; you control distribution.`,'');
+  toast('Early-warning brief generated — human-reviewed, you distribute it');
 }
 // ---- Connect: flip between the built-in demo analyzer and the live AI backend ----
 async function connectBackend(){
