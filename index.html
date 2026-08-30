@@ -1230,7 +1230,7 @@ function _tagConnected(tag){
  for(let i=0;i<n;i++){const plat=_PLATS[i%_PLATS.length];const handle=genHandle([t]);const extra=pickCodebookTerms(1);
    const text=`#${t} ${extra.join(' ')} ${['tribe and train','join us','honor the fallen','the truth','wake up','shop the drop'][i%6]}`;
    const hits=cbMatch(text+' '+handle,[]);const pr=cbPrior(hits);
-   gen.push({platform:plat,poster:handle,text:`${plat==='x'?'https://x.com':'https://'+plat+'.com'}/${handle}`,score:Math.max(pr.score,6),category:hits.length?pr.category:'propaganda',tier:tierOf(Math.max(pr.score,6)),hits:hits.map(h=>h.term),thumb:null,real:false})}
+   gen.push({platform:plat,poster:handle,url:_acctURL(plat,handle),text:_acctURL(plat,handle),score:Math.max(pr.score,6),category:hits.length?pr.category:'propaganda',tier:tierOf(Math.max(pr.score,6)),hits:hits.map(h=>h.term),thumb:null,real:false})}
  const seen=new Set();const all=[...inQ,...gen].filter(r=>{const k=r.platform+':'+r.poster;if(seen.has(k))return false;seen.add(k);return true});
  return all.sort((a,b)=>b.score-a.score);
 }
@@ -1256,7 +1256,7 @@ async function crawlHashtag(tag,target,statusEl){
    const extra=pickCodebookTerms(1+Math.floor(Math.random()*2));
    const text=`#${t} ${extra.join(' ')} ${['tribe and train','join us','honor the fallen','the truth','wake up','shop the drop','follow for more','repost','new account'][Math.floor(Math.random()*9)]}`;
    const hits=cbMatch(text+' '+handle,[]);const pr=cbPrior(hits);const score=Math.min(10,Math.max(pr.score,4+Math.floor(Math.random()*6)));
-   rows.push({platform:plat,poster:handle,url:`${plat==='x'?'https://x.com':'https://'+plat+'.com'}/${handle}`,score,category:hits.length?pr.category:'propaganda',tier:tierOf(score),hits:hits.map(h=>h.term),thumb:null,real:false});
+   rows.push({platform:plat,poster:handle,url:_acctURL(plat,handle),score,category:hits.length?pr.category:'propaganda',tier:tierOf(score),hits:hits.map(h=>h.term),thumb:null,real:false});
    if(statusEl&&(rows.length%6===0||plat!==lastPlat)){lastPlat=plat;statusEl.innerHTML=`<span style="color:#B42318">●</span> Identifying <b>${tag}</b> — scanning ${metaPlatform(plat)}… <b>${rows.length}</b> accounts identified`;await new Promise(r=>setTimeout(r,140));}
  }
  return rows.sort((a,b)=>b.score-a.score);
@@ -1273,7 +1273,7 @@ function _tagConnectedWide(tag,count){
    const extra=pickCodebookTerms(1+(i%2));
    const text=`#${t} ${extra.join(' ')} ${['tribe and train','join us','honor the fallen','the truth','wake up','shop the drop','follow for more','repost'][i%8]}`;
    const hits=cbMatch(text+' '+handle,[]);const pr=cbPrior(hits);const score=Math.min(10,Math.max(pr.score,5+(i%5)));
-   out.push({platform:plat,poster:handle,url:`${plat==='x'?'https://x.com':'https://'+plat+'.com'}/${handle}`,text:`${plat==='x'?'https://x.com':'https://'+plat+'.com'}/${handle}`,score,category:hits.length?pr.category:'propaganda',tier:tierOf(score),hits:hits.map(h=>h.term),thumb:null,real:false});
+   out.push({platform:plat,poster:handle,url:_acctURL(plat,handle),text:_acctURL(plat,handle),score,category:hits.length?pr.category:'propaganda',tier:tierOf(score),hits:hits.map(h=>h.term),thumb:null,real:false});
  }
  return out.sort((a,b)=>b.score-a.score);
 }
@@ -1294,7 +1294,7 @@ async function exportHashtagXLSX(preRows,tagArg){
  for(const r of rows){
    const means=(HARM[r.category]||'').replace(/\s+/g,' ');
    const shows=`${metaPlatform(r.platform)} account "${r.poster}" using ${(r.hits&&r.hits.length)?r.hits.slice(0,3).join(', '):tag}`;
-   const row=ws.addRow(['',metaPlatform(r.platform),r.poster,r.url||r.text||'',tag,(r.category||'').replace(/_/g,' '),r.score!=null?r.score+'/10':'',r.tier||'',(r.hits||[]).join(', '),shows,means,r.real?'captured':'connected']);
+   const row=ws.addRow(['',metaPlatform(r.platform),r.poster,r.url||r.text||'',tag,(r.category||'').replace(/_/g,' '),r.score!=null?r.score+'/10':'',r.tier||'',(r.hits||[]).join(', '),shows,means,r.real?'captured (live link)':'representative (demo)']);
    row.height=r.thumb?84:32;row.alignment={wrapText:true,vertical:'top'};
    const url=r.url||r.text;if(url&&/^https?:/.test(url)){row.getCell(4).value={text:url,hyperlink:url};row.getCell(4).font={color:{argb:'FF1D4ED8'},underline:true}}
    if(r.thumb&&r.category!=='child_safety'){try{const m=r.thumb.match(/^data:image\/(\w+);base64,(.+)$/);if(m){const id=wb.addImage({base64:m[2],extension:m[1]==='jpeg'?'jpeg':(m[1]==='png'?'png':'jpeg')});ws.addImage(id,{tl:{col:0.12,row:row.number-1+0.08},ext:{width:150,height:82}})}}catch(e){}}
@@ -1324,7 +1324,7 @@ function buildHashtagReportHTML(tag,rows){
  const domCat=Object.entries(catCount).sort((a,b)=>b[1]-a[1])[0]?.[0]||'propaganda';
  const pm=POLICY_MAP[domCat]||POLICY_MAP.propaganda;
  const imgRows=rows.filter(r=>r.thumb).slice(0,12);
- const trs=rows.map(r=>`<tr><td>${r.platform}</td><td><b>${(r.poster||'').replace(/</g,'&lt;')}</b></td><td>${r.category.replace(/_/g,' ')}</td><td style="text-align:center">${r.score}/10 <span style="color:${TIERHEX[r.tier]||'#555'};font-weight:700">${r.tier}</span></td><td style="font-size:11px;color:#556">${(r.hits||[]).slice(0,3).join(', ')}</td><td style="font-size:11px">${r.real?'<b>captured</b>':'connected'}</td></tr>`).join('');
+ const trs=rows.map(r=>`<tr><td>${r.platform}</td><td><b>${(r.poster||'').replace(/</g,'&lt;')}</b></td><td>${r.category.replace(/_/g,' ')}</td><td style="text-align:center">${r.score}/10 <span style="color:${TIERHEX[r.tier]||'#555'};font-weight:700">${r.tier}</span></td><td style="font-size:11px;color:#556">${(r.hits||[]).slice(0,3).join(', ')}</td><td style="font-size:11px">${r.real?'<b>captured — live link</b>':'<span style=\'color:#6b7785\'>representative (demo)</span>'}</td></tr>`).join('');
  const gallery=imgRows.length?`<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px">Evidence images</h2><div style="display:flex;flex-wrap:wrap;gap:8px">${imgRows.map(r=>`<div style="width:190px;border:1px solid #ccd5e0;border-radius:6px;overflow:hidden"><img src="${r.thumb}" style="width:190px;display:block"><div style="font-size:11px;padding:3px 6px;background:${H};color:#fff">${(r.poster||'').replace(/</g,'&lt;')} · ${r.platform}</div><div style="font-size:11px;padding:3px 6px;color:#b42318;font-weight:700">${r.category.replace(/_/g,' ')} ${r.score}/10</div></div>`).join('')}</div>`:'';
  return `<!doctype html><html><head><meta charset="utf-8"><title>${rid} — ${tag} network report</title></head>
 <body style="font-family:Segoe UI,Arial,sans-serif;color:#1f2933;max-width:900px;margin:22px auto;padding:0 22px;line-height:1.55">
@@ -1526,7 +1526,7 @@ function huntToggle(){huntRunning=!huntRunning;const b=document.getElementById('
  if(huntRunning){b.textContent='Stop crawler';b.classList.remove('warn');b.classList.add('mute');huntSweep();huntTimer=setInterval(huntSweep,15000)}
  else{b.textContent='Start crawler';b.classList.add('warn');b.classList.remove('mute');clearInterval(huntTimer);document.getElementById('hStatus').innerHTML='<span class="huntdot"></span>idle'}}
 function huntClear(){HUNTQ=[];renderHunt()}
-function huntToReview(i){const r=HUNTQ[i];if(!r)return;HUNT_SEEN.add(r.platform+':'+r.poster.toLowerCase());addItem(`${r.platform==='x'?'https://x.com':'https://'+r.platform+'.com'}/${r.poster} (${r.text})`);HUNTQ.splice(i,1);renderHunt();showTab('queue');toast('Sent to review queue')}
+function huntToReview(i){const r=HUNTQ[i];if(!r)return;HUNT_SEEN.add(r.platform+':'+r.poster.toLowerCase());addItem((_acctURL(r.platform,r.poster)+' ('+r.text+')'));HUNTQ.splice(i,1);renderHunt();showTab('queue');toast('Sent to review queue')}
 async function loadHuntAllowlist(){try{const r=await fetch('samples/hunt_allowlist.json');if(!r.ok)return;const j=await r.json();
   const el=document.getElementById('hExclude');if(el&&!el.value.trim())el.value=(j.exclude_accounts||[]).join('\n');}catch(e){}}
 function renderSeeds(){
@@ -1627,7 +1627,10 @@ function pickCodebookTerms(n){const pool=CODEBOOK.filter(e=>!e.context_required&
 function genHandle(seed){const base=((seed&&seed[0])||'anon').toString().replace(/[^a-z0-9]/gi,'').slice(0,9).toLowerCase()||'anon';
   const suf=['_88','1488','_official','.hd','_'+Math.floor(Math.random()*900+100),'_reup','_x','ff'];return '@'+base+suf[Math.floor(Math.random()*suf.length)]}
 const _PLATS=['instagram','x','telegram','tiktok','facebook'];
-function _url(plat,handle,text){return `${plat==='x'?'https://x.com':'https://'+plat+'.com'}/${handle} (${text})`}
+function _acctURL(plat,handle){const h=(handle||'').replace(/^@/,'');
+ const m={x:'https://x.com/'+h,instagram:'https://instagram.com/'+h,facebook:'https://facebook.com/'+h,telegram:'https://t.me/'+h,tiktok:'https://www.tiktok.com/@'+h};
+ return m[plat]||('https://'+plat+'.com/'+h)}
+function _url(plat,handle,text){return _acctURL(plat,handle)+(text?(' ('+text+')'):'')}
 // ---- Go Live: auto-discover nefarious content into the queue + run the Active Hunt ----
 let LIVE_ON=false, liveTimer=null;
 function toggleLive(){LIVE_ON=!LIVE_ON;const b=document.getElementById('goLiveBtn');
