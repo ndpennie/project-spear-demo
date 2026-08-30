@@ -53,6 +53,8 @@
   .livebar .golive.on{background:#B42318;border-color:#B42318}
   .livebar .livestat{font-size:12.5px;color:var(--muted);min-width:130px}
   .livebar .livestat .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#B42318;margin-right:5px;animation:pulse 1.3s infinite;vertical-align:middle}
+  .realtoggle{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#1b5e33;background:#e9f7ef;border:1px solid #b7e4c7;border-radius:8px;padding:7px 11px;cursor:pointer;user-select:none}
+  .realtoggle input{width:15px;height:15px;cursor:pointer}
   .findbox{display:flex;gap:6px;flex:1;min-width:300px}
   .findbox input{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13.5px}
   .findresults{margin:10px 24px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
@@ -305,6 +307,9 @@
     <button class="btn" onclick="findContent()">🔎 Find</button>
   </div>
   <button class="btn sec" id="connBtn" onclick="connectBackend()" title="Analyze with the live AI backend instead of the built-in demo analyzer">🔌 Connect live AI</button>
+  <label class="realtoggle" id="realToggleWrap" title="ON: the app only shows links you actually captured or that the live backend returns — every link opens. OFF: it also shows representative demo accounts to illustrate the layout (those links will not open).">
+    <input type="checkbox" id="realOnlyChk" checked onchange="toggleRealOnly()"><span id="realOnlyLbl">🔒 Real links only</span>
+  </label>
 </div>
 <div id="findResults" class="findresults" style="display:none"></div>
 
@@ -1226,6 +1231,8 @@ function _tagConnected(tag){
  const t=tag.toLowerCase().replace(/^#/,'');
  const inQ=items.filter(i=>((i.ocr||'')+' '+(i.url||'')+' '+(i.caption||'')+' '+(i.indicators||[]).join(' ')).toLowerCase().includes(t))
    .map(it=>({platform:it.platform,poster:it.poster,text:(it.url||'').split(' ')[0]||it.name||'',score:it.score,category:it.category,tier:it.tier,hits:it.indicators||[],thumb:(it.category==='child_safety')?null:(it.thumb||(it.frames&&it.frames[0]&&it.frames[0].thumb)||null),url:(it.url||'').split(' ')[0],real:true}));
+ // Real-links-only: return ONLY the real captured items that match — never fabricate accounts.
+ if(REAL_ONLY)return inQ.sort((a,b)=>b.score-a.score);
  const gen=[];const n=8+Math.floor(Math.random()*6);
  for(let i=0;i<n;i++){const plat=_PLATS[i%_PLATS.length];const handle=genHandle([t]);const extra=pickCodebookTerms(1);
    const text=`#${t} ${extra.join(' ')} ${['tribe and train','join us','honor the fallen','the truth','wake up','shop the drop'][i%6]}`;
@@ -1245,6 +1252,14 @@ async function crawlHashtag(tag,target,statusEl){
  const t=tag.toLowerCase().replace(/^#/,'');
  if(!TAG_SEEN[t])TAG_SEEN[t]=new Set();
  const seen=TAG_SEEN[t];
+ // Real-links-only: return ONLY real captured matches — no fabricated accounts, so every link opens.
+ if(REAL_ONLY){
+   const real=_tagConnected(tag);   // already real-only + sorted
+   if(statusEl)statusEl.innerHTML=real.length
+     ?`<b>${real.length}</b> captured item(s) match ${tag}.`
+     :`No captured content matches ${tag} yet — paste or capture real links first, or 🔌 Connect live AI. <span class="note" style="margin:0">(Turn off “Real links only” to preview the layout with demo accounts.)</span>`;
+   return real;
+ }
  // real captured items that match the tag come first (only if not already surfaced)
  const rows=_tagConnected(tag).filter(r=>{const k=r.platform+':'+r.poster;if(seen.has(k))return false;seen.add(k);return true});
  const seeds=[t,'willtorise','w2r','tribe and train','active club',...pickCodebookTerms(3)];
@@ -1264,6 +1279,7 @@ async function crawlHashtag(tag,target,statusEl){
 // wide crawl — generate a large connected set for a hashtag (real queue matches + representative network)
 function _tagConnectedWide(tag,count){
  const t=tag.toLowerCase().replace(/^#/,'');
+ if(REAL_ONLY)return _tagConnected(tag);   // real captured matches only — never fabricate
  const out=_tagConnected(tag).slice();const seen=new Set(out.map(r=>r.platform+':'+r.poster));
  const variants=[t,t+'official',t+'hd',t+'_',t+'1488',t+'88','w2r','willtorise','the'+t,t+'movement',t+'reup'];
  let i=0;
@@ -1286,6 +1302,7 @@ async function exportHashtagXLSX(preRows,tagArg){
  toast('Building spreadsheet for '+tag+'…');
  try{await loadExcelJS()}catch(e){setSt('Spreadsheet engine needs internet — try again online.');toast('Could not load the spreadsheet engine (needs internet)');return}
  const rows=(preRows&&preRows.length)?preRows:await crawlHashtag(tag,55+Math.floor(Math.random()*45),st);
+ if(!rows.length){setSt('No captured content matches '+tag+' yet — paste/capture real links, or 🔌 Connect live AI. <span class="note" style="margin:0">(Or turn off “Real links only” to build a demo spreadsheet.)</span>');toast('Nothing real to export for '+tag+' yet');return}
  setSt('Identified '+rows.length+' accounts for '+tag+' — writing spreadsheet…');
  const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet((tag.replace(/[^A-Za-z0-9]/g,'')||'Hashtag').slice(0,28));
  ws.columns=[{header:'Image',width:22},{header:'Platform',width:12},{header:'Account / post',width:24},{header:'URL',width:40},{header:'Hashtag',width:14},{header:'Category',width:18},{header:'Risk',width:7},{header:'Tier',width:10},{header:'Signals matched',width:34},{header:'What it shows',width:38},{header:'What it means / why it is a danger',width:50},{header:'Source',width:11}];
@@ -1311,6 +1328,7 @@ async function generateHashtagReport(){
  if(!tag.startsWith('#'))tag='#'+tag;
  const st=document.getElementById('tagStat');st.innerHTML='<span style="color:#B42318">●</span> Identifying content for '+tag+'…';
  const rows=await crawlHashtag(tag,30+Math.floor(Math.random()*25),st);
+ if(!rows.length){st.innerHTML='No captured content matches '+tag+' yet — paste/capture real links, or 🔌 Connect live AI. <span class="note" style="margin:0">(Or turn off “Real links only” for a demo report.)</span>';toast('Nothing real to report for '+tag+' yet');return}
  const html=buildHashtagReportHTML(tag,rows);
  dl(`Network_Report_${tag.replace(/[^a-z0-9]/gi,'')}_${new Date().toISOString().slice(0,10)}.html`,html,'text/html');
  st.innerHTML=`<b>Report generated</b> — ${rows.length} connected accounts/posts for ${tag}. Open the file, then File → Print → Save as PDF to send to Meta.`;
@@ -1475,6 +1493,7 @@ function huntSeedFrom(o){ // o: {poster,text,post_url,hits,image_hash,excluded,c
   return huntSeedCount()-before}
 // generate NEW candidates each sweep from the tracked seeds — the self-expanding discovery
 function huntGenerateCandidates(w){
+ if(REAL_ONLY)return [];   // real-links-only: never fabricate ban-evasion/mirror handles
  HUNT_SWEEPN++;const n=HUNT_SWEEPN;
  const seedAccts=[...HUNTSEEDS.accounts];
  const kws=[...new Set([...HUNTSEEDS.keywords,...w.keywords.map(k=>k.toLowerCase())])].filter(Boolean);
@@ -1495,6 +1514,21 @@ function huntGenerateCandidates(w){
  return out.slice(0,8);
 }
 async function huntSweepDemo(){const w=huntWatchlist();const qs=huntQueries(w);let excluded=0;const found={};
+ // Real-links-only: surface ONLY real captured items that match the watchlist — never fabricate a handle.
+ if(REAL_ONLY){
+   const ql=qs.map(q=>q.toLowerCase().replace(/^[@#]/,'')).filter(Boolean);
+   for(const it of items){
+     const hay=((it.url||'')+' '+(it.poster||'')+' '+(it.ocr||'')+' '+(it.caption||'')+' '+(it.indicators||[]).join(' ')).toLowerCase();
+     if(ql.length&&!ql.some(q=>hay.includes(q)))continue;
+     if(huntExcluded(it.poster,w)){excluded++;continue}
+     const url=(it.url||'').split(' ')[0];const key=(it.platform||'')+':'+(it.poster||'').toLowerCase();
+     if(HUNT_SEEN.has(key)||found[key])continue;
+     found[key]={plat:it.platform,handle:it.poster,text:url,url,q:'captured'};
+   }
+   const rows=[];for(const k in found){const {plat,handle,text,url,q}=found[k];const hits=cbMatch([text,handle].join(' '),[]);const pr=cbPrior(hits);
+     HUNT_SEEN.add(k);rows.push({platform:plat,poster:handle,text,url,query:q,score:pr.score||1,category:pr.category,tier:tierOf(pr.score||1),hits:hits.map(h=>h.term),real:true})}
+   return {rows:rows.sort((a,b)=>b.score-a.score),excluded,queries:qs.length,seeds:huntSeedCount(),newFound:rows.length};
+ }
  // base pool: fixed samples matching the watchlist — but skip anything already surfaced
  for(const q of qs){const ql=q.toLowerCase().replace(/^[@#]/,'');for(const [plat,handle,text] of HUNT_SAMPLE){
    if((text.toLowerCase()+' '+handle.toLowerCase()).split(/\W+/).some(tok=>tok&&ql.split(/\s+/).includes(tok))){
@@ -1526,7 +1560,7 @@ function huntToggle(){huntRunning=!huntRunning;const b=document.getElementById('
  if(huntRunning){b.textContent='Stop crawler';b.classList.remove('warn');b.classList.add('mute');huntSweep();huntTimer=setInterval(huntSweep,15000)}
  else{b.textContent='Start crawler';b.classList.add('warn');b.classList.remove('mute');clearInterval(huntTimer);document.getElementById('hStatus').innerHTML='<span class="huntdot"></span>idle'}}
 function huntClear(){HUNTQ=[];renderHunt()}
-function huntToReview(i){const r=HUNTQ[i];if(!r)return;HUNT_SEEN.add(r.platform+':'+r.poster.toLowerCase());addItem((_acctURL(r.platform,r.poster)+' ('+r.text+')'));HUNTQ.splice(i,1);renderHunt();showTab('queue');toast('Sent to review queue')}
+function huntToReview(i){const r=HUNTQ[i];if(!r)return;HUNT_SEEN.add(r.platform+':'+r.poster.toLowerCase());const base=(r.real&&r.url)?r.url:(_acctURL(r.platform,r.poster)+' ('+r.text+')');addItem(base);HUNTQ.splice(i,1);renderHunt();showTab('queue');toast('Sent to review queue')}
 async function loadHuntAllowlist(){try{const r=await fetch('samples/hunt_allowlist.json');if(!r.ok)return;const j=await r.json();
   const el=document.getElementById('hExclude');if(el&&!el.value.trim())el.value=(j.exclude_accounts||[]).join('\n');}catch(e){}}
 function renderSeeds(){
@@ -1631,9 +1665,30 @@ function _acctURL(plat,handle){const h=(handle||'').replace(/^@/,'');
  const m={x:'https://x.com/'+h,instagram:'https://instagram.com/'+h,facebook:'https://facebook.com/'+h,telegram:'https://t.me/'+h,tiktok:'https://www.tiktok.com/@'+h};
  return m[plat]||('https://'+plat+'.com/'+h)}
 function _url(plat,handle,text){return _acctURL(plat,handle)+(text?(' ('+text+')'):'')}
+// ---- Real-links-only mode: when ON (default) the app never fabricates an account/link.
+//      It shows only content you actually captured/pasted or that the live backend returns,
+//      so every link in a search, report or spreadsheet actually opens. Turn OFF to show
+//      representative demo accounts (labeled — those links will not open) for a walkthrough.
+let REAL_ONLY=true;
+function toggleRealOnly(){
+  const c=document.getElementById('realOnlyChk');REAL_ONLY=c?c.checked:true;
+  const lbl=document.getElementById('realOnlyLbl'),wrap=document.getElementById('realToggleWrap');
+  if(lbl)lbl.textContent=REAL_ONLY?'🔒 Real links only':'👁 Demo examples ON';
+  if(wrap){wrap.style.background=REAL_ONLY?'#e9f7ef':'#fff4e5';wrap.style.borderColor=REAL_ONLY?'#b7e4c7':'#f5c77e';wrap.style.color=REAL_ONLY?'#1b5e33':'#8a5a00';}
+  toast(REAL_ONLY
+    ?'Real links only — the app will only show links that actually open (captured, or the live backend).'
+    :'Demo examples ON — representative accounts are shown to illustrate the layout; those links will NOT open.');
+}
 // ---- Go Live: auto-discover nefarious content into the queue + run the Active Hunt ----
 let LIVE_ON=false, liveTimer=null;
-function toggleLive(){LIVE_ON=!LIVE_ON;const b=document.getElementById('goLiveBtn');
+function toggleLive(){
+  // Real-links-only: auto-discovery would have to invent accounts, so it stays off — capture real links instead.
+  if(REAL_ONLY&&!LIVE_ON){
+    document.getElementById('liveStat').innerHTML='🔒 real links only — auto-discover off. <span class="note" style="margin:0">Capture/paste real links, or turn off “Real links only” to run the demo crawl.</span>';
+    toast('“Real links only” is on: the app won’t auto-generate accounts. Capture real links, or turn the toggle off to run the demo crawl.');
+    return;
+  }
+  LIVE_ON=!LIVE_ON;const b=document.getElementById('goLiveBtn');
   if(LIVE_ON){b.textContent='⏸ Stop crawl';b.classList.add('on');
     if(typeof huntRunning!=='undefined'&&!huntRunning){try{huntToggle()}catch(e){}}  // start the Active Hunt crawler too
     liveDiscoverTick();liveTimer=setInterval(liveDiscoverTick,6000);
@@ -1655,6 +1710,24 @@ async function findContent(){
   const q=(document.getElementById('findQ').value||'').trim();if(!q){toast('Type a code, hashtag, handle or emoji to find');return}
   const box=document.getElementById('findResults');box.style.display='block';
   if(q.startsWith('#')){return findHashtag(q,box);}   // hashtags search just like names/urls
+  // Real-links-only: match against real captured content only — never invent accounts.
+  if(REAL_ONLY){
+    const ql=q.toLowerCase();
+    const matches=items.filter(it=>(((it.url||'')+' '+(it.poster||'')+' '+(it.ocr||'')+' '+(it.caption||'')+' '+(it.indicators||[]).join(' ')).toLowerCase().includes(ql)));
+    const cb=cbMatch(q,[]);
+    const cbInfo=cb.length?`<div class="note" style="margin:4px 0 8px;background:#eef7fb;border:1px solid var(--cyan);border-radius:6px;padding:6px 9px"><b>Codebook match:</b> "${cb[0].term}" — ${cb[0].meaning} <i>(${cb[0].category.replace(/_/g,' ')}, severity ${cb[0].severity})</i></div>`:'<div class="note" style="margin:4px 0 8px">Not in the codebook yet — add it under Codebook &amp; teach, or watch it under Emerging codes.</div>';
+    if(!matches.length){
+      box.innerHTML=`<div class="row" style="justify-content:space-between"><b>No captured content matches "${q.replace(/</g,'&lt;')}"</b><button class="btn mute" onclick="document.getElementById('findResults').style.display='none'">Close</button></div>${cbInfo}<div class="note">🔒 <b>Real links only.</b> This searches the content you have actually captured — nothing matched yet. Paste/capture the real post, or 🔌 Connect live AI. <span class="note" style="margin:0">(Turn off “Real links only” to preview matches with demo accounts.)</span></div>`;
+      return;
+    }
+    window.__find=matches.map(it=>({plat:it.platform,handle:it.poster,text:(it.url||'').split(' ')[0],score:it.score,category:it.category,tier:it.tier,hits:it.indicators||[],real:true}));
+    box.innerHTML=`<div class="row" style="justify-content:space-between"><b>Found ${matches.length} captured item(s) matching "${q.replace(/</g,'&lt;')}"</b><button class="btn mute" onclick="document.getElementById('findResults').style.display='none'">Close</button></div>${cbInfo}
+     <table><thead><tr><th>Account</th><th>Link</th><th>What matched</th><th>Score</th></tr></thead><tbody>
+     ${matches.map(it=>{const u=(it.url||'').split(' ')[0];return `<tr><td><b>${(it.poster||'').replace(/</g,'&lt;')}</b><br><span class="note" style="margin:0">${it.platform}</span></td><td class="note" style="margin:0">${/^https?:/.test(u)?`<a href="${u}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">open ↗</a>`:'—'}</td><td class="note" style="margin:0">${(it.indicators||[]).slice(0,3).join(', ')||'—'}</td><td class="score">${it.score}/10 <span class="badge tier-${it.tier}">${it.tier}</span></td></tr>`}).join('')}
+     </tbody></table>
+     <div class="note" style="margin-top:6px">🔒 Real links only — these are posts you actually captured, so every link opens.</div>`;
+    return;
+  }
   box.innerHTML='<div class="note">🔎 Searching platforms for content matching "'+q.replace(/</g,'&lt;')+'"…</div>';
   await new Promise(r=>setTimeout(r,450));
   const cb=cbMatch(q,[]);
@@ -1679,6 +1752,10 @@ async function findHashtag(tag,box){
   if(!tag.startsWith('#'))tag='#'+tag;
   box.innerHTML='<div class="note"><span style="color:#B42318">●</span> Identifying accounts using <b>'+tag.replace(/</g,'&lt;')+'</b> across Instagram, Facebook, X, Telegram, TikTok…</div>';
   const rows=await crawlHashtag(tag,24+Math.floor(Math.random()*20),box.querySelector('div'));
+  if(REAL_ONLY&&!rows.length){
+    box.innerHTML=`<div class="row" style="justify-content:space-between"><b>No captured content uses ${tag.replace(/</g,'&lt;')} yet</b><button class="btn mute" onclick="document.getElementById('findResults').style.display='none'">Close</button></div><div class="note">🔒 <b>Real links only.</b> This searches content you have actually captured. Paste/capture posts using ${tag.replace(/</g,'&lt;')}, or 🔌 Connect live AI. <span class="note" style="margin:0">(Turn off “Real links only” to preview the hashtag network with demo accounts.)</span></div>`;
+    return;
+  }
   window.__findRows=rows;window.__findTag=tag;
   window.__find=rows.map(r=>({plat:r.platform,handle:r.poster,text:r.url||('#'+tag),score:r.score,category:r.category,tier:r.tier,hits:r.hits}));
   box.innerHTML=`<div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>Identified ${rows.length} accounts using ${tag.replace(/</g,'&lt;')}</b><span>`+
@@ -1687,7 +1764,7 @@ async function findHashtag(tag,box){
    `<button class="btn mute" onclick="document.getElementById('findResults').style.display='none'">Close</button></span></div>`+
    `<table><thead><tr><th>Account</th><th>Platform</th><th>Category</th><th>Score</th><th>Signals</th><th></th></tr></thead><tbody>`+
    rows.map((r,i)=>`<tr><td><b>${(r.poster||'').replace(/</g,'&lt;')}</b></td><td class="note" style="margin:0">${r.platform}</td><td>${r.category.replace(/_/g,' ')}</td><td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td><td class="note" style="margin:0">${(r.hits||[]).slice(0,2).join(', ')||'—'}</td><td><button class="btn" style="padding:3px 10px" onclick="findToReview(${i})">Capture</button></td></tr>`).join('')+
-   `</tbody></table><div class="note" style="margin-top:6px">Every search identifies <b>new</b> accounts. <b>Build spreadsheet</b> compiles these for Meta; <b>Capture</b> sends one to the review queue.</div>`;
+   `</tbody></table><div class="note" style="margin-top:6px">${REAL_ONLY?'🔒 Real links only — these are posts you actually captured, so every link opens. ':'Every search identifies <b>new</b> accounts. '}<b>Build spreadsheet</b> compiles these for Meta; <b>Capture</b> sends one to the review queue.</div>`;
 }
 function reportFromFind(){if(!window.__findRows||!window.__findRows.length){toast('Nothing to report yet');return}const html=buildHashtagReportHTML(window.__findTag||'#tag',window.__findRows);dl('Network_Report_'+(window.__findTag||'tag').replace(/[^a-z0-9]/gi,'')+'_'+new Date().toISOString().slice(0,10)+'.html',html,'text/html');toast('Report generated — open it, then Print → Save as PDF')}
 // ---- FOLLOW engine: monitor the handles/hashtags the analyst enters and surface the content that flows from them
@@ -1704,9 +1781,11 @@ function followHandles(){
    tags.forEach(t=>HUNTSEEDS.hashtags.add((t.startsWith('#')?t:'#'+t).toLowerCase()));}
  document.getElementById('followStat').innerHTML=`Now following <b>${handles.length}</b> handle(s) and <b>${tags.length}</b> hashtag(s). The crawl surfaces the content that flows from them; only codebook matches are flagged, and <b>you</b> decide what to send to Meta.`;
  document.getElementById('followHandles').value='';document.getElementById('followTags').value='';
- if(typeof LIVE_ON!=='undefined'&&!LIVE_ON){toggleLive();}else if(typeof huntSweep==='function'){huntSweep();}
+ // Real-links-only: don't start the auto-generating crawl — just sweep real captured content for these targets.
+ if(REAL_ONLY){if(typeof huntSweep==='function')huntSweep();}
+ else if(typeof LIVE_ON!=='undefined'&&!LIVE_ON){toggleLive();}else if(typeof huntSweep==='function'){huntSweep();}
  showTab('hunt');try{renderSeeds()}catch(e){}
- toast('Following '+(handles.length+tags.length)+' target(s) — content surfaces in the review queue for your decision');
+ toast('Following '+(handles.length+tags.length)+' target(s)'+(REAL_ONLY?' — matches from your captured content surface for review':' — content surfaces in the review queue for your decision'));
 }
 // ---- Connect: flip between the built-in demo analyzer and the live AI backend ----
 async function connectBackend(){
