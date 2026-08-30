@@ -40,12 +40,14 @@
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
   .kpi .n{font-size:30px;font-weight:800;color:var(--navy)} .kpi .l{font-size:13px;color:var(--muted);font-weight:500}
   /* ---- 3-step guide + step badges ---- */
-  .stepsguide{display:flex;align-items:stretch;gap:10px;padding:16px 24px 0;flex-wrap:wrap}
-  .stepcard{flex:1 1 0;min-width:210px;display:flex;align-items:center;gap:13px;background:linear-gradient(180deg,#ffffff,#eef5fb);border:1px solid var(--line);border-left:5px solid var(--cyan);border-radius:11px;padding:13px 16px}
-  .stepnum{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--navy);color:#fff;font-size:21px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(47,168,204,.28)}
-  .stepcard b{display:block;font-size:16px;color:var(--navy);line-height:1.2}
+  .stepsguide{display:flex;align-items:stretch;gap:8px;padding:16px 24px 0;flex-wrap:wrap}
+  .stepcard{flex:1 1 0;min-width:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:linear-gradient(180deg,#ffffff,#eef5fb);border:2px solid var(--cyan);border-radius:12px;padding:13px 10px;cursor:pointer;transition:transform .12s,box-shadow .12s}
+  .stepcard:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(21,42,78,.16);background:linear-gradient(180deg,#ffffff,#e2f0fa)}
+  .stepnum{flex:0 0 auto;font-size:22px;line-height:1}
+  .stepcard b{display:block;font-size:16.5px;color:var(--navy);line-height:1.25;letter-spacing:.3px}
   .stepcard div span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
   .steparrow{display:flex;align-items:center;font-size:26px;color:var(--cyan);font-weight:800}
+  .steploop{color:var(--cyan);font-size:24px;font-weight:800;display:flex;align-items:center}
   .hstep{display:inline-block;background:var(--navy);color:#fff;border-radius:6px;padding:2px 10px;margin-right:9px;font-size:13px;font-weight:800;letter-spacing:.6px;vertical-align:middle}
   /* ---- live discovery / find / connect control bar ---- */
   .livebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 24px 0}
@@ -55,8 +57,9 @@
   .livebar .livestat .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#B42318;margin-right:5px;animation:pulse 1.3s infinite;vertical-align:middle}
   .realtoggle{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#1b5e33;background:#e9f7ef;border:1px solid #b7e4c7;border-radius:8px;padding:7px 11px;cursor:pointer;user-select:none}
   .realtoggle input{width:15px;height:15px;cursor:pointer}
-  .tab.ai{color:#1b4db3;font-weight:700}
-  .tab.ai.on{border-color:#1b4db3}
+  .tab.ai{color:#fff;font-weight:800;background:#B42318;border-color:#B42318;border-radius:6px 6px 0 0}
+  .tab.ai.on{background:#8f1a12;border-color:#8f1a12;color:#fff}
+  .ailabel{display:inline-block;background:#B42318;color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;padding:5px 12px;border-radius:7px;margin:0 0 6px}
   .aimsg{margin:0 0 10px;padding:9px 12px;border-radius:10px;font-size:13.5px;line-height:1.55}
   .aimsg.u{background:#eef2fb;border:1px solid #d6e0f5;margin-left:12%}
   .aimsg.a{background:#fff;border:1px solid var(--line)}
@@ -326,7 +329,7 @@
 <div class="livebar" style="padding-top:10px">
   <b style="font-size:13px;color:var(--navy)">📋 Hashtag report</b>
   <input id="tagQ" placeholder="#Will2Rise" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:220px;font-size:13.5px" onkeydown="if(event.key==='Enter')openLiveHashtag()">
-  <button class="btn" onclick="openLiveHashtag()" style="background:#1877F2;border-color:#1877F2" title="Open the real, live hashtag page on each platform so you can grab the actual posts">🌐 Find live posts</button>
+  <button class="btn" onclick="openLiveHashtag()" style="background:#1877F2;border-color:#1877F2" title="Build filtered live searches — hashtag + known threat terms — so results are the nefarious posts, not benign pictures (no login needed)">🔎 Find nefarious posts</button>
   <button class="btn sec" onclick="exportHashtagXLSX()">⬇ Build spreadsheet (.xlsx)</button>
   <button class="btn sec" onclick="generateHashtagReport()">📄 .html report</button>
   <span class="note" id="tagStat" style="margin:0">Type a hashtag → <b>Find live posts</b> opens the real platform pages; capture the posts you see, then build a live report for Meta.</span>
@@ -336,8 +339,13 @@
     <b id="tagLiveTitle">Live hashtag pages</b>
     <button class="btn mute" onclick="document.getElementById('tagLivePanel').style.display='none'">Close</button>
   </div>
-  <div class="note" style="margin:4px 0 8px">These are the <b>real, live</b> hashtag pages on each platform. Open them, find the violating posts, copy each post's link, and paste the links below. The report is built only from links you paste — so every link opens for Meta.</div>
-  <div id="tagLiveLinks" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+  <div class="note" style="margin:4px 0 8px">These searches <b>combine your hashtag with known threat terms</b>, so the results are the <b>nefarious posts — not benign pictures</b>. They run through web search, which is indexed, so <b>no login</b> is needed. Open one, find the violating posts, copy each post's link, and paste the links below — the report is built only from links you paste, so every link opens for Meta.</div>
+  <div class="row" style="gap:8px;flex-wrap:wrap;margin:0 0 8px;align-items:center">
+    <input id="tagFocusTerms" placeholder="Add your own threat terms (optional): day of the rope, 1488, tribe and train…" style="flex:1;min-width:240px;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px" onkeydown="if(event.key==='Enter')openLiveHashtag()">
+    <button class="btn sec" onclick="openLiveHashtag()">↻ Rebuild searches</button>
+  </div>
+  <div id="tagLiveLinks" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
+  <div class="note" id="tagTermsUsed" style="margin:0 0 10px"></div>
   <textarea id="tagPosts" placeholder="Paste the real post links you found (one per line):&#10;https://www.instagram.com/p/…&#10;https://www.facebook.com/…/posts/…&#10;https://x.com/…/status/…" style="width:100%;min-height:90px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;box-sizing:border-box"></textarea>
   <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
     <button class="btn" onclick="captureHashtagPosts()">✓ Capture posts &amp; analyze</button>
@@ -354,12 +362,19 @@
   <span class="note" id="followStat" style="margin:0">The crawl surfaces content that flows from these; only codebook matches are flagged — <b>you</b> decide what's newsworthy vs. reportable (human-in-the-loop).</span>
 </div>
 
-<div class="stepsguide">
-  <div class="stepcard"><span class="stepnum">1</span><div><b>Capture a post</b><span>Paste a link or drop a screenshot — left panel</span></div></div>
+<div class="stepsguide" title="The full loop — press any step to go there">
+  <div class="stepcard" onclick="stepGo('hunt')"><span class="stepnum">🔎</span><div><b>1 · HUNT</b><span>filtered live search</span></div></div>
   <div class="steparrow">→</div>
-  <div class="stepcard"><span class="stepnum">2</span><div><b>Review &amp; flag</b><span>See it scored in the queue — center panel</span></div></div>
+  <div class="stepcard" onclick="stepGo('capture')"><span class="stepnum">📥</span><div><b>2 · CAPTURE</b><span>links · photos · video</span></div></div>
   <div class="steparrow">→</div>
-  <div class="stepcard"><span class="stepnum">3</span><div><b>Decide &amp; report</b><span>Confirm and generate the report — right panel</span></div></div>
+  <div class="stepcard" onclick="stepGo('analyze')"><span class="stepnum">🤖</span><div><b>3 · ANALYZE</b><span>codebook + AI score</span></div></div>
+  <div class="steparrow">→</div>
+  <div class="stepcard" onclick="stepGo('decide')"><span class="stepnum">👤</span><div><b>4 · DECIDE</b><span>human review</span></div></div>
+  <div class="steparrow">→</div>
+  <div class="stepcard" onclick="stepGo('report')"><span class="stepnum">📄</span><div><b>5 · REPORT</b><span>Meta · NCMEC · LE</span></div></div>
+  <div class="steparrow">→</div>
+  <div class="stepcard" onclick="stepGo('teach')"><span class="stepnum">📚</span><div><b>6 · TEACH</b><span>new codes learned</span></div></div>
+  <div class="steploop" title="Teaching feeds the next hunt — the loop repeats">↩</div>
 </div>
 
 <div class="wrap">
@@ -411,7 +426,7 @@
 
   <!-- CENTER: queue -->
   <div class="card">
-    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab ai" id="tabAI" onclick="showTab('ai')">💬 Analyst AI</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt" id="tabH" onclick="showTab('hunt')">Active Hunt</div><div class="tab bg" id="tabBG" onclick="showTab('bg')">BrandGuard™</div><span class="mode" id="modeTag">demo analyzer</span></div>
+    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab ai" id="tabAI" onclick="showTab('ai')">💬 AI CHAT</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt" id="tabH" onclick="showTab('hunt')">Active Hunt</div><div class="tab bg" id="tabBG" onclick="showTab('bg')">BrandGuard™</div><span class="mode" id="modeTag">demo analyzer</span></div>
     <div id="aiPane" style="display:none">
       <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
         <h3 style="margin:0"><span class="hstep">ASK</span>Analyst AI — ask about a threat, or teach the system one</h3>
@@ -419,7 +434,8 @@
       </div>
       <div class="note" style="margin:2px 0 8px">Ask a question — <i>"what is 764?"</i>, <i>"is 'tribe and train' extremist?"</i>, <i>"who have we captured using #will2rise?"</i> — and the system searches the codebook, your Library and everything you've captured, then answers with the policy mapping and recommended action. Spotted something new that isn't public yet? Describe it and press <b>📚 Teach the system</b> so it becomes context for early warning. <b>You decide</b> what reaches law enforcement — the AI assembles the picture, you confirm it.</div>
       <div id="aiThread" style="max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbfcfe"><div class="aiempty">Ask a question about a threat, or describe one you've identified. The assistant grounds every answer in the codebook, your Library and your captured evidence — and cites what it used.</div></div>
-      <textarea id="aiInput" placeholder="Ask about a threat, a code, a handle, a hashtag — or describe a new threat you've identified… (Ctrl/⌘-Enter to send)" style="width:100%;min-height:66px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;font-family:inherit;box-sizing:border-box;margin-top:8px" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))askAssistant()"></textarea>
+      <div style="margin-top:10px"><span class="ailabel">💬 AI CHAT — type your question here ⬇</span></div>
+      <textarea id="aiInput" placeholder="Type here… e.g. “What is 764?”, “Is ‘tribe and train’ extremist?”, or describe a new threat you've spotted. Then press Ask the system." style="width:100%;min-height:80px;border:2px solid #B42318;border-radius:8px;padding:11px 13px;font-size:14.5px;font-family:inherit;box-sizing:border-box" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))askAssistant()"></textarea>
       <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
         <button class="btn" onclick="askAssistant()">🔎 Ask the system</button>
         <button class="btn sec" onclick="assistantIngest()" title="Add what you just described to the system's knowledge so it develops context and can flag it going forward">📚 Teach the system this</button>
@@ -1366,25 +1382,47 @@ async function exportHashtagXLSX(preRows,tagArg){
 }
 // ---- Assisted LIVE hashtag capture: jump to each platform's real hashtag page, capture the real posts,
 //      then build a live report/spreadsheet whose links all resolve (works on free — no crawling/API). ----
-function _hashtagPageURLs(t){return [
-  ['Instagram','https://www.instagram.com/explore/tags/'+t+'/'],
-  ['Facebook','https://www.facebook.com/hashtag/'+t],
-  ['X (Twitter)','https://x.com/search?q=%23'+t+'&src=typed_query&f=live'],
-  ['TikTok','https://www.tiktok.com/tag/'+t],
-  ['Telegram (channel search)','https://t.me/s/'+t],
-];}
+// Threat terms injected into the hashtag search so results are the NEFARIOUS posts, not benign pictures.
+// child_safety / self_harm terms are deliberately EXCLUDED — those are never searched or surfaced (they route
+// to NCMEC / crisis resources), so no dork ever fishes for that material.
+function nefariousSearchTerms(extra){
+  const skip=new Set(['child_safety','self_harm_promotion','benign']);
+  const pool=CODEBOOK.filter(e=>e.severity>=4&&!skip.has(e.category)&&!e.context_required)
+    .map(e=>(e.term||'').trim()).filter(t=>t.length>2&&!t.startsWith('#'));
+  const ex=(extra||[]).map(x=>x.trim()).filter(Boolean);
+  return [...new Set([...ex,...pool])].slice(0,14);
+}
+function _orGroup(terms){return '('+terms.map(t=>/\s/.test(t)?`"${t}"`:t).join(' OR ')+')';}
+// Searches that FILTER to nefarious content: hashtag + threat terms. Google site-search is indexed (no login);
+// X native live search takes the operators directly.
+function _hashtagSearchURLs(t,terms){
+  const org=_orGroup(terms);
+  const g=(site)=>'https://www.google.com/search?q='+encodeURIComponent(`site:${site} "${t}" ${org}`);
+  return [
+    ['🔎 Instagram — filtered', g('instagram.com')],
+    ['🔎 Facebook — filtered', g('facebook.com')],
+    ['🔎 TikTok — filtered', g('tiktok.com')],
+    ['🔎 Telegram — filtered', g('t.me')],
+    ['🔎 X — live filtered', 'https://x.com/search?q='+encodeURIComponent(`#${t} ${org}`)+'&f=live'],
+    ['🌐 All platforms (web)', 'https://www.google.com/search?q='+encodeURIComponent(`"#${t}" ${org}`)],
+  ];
+}
 function openLiveHashtag(){
   let tag=(document.getElementById('tagQ').value||'').trim();if(!tag){toast('Type a hashtag first');return}
   if(!tag.startsWith('#'))tag='#'+tag;const t=tag.replace(/^#/,'').replace(/[^A-Za-z0-9_]/g,'');
   if(!t){toast('Enter a valid hashtag');return}
   window.__liveTag=tag;
-  document.getElementById('tagLiveTitle').innerHTML='Live pages for <b>'+tag.replace(/</g,'&lt;')+'</b> — open, find posts, paste the links';
-  document.getElementById('tagLiveLinks').innerHTML=_hashtagPageURLs(t).map(([name,u])=>
-    `<a class="btn sec" href="${u}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">↗ ${name}</a>`).join('');
+  const extra=((document.getElementById('tagFocusTerms')||{}).value||'').split(/[,\n]+/).map(x=>x.trim()).filter(Boolean);
+  const terms=nefariousSearchTerms(extra);
+  document.getElementById('tagLiveTitle').innerHTML='Filtered live search for <b>'+tag.replace(/</g,'&lt;')+'</b> — nefarious content only';
+  document.getElementById('tagLiveLinks').innerHTML=_hashtagSearchURLs(t,terms).map(([name,u])=>
+    `<a class="btn sec" href="${u}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">${name} ↗</a>`).join('');
+  const shown=terms.slice(0,14).map(x=>x.replace(/</g,'&lt;')).join(', ');
+  document.getElementById('tagTermsUsed').innerHTML=`<b>Filtering ${tag.replace(/</g,'&lt;')} for:</b> ${shown}${extra.length?' <span style="color:#1b5e33">(incl. your terms)</span>':''}. Add your own terms above and press <b>↻ Rebuild searches</b> to sharpen it.`;
   document.getElementById('tagLiveStat').textContent='';
   document.getElementById('tagPosts').value='';
   document.getElementById('tagLivePanel').style.display='block';
-  document.getElementById('tagStat').innerHTML='Opened live pages for <b>'+tag.replace(/</g,'&lt;')+'</b> — grab the real post links and paste them below.';
+  document.getElementById('tagStat').innerHTML='Built filtered searches for <b>'+tag.replace(/</g,'&lt;')+'</b> — open one, grab the violating post links, paste them below.';
 }
 async function captureHashtagPosts(alsoBuild){
   const tag=window.__liveTag||((document.getElementById('tagQ').value||'').trim());
@@ -1991,6 +2029,23 @@ ${libList?`<h2 style="color:${H};border-bottom:2px solid ${C};padding-bottom:4px
   dl(`Early_Warning_${rid}.html`,html,'text/html');
   aiPush('assistant',`🚨 <b>Early-warning brief drafted</b> (${rid}). It downloaded as a file — open it, then File → Print → Save as PDF to hand to your law-enforcement contact. <b>Nothing was sent automatically</b>; you control distribution.`,'');
   toast('Early-warning brief generated — human-reviewed, you distribute it');
+}
+// ---- Six-step loop navigator: press a step card, land in the right place ----
+function stepGo(s){
+  const flash=el=>{if(!el)return;el.scrollIntoView({behavior:'smooth',block:'center'});
+    const old=el.style.boxShadow;el.style.boxShadow='0 0 0 4px rgba(180,35,24,.45)';setTimeout(()=>{el.style.boxShadow=old},1600);};
+  if(s==='hunt'){const el=document.getElementById('tagQ');flash(el);if(el)el.focus();
+    toast('Step 1 — HUNT: type a hashtag here, then press “🔎 Find nefarious posts”.');}
+  else if(s==='capture'){const el=document.getElementById('urls');flash(el);if(el)el.focus();
+    toast('Step 2 — CAPTURE: paste the post links here (or upload a screenshot/video below).');}
+  else if(s==='analyze'){showTab('queue');flash(document.getElementById('queuePane'));
+    toast('Step 3 — ANALYZE: automatic. Every captured post is scored here with a category, 0–10 risk and tier.');}
+  else if(s==='decide'){showTab('queue');flash(document.getElementById('queuePane'));
+    toast('Step 4 — DECIDE: you review each item. Click a row to see the evidence and confirm or dismiss it.');}
+  else if(s==='report'){const el=document.getElementById('reportBtn');flash(el);
+    toast('Step 5 — REPORT: press “📄 Get report” for the Meta spreadsheet, or use Hashtag report below it.');}
+  else if(s==='teach'){showTab('ai');flash(document.getElementById('aiInput'));const el=document.getElementById('aiInput');if(el)el.focus();
+    toast('Step 6 — TEACH: ask the AI anything, or describe a new threat and press “📚 Teach the system this”.');}
 }
 // ---- Connect: flip between the built-in demo analyzer and the live AI backend ----
 async function connectBackend(){
