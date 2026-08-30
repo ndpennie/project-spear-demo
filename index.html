@@ -688,7 +688,7 @@ function analyze(url){
   const cbh=cbMatch(url,[]);const pr=cbPrior(cbh);
   if(cbh.length&&pr.score>score){bd.push({l:`Codebook: <b>${cbh[0].term}</b> ${cbh.length>1?'+'+(cbh.length-1)+' more':''} — raises score to codebook prior`,d:pr.score-score});score=pr.score;if(cat==='benign')cat=pr.category}
   else if(cbh.length){bd.push({l:`Codebook corroboration: ${cbh.map(x=>x.term).slice(0,3).join(', ')}`,d:0})}
-  if(cbh.length)ind=[...ind,...cbh.map(x=>x.term).filter(t=>!ind.includes(t))];
+  if(cbh.length)ind=[...ind.filter(x=>!/no risk indicators/.test(x)),...cbh.map(x=>x.term).filter(t=>!ind.includes(t))];
   return {category:cat,score,tier:tierOf(score),recommendation:recOf(score),grade:cbh.some(x=>!x.context_required&&x.severity>=4)?'Corroborated':grade,connection:conn,indicators:ind,reasoning,breakdown:bd,hitWords,cbHits:cbh,confidence:cat==='benign'?0.9:0.55+((h%40)/100)};
 }
 // ---------- plain-language explanation shown when an analyst clicks a link ----------
@@ -856,6 +856,20 @@ CODEBOOK.push(
  {id:"as-fakerabbi",kind:"term",term:"fake rabbi (AI 'Rabbi Goldman')",variants:["rabbi goldman","fake rabbi","rabbii goldman","rabbit goldman"],meaning:"AI-generated fake-rabbi persona used to put antisemitic words in a 'Jewish' mouth.",category:"antisemitism",severity:3,context_required:true,visual_cues:["AI-generated rabbi portrait"]},
  {id:"as-2percent",kind:"term",term:"2% 'no authority' slur",variants:["2%","only 2 percent","jews are 2%","no authority"],meaning:"Trope that Jews are 'only 2% of the population' yet secretly control policy — a control conspiracy.",category:"antisemitism",severity:3,context_required:true,visual_cues:[]},
  {id:"as-jewsdidthis",kind:"term",term:"the Jews did this",variants:["the jews did this","jews did this"],meaning:"Blame canard attributing events (e.g. gas prices, wars) to Jews.",category:"antisemitism",severity:4,context_required:false,visual_cues:[]}
+);
+// ---------- HISTORICAL / MYTHOLOGICAL DISGUISE — extremists cloak recruitment in Germanic/Norse myth, medieval ----------
+// ---------- and Nazi-era history so it reads as "heritage" or "fitness". Each entry carries the historical origin -----------
+// ---------- AND how it is repurposed today, so the system flags the CONDUCT under the historical cover. ------------------
+CODEBOOK.push(
+ {id:"hd-kdn",kind:"term",term:"Kampf der Nibelungen",variants:["kampf der nibelungen","kdn","battle of the nibelungs","der kampf","nibelungen kampf"],meaning:"HISTORY: 'Battle of the Nibelungs' — the name invokes the medieval Nibelungenlied (the Germanic epic the Nazis mythologised as an ideal of racial loyalty). TODAY: a German neo-Nazi combat-sports/MMA fight-club and clothing brand that trains and networks militant white-nationalists; associated events were banned by German authorities in 2019. A collaboration or 'X' with this brand (e.g. with Will2Rise) is a militant-extremist network signal, not sportswear.",category:"domestic_terrorism",severity:5,context_required:false,visual_cues:["nettle leaf in a hexagon/octagon","distressed combat-sport branding","XX / 'X' brand collab lockup"]},
+ {id:"hd-nettle",kind:"symbol",term:"nettle leaf (Brennnessel)",variants:["nettle leaf","brennnessel","stinging nettle","nessel"],meaning:"HISTORY/SYMBOL: the stinging-nettle leaf is the emblem of Kampf der Nibelungen — chosen as a 'hardy, resistant German plant'. TODAY: on combat-sport or streetwear branding it marks affiliation with that neo-Nazi fight-club network. Benign gardening/foraging use is common, so confirm the extremist branding context.",category:"domestic_terrorism",severity:3,context_required:true,visual_cues:["green nettle leaf outlined in a hexagon or octagon","monochrome distressed leaf badge"]},
+ {id:"hd-will2rise",kind:"term",term:"Will2Rise",variants:["will2rise","will 2 rise","willtorise","will to rise","w2r"],meaning:"HISTORY: 'Will to rise' echoes the fascist 'triumph of the will' aesthetic. TODAY: a white-nationalist 'Active Club' clothing/fitness brand that packages neo-Nazi recruitment as fashion and combat sport; cross-promotes with militant fight networks (e.g. Kampf der Nibelungen). The fitness/apparel framing is the cover.",category:"domestic_terrorism",severity:4,context_required:false,visual_cues:["axe/rune-styled W2R wordmark","fight-club apparel","Active Club aesthetic"]},
+ {id:"hd-nibelungentreue",kind:"term",term:"Nibelungentreue",variants:["nibelungentreue","nibelung loyalty","treue bis in den tod"],meaning:"HISTORY: 'Nibelung loyalty' — a WWI/Nazi-era slogan (used by Göring at Stalingrad) meaning fanatical loyalty unto death, drawn from the Nibelungenlied. TODAY: signals absolute loyalty to the movement/cell.",category:"domestic_terrorism",severity:4,context_required:true,visual_cues:[]},
+ {id:"hd-zweimarken",kind:"phrase",term:"Zwei Marken, eine Haltung",variants:["zwei marken eine haltung","zwei marken. eine haltung","two brands one stance","one attitude","eine haltung"],meaning:"COVER SLOGAN: 'Two brands, one stance' — the co-branding tagline used to announce a merger of two extremist apparel/fight brands as one movement. 'Haltung' (stance/attitude) signals shared ideology behind the merchandise.",category:"propaganda",severity:3,context_required:true,visual_cues:["two logos joined by an 'X'"]},
+ {id:"hd-blutboden",kind:"term",term:"Blood and Soil / Blut und Boden",variants:["blood and soil","blut und boden","blubo"],meaning:"HISTORY: a core Nazi ideology tying racial identity to ancestral land. TODAY: chanted/posted to signal ethnonationalist 'heritage' framing.",category:"domestic_terrorism",severity:4,context_required:false,visual_cues:["farm/land imagery with runic type"]},
+ {id:"hd-blacksun",kind:"symbol",term:"Black Sun / Schwarze Sonne",variants:["black sun","schwarze sonne","sonnenrad","sun wheel","wewelsburg"],meaning:"HISTORY: a sun-wheel mosaic laid in the SS castle at Wewelsburg; an esoteric-SS symbol. TODAY: a globally recognised neo-Nazi emblem that dodges swastika filters while meaning the same thing.",category:"domestic_terrorism",severity:5,context_required:false,visual_cues:["12-spoke radial sun wheel","circular sig-rune wheel"]},
+ {id:"hd-wolfsangel",kind:"symbol",term:"Wolfsangel / Othala / Tyr / Sig runes",variants:["wolfsangel","othala","odal rune","tyr rune","tiwaz","sig rune","sowilo","black eagle rune"],meaning:"HISTORY: medieval heraldic and Elder-Futhark runes revived by the SS and Nazi divisions as unit insignia. TODAY: used as 'European heritage' badges that carry the Nazi meaning while looking like folklore. Some runes have genuine Norse-pagan/Heathen religious use, so confirm the extremist context.",category:"domestic_terrorism",severity:4,context_required:true,visual_cues:["angular rune badge/patch","rune tattoo","rune in a circle"]},
+ {id:"hd-mythcover",kind:"term",term:"Germanic/Norse myth cover (Wotan, Thule, Ahnenerbe)",variants:["wotan","wotanism","odinism","thule","thule society","ahnenerbe","ariosophy","widar","irminism","armanen"],meaning:"METHOD: Germanic/Norse mythology and Nazi pseudo-history (Thule Society, Ahnenerbe, Ariosophy) are used as a respectable-looking wrapper for white-nationalist ideology. Odinism/Heathenry also names a legitimate religion, so flag only where paired with movement/recruitment/violence signals — the historical name is the disguise.",category:"propaganda",severity:3,context_required:true,visual_cues:["runic fonts","valknut","mjölnir with SS styling"]}
 );
 let PROPOSALS=[];  // in-memory proposals (posted to backend when API_BASE set)
 const VIS_QUICK=['black tawhid banner (ISIS flag)','Ajnad media logo','Al-Furqan logo','Al-Thabat logo','Amaq watermark','affiliate watermark (corner)','blurred/cut-off watermark','nasheed audio credit','raised-arm salute','red armband','pickelhaube helmet','black uniform','skull mask','rifle','black sun','totenkopf','celtic cross','triple-parenthesis echo','US flag','neoclassical columns','blood on hands','halo edit on perpetrator','hawaiian shirt + rifle','black standard','QR code','wallet string','AI-generated illustration'];
@@ -1625,6 +1639,23 @@ function huntQueries(w){let q=[];w.accounts.forEach(a=>q.push(a.startsWith('@')?
 function huntExcluded(handle,w){const set=new Set(w.exclude_accounts.map(a=>a.toLowerCase().replace(/^@/,'')));return set.has((handle||'').toLowerCase().replace(/^@/,''))}
 // ---- LIVE self-expanding target set (confirmed threats feed new search targets) ----
 const HUNTSEEDS={accounts:new Set(),hashtags:new Set(),keywords:new Set(),links:new Set(),domains:new Set()};
+// Analyst-entered FOLLOWED SPACES — hashtags the analyst has chosen to monitor. These are collection
+// targets, NOT threat signals: they are never in the codebook, never add score, and a post using one is
+// flagged ONLY if its content matches codebook conduct (incitement, operational planning, hate codes…).
+// Human review gates everything before any referral. Follow entries persist across sessions.
+const FOLLOW_SEED_TAGS=['#fuck12','#acab','#shutitdown4palestine','#floodun4gaza','#floodunforgaza'];
+function followSave(){try{localStorage.setItem('spear_follow',JSON.stringify({a:[...HUNTSEEDS.accounts],t:[...HUNTSEEDS.hashtags]}))}catch(e){}}
+function followLoad(){
+  let saved=null;try{saved=JSON.parse(localStorage.getItem('spear_follow')||'null')}catch(e){}
+  (saved&&saved.a?saved.a:[]).forEach(x=>HUNTSEEDS.accounts.add(x));
+  const tags=new Set([...(saved&&saved.t?saved.t:[]),...FOLLOW_SEED_TAGS]);
+  tags.forEach(x=>HUNTSEEDS.hashtags.add(x.toLowerCase()));
+  followSave();
+  const el=document.getElementById('followStat');
+  if(el)el.innerHTML=`Following <b>${HUNTSEEDS.hashtags.size}</b> hashtag(s) and <b>${HUNTSEEDS.accounts.size}</b> handle(s) — saved, active every session. These are <b>monitored spaces, not threat signals</b>: only content matching the codebook gets flagged, and <b>you</b> decide what's reported.`;
+  const hT=document.getElementById('hTags');if(hT&&!hT.value.trim())hT.value=[...HUNTSEEDS.hashtags].join('\n');
+  try{renderSeeds()}catch(e){}
+}
 const HUNTHASHES=new Set();
 function huntSeedCount(){return HUNTSEEDS.accounts.size+HUNTSEEDS.hashtags.size+HUNTSEEDS.keywords.size+HUNTSEEDS.links.size+HUNTSEEDS.domains.size+HUNTHASHES.size}
 function huntSeedFrom(o){ // o: {poster,text,post_url,hits,image_hash,excluded,category}
@@ -1778,6 +1809,8 @@ function seedSources(){const txt="The '764' network is a violent online extortio
   const asText="Curated antisemitic / hate terms, slurs, numeric codes and emoji (confidential list, compiled Mar 2026, updated Jul 2026). Used as hashtags and profile/account names on Facebook and Instagram; searching them makes the analyst 'be hunted' by the algorithm, which then surfaces matching accounts to capture, flag and report. Examples: Noticing, Goyim, ZOG, Happy Merchant, 110/109, 1488, 6MWE, Holohoax, the Juice (juice-box emoji), Every Single Time, the JQ, echoes ((( ))), RAHOWA, ORION, 311 (KKK), Total Jew Death, blood libel, synagogue of satan, fake AI 'Rabbi Goldman'. Cross-referenced against Facebook's Dangerous Individuals & Organizations list.";
   const asUrl='https://www.documentcloud.org/documents/21083819-facebook-dangerous-individuals-and-organizations-list-reproduced-snapshot/';
   LIBRARY.unshift({id:'src-fbdoi',name:"Facebook Dangerous Individuals & Organizations list",kind:'source',note:asUrl,url:asUrl,size:asText.length,text:asText,chunks:Math.ceil(asText.length/600),terms:['antisemitism','goyim','zog','holohoax','6mwe','rahowa','the juice','jewish question'],imported:0,image:null,ts:'seed'});
+  const hdText="HISTORICAL-DISGUISE METHOD (why the system reads history, not just keywords). Modern white-nationalist and neo-Nazi groups deliberately cloak recruitment in Germanic/Norse mythology, medieval epics and Nazi-era history so posts read as 'heritage', 'fitness' or 'streetwear' rather than extremism. Worked example: a 'Will2Rise X Kampf der Nibelungen — Zwei Marken, eine Haltung' poster looks like a clothing collaboration, but Kampf der Nibelungen ('Battle of the Nibelungs', from the medieval Nibelungenlied the Nazis mythologised) is a German neo-Nazi combat-sports/fight-club brand whose events were banned in Germany in 2019, its emblem is the stinging-nettle leaf, and Will2Rise is a US 'Active Club' brand that sells neo-Nazi fight-club culture as apparel. 'Zwei Marken, eine Haltung' ('two brands, one stance') announces the two extremist brands merging as one movement. The disguise pattern to teach the system: (1) a historic/mythic NAME (Nibelungen, Wotan, Thule, Ahnenerbe, Nibelungentreue); (2) a repurposed SYMBOL (nettle leaf, Black Sun/Schwarze Sonne from Wewelsburg, Wolfsangel/Othala/Sig runes, valknut); (3) a fitness/combat-sport or apparel WRAPPER (Active Club, fight night, 'defend your heritage'); (4) a loyalty/soil SLOGAN (Blood and Soil / Blut und Boden, 'eine Haltung'). Any two together, especially with a recruitment or event pathway, is a militarized-movement signal to flag for human review — not sportswear. Some elements (nettle plant, Norse runes, Odinism/Heathenry as a religion) have innocent uses, so these are context-required: flag when the extremist branding or movement context is present.";
+  LIBRARY.unshift({id:'src-histdisguise',name:'Historical-disguise method — Germanic myth & Nazi-era cover',kind:'source',note:'how extremists hide recruitment inside history/mythology',url:'',size:hdText.length,text:hdText,chunks:Math.ceil(hdText.length/600),terms:['kampf der nibelungen','nibelungen','nettle leaf','will2rise','black sun','wolfsangel','blut und boden','nibelungentreue','ahnenerbe','thule'],imported:0,image:null,ts:'seed'});
   if(typeof renderLibrary==='function')renderLibrary();}
 function renderLibrary(){const tb=document.querySelector('#libTable tbody');document.getElementById('libEmpty').style.display=LIBRARY.length?'none':'block';
   tb.innerHTML=LIBRARY.map(d=>`<tr><td>${d.image?`<img class="thumb" src="${d.image.thumb}">`:(d.url?'🔗 ':'📄 ')}${d.url?`<a href="${d.url}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">${d.name} ↗</a>`:`<b>${d.name}</b>`}<br><span class="note" style="margin:0">${d.url?'':(d.note||'')}${d.image?` · dHash ${d.image.dhash}`:''}</span></td><td class="cat">${d.kind.replace('_',' ')}</td><td>${d.image?'fingerprint':d.chunks+' chunk'+(d.chunks===1?'':'s')}</td><td>${d.imported?`<b>${d.imported}</b> proposals · `:''}${d.terms.length?`<span class="note" style="margin:0">candidates: </span>${d.terms.slice(0,6).map(t=>`<span class="chip teach" onclick="teachFrom('${t.replace(/'/g,'')}')">+ ${t}</span>`).join(' ')}`:(d.image?'reference image':'—')}</td><td class="status">${d.ts}</td></tr>`).join('')}
@@ -2080,6 +2113,38 @@ function stepGo(s){
   else if(s==='teach'){showTab('ai');flash(document.getElementById('aiInput'));const el=document.getElementById('aiInput');if(el)el.focus();
     toast('Step 6 — TEACH: ask the AI anything, or describe a new threat and press “📚 Teach the system this”.');}
 }
+// ---- Affiliate finder: from ONE confirmed account, pivot to the affiliated network — they share the same
+//      brands, coded terms, collaborators and hashtags. Builds filtered searches (no login); paste the results
+//      back and the same extractor captures the whole network for scoring & human review. ----
+function findAffiliates(id){
+  const it=(id!=null&&items.find(x=>x.id===id))||items[0];
+  if(!it){toast('Capture an account first, then find its affiliates');return}
+  const handle=(it.poster||'').replace(/^@/,'');
+  const urlTags=((it.url||'').match(/#[A-Za-z0-9_]+/g)||[]);
+  const terms=[...new Set([
+    ...(it.indicators||[]).filter(t=>t&&t.length>2&&!/no risk/i.test(t)),
+    ...urlTags, handle
+  ].filter(Boolean))].slice(0,10);
+  if(!terms.length){toast('This account has no brand/code signals to pivot on yet');return}
+  const org=_orGroup(terms);
+  const g=(site)=>'https://www.google.com/search?q='+encodeURIComponent(`site:${site} ${org}`);
+  const links=[
+    ['🔎 Instagram affiliates',g('instagram.com')],
+    ['🔎 Facebook affiliates',g('facebook.com')],
+    ['🔎 TikTok affiliates',g('tiktok.com')],
+    ['🔎 Telegram affiliates',g('t.me')],
+    ['🔎 X affiliates (live)','https://x.com/search?q='+encodeURIComponent(org)+'&f=live'],
+    ['🌐 Whole network (web)','https://www.google.com/search?q='+encodeURIComponent(org)],
+  ];
+  window.__liveTag='@'+(handle||'account')+' network';
+  document.getElementById('tagLiveTitle').innerHTML='Affiliated accounts around <b>'+((it.poster||'this account').replace(/</g,'&lt;'))+'</b> — same brands, codes &amp; collaborators';
+  document.getElementById('tagLiveLinks').innerHTML=links.map(([n,u])=>`<a class="btn sec" href="${u}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">${n} ↗</a>`).join('');
+  document.getElementById('tagTermsUsed').innerHTML='<b>Pivoting on:</b> '+terms.map(x=>x.replace(/</g,'&lt;')).join(', ')+'. <span class="note" style="margin:0">The affiliated network shares these brands, codes and collaborators — open a search, copy the whole page, paste below to capture them all.</span>';
+  document.getElementById('tagPosts').value='';const pn=document.getElementById('tagPasteN');if(pn)pn.innerHTML='';
+  document.getElementById('tagLivePanel').style.display='block';
+  document.getElementById('tagLivePanel').scrollIntoView({behavior:'smooth',block:'center'});
+  toast('Affiliate search built from '+((it.poster)||'this account')+' — open one, copy the page, paste back to capture the network.');
+}
 // ---- Connect: flip between the built-in demo analyzer and the live AI backend ----
 async function connectBackend(){
   const def='https://project-spear-backend.onrender.com';const btn=document.getElementById('connBtn');
@@ -2243,7 +2308,7 @@ function renderDetail(){
      <button class="btn mute" onclick="act('Dismissed')">Dismiss (FP)</button>
    </div>
    ${it.tier==='CRITICAL'?`<div class="twoman">CRITICAL tier: escalation requires two-analyst confirmation (${it.reviewers.length}/2 recorded).</div>`:''}
-   <div class="row" style="margin-top:8px"><span class="pill">report.md</span><span class="pill">metadata.json</span><span class="pill">screenshot.png</span><span class="pill">media/</span><button class="btn sec" style="margin-left:auto" onclick="openReport()">Generate report</button></div>
+   <div class="row" style="margin-top:8px"><span class="pill">report.md</span><span class="pill">metadata.json</span><span class="pill">screenshot.png</span><span class="pill">media/</span><button class="btn" style="margin-left:auto;background:#6B46C1;border-color:#6B46C1" onclick="findAffiliates(${it.id})" title="Pivot from this account to affiliated accounts that share its brands, codes and collaborators">🔗 Find affiliated accounts</button><button class="btn sec" onclick="openReport()">Generate report</button></div>
    <h3 style="margin-top:14px">Audit log</h3>
    <div class="audit">${audit.filter(a=>a.id===it.id).map(a=>`<div><b>${a.t}</b> · ${a.who} · ${a.action} — ${a.detail}</div>`).join('')||'<div>—</div>'}</div>`;
 }
@@ -2257,7 +2322,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();
 if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
 // crawl is OFF by default — the user starts it with the Start crawl toggle (saves data)
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
