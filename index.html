@@ -315,10 +315,25 @@
 
 <div class="livebar" style="padding-top:10px">
   <b style="font-size:13px;color:var(--navy)">📋 Hashtag report</b>
-  <input id="tagQ" placeholder="#Will2Rise" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:220px;font-size:13.5px" onkeydown="if(event.key==='Enter')generateHashtagReport()">
-  <button class="btn" onclick="exportHashtagXLSX()">🔎 Search &amp; build spreadsheet (.xlsx)</button>
-  <button class="btn sec" onclick="generateHashtagReport()">.html report</button>
-  <span class="note" id="tagStat" style="margin:0">Enter a hashtag — the system searches all connected content and builds a long spreadsheet for Meta.</span>
+  <input id="tagQ" placeholder="#Will2Rise" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:220px;font-size:13.5px" onkeydown="if(event.key==='Enter')openLiveHashtag()">
+  <button class="btn" onclick="openLiveHashtag()" style="background:#1877F2;border-color:#1877F2" title="Open the real, live hashtag page on each platform so you can grab the actual posts">🌐 Find live posts</button>
+  <button class="btn sec" onclick="exportHashtagXLSX()">⬇ Build spreadsheet (.xlsx)</button>
+  <button class="btn sec" onclick="generateHashtagReport()">📄 .html report</button>
+  <span class="note" id="tagStat" style="margin:0">Type a hashtag → <b>Find live posts</b> opens the real platform pages; capture the posts you see, then build a live report for Meta.</span>
+</div>
+<div id="tagLivePanel" class="findresults" style="display:none">
+  <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+    <b id="tagLiveTitle">Live hashtag pages</b>
+    <button class="btn mute" onclick="document.getElementById('tagLivePanel').style.display='none'">Close</button>
+  </div>
+  <div class="note" style="margin:4px 0 8px">These are the <b>real, live</b> hashtag pages on each platform. Open them, find the violating posts, copy each post's link, and paste the links below. The report is built only from links you paste — so every link opens for Meta.</div>
+  <div id="tagLiveLinks" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+  <textarea id="tagPosts" placeholder="Paste the real post links you found (one per line):&#10;https://www.instagram.com/p/…&#10;https://www.facebook.com/…/posts/…&#10;https://x.com/…/status/…" style="width:100%;min-height:90px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;box-sizing:border-box"></textarea>
+  <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
+    <button class="btn" onclick="captureHashtagPosts()">✓ Capture posts &amp; analyze</button>
+    <button class="btn sec" onclick="captureHashtagPosts(true)" title="Capture the pasted posts and immediately build the spreadsheet">✓ Capture + build spreadsheet</button>
+    <span class="note" id="tagLiveStat" style="margin:0"></span>
+  </div>
 </div>
 
 <div class="livebar" style="padding-top:10px">
@@ -1322,6 +1337,44 @@ async function exportHashtagXLSX(preRows,tagArg){
  const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='Hashtag_'+tag.replace(/[^A-Za-z0-9]/g,'')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);
  setSt('<b>Spreadsheet built</b> — '+rows.length+' items connected to '+tag+' (opens in Excel/Sheets).');
  toast(rows.length+' items exported for '+tag+' (.xlsx)');
+}
+// ---- Assisted LIVE hashtag capture: jump to each platform's real hashtag page, capture the real posts,
+//      then build a live report/spreadsheet whose links all resolve (works on free — no crawling/API). ----
+function _hashtagPageURLs(t){return [
+  ['Instagram','https://www.instagram.com/explore/tags/'+t+'/'],
+  ['Facebook','https://www.facebook.com/hashtag/'+t],
+  ['X (Twitter)','https://x.com/search?q=%23'+t+'&src=typed_query&f=live'],
+  ['TikTok','https://www.tiktok.com/tag/'+t],
+  ['Telegram (channel search)','https://t.me/s/'+t],
+];}
+function openLiveHashtag(){
+  let tag=(document.getElementById('tagQ').value||'').trim();if(!tag){toast('Type a hashtag first');return}
+  if(!tag.startsWith('#'))tag='#'+tag;const t=tag.replace(/^#/,'').replace(/[^A-Za-z0-9_]/g,'');
+  if(!t){toast('Enter a valid hashtag');return}
+  window.__liveTag=tag;
+  document.getElementById('tagLiveTitle').innerHTML='Live pages for <b>'+tag.replace(/</g,'&lt;')+'</b> — open, find posts, paste the links';
+  document.getElementById('tagLiveLinks').innerHTML=_hashtagPageURLs(t).map(([name,u])=>
+    `<a class="btn sec" href="${u}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">↗ ${name}</a>`).join('');
+  document.getElementById('tagLiveStat').textContent='';
+  document.getElementById('tagPosts').value='';
+  document.getElementById('tagLivePanel').style.display='block';
+  document.getElementById('tagStat').innerHTML='Opened live pages for <b>'+tag.replace(/</g,'&lt;')+'</b> — grab the real post links and paste them below.';
+}
+async function captureHashtagPosts(alsoBuild){
+  const tag=window.__liveTag||((document.getElementById('tagQ').value||'').trim());
+  const raw=(document.getElementById('tagPosts').value||'').split(/\s*\n\s*/).map(x=>x.trim()).filter(Boolean);
+  const urls=raw.filter(u=>/^https?:\/\//i.test(u));
+  const st=document.getElementById('tagLiveStat');
+  if(!urls.length){st.innerHTML='<span style="color:#B42318">Paste at least one real post link (starting with https://).</span>';return}
+  st.innerHTML='<span style="color:#B42318">●</span> Analyzing '+urls.length+' real post(s)…';
+  let n=0;for(const u of urls){setBusy(true,`Analyzing captured post ${++n} of ${urls.length}…`);
+    // append the hashtag so the tag-report builders pick these up, keeping the real URL first
+    await addItem(u+' ('+tag+')');}
+  setBusy(false);render();
+  st.innerHTML='<b>'+urls.length+' real post(s) captured</b> for '+tag.replace(/</g,'&lt;')+' — every link opens. Building the report from these.';
+  audit.unshift({t:new Date().toLocaleTimeString(),id:0,action:'live hashtag capture',detail:`${urls.length} real posts captured for ${tag}`,who:'Strategic'});
+  document.getElementById('tagStat').innerHTML='<b>'+urls.length+'</b> real post(s) captured for '+tag.replace(/</g,'&lt;')+'. Use <b>Build spreadsheet</b> or <b>.html report</b> — the links are live.';
+  if(alsoBuild)exportHashtagXLSX(null,tag);
 }
 async function generateHashtagReport(){
  let tag=(document.getElementById('tagQ').value||'').trim();if(!tag){toast('Enter a hashtag');return}
