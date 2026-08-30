@@ -328,35 +328,32 @@
 
 <div class="livebar" style="padding-top:10px">
   <b style="font-size:13px;color:var(--navy)">📋 Hashtag report</b>
-  <input id="tagQ" placeholder="#Will2Rise" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:220px;font-size:13.5px" onkeydown="if(event.key==='Enter')openLiveHashtag()">
-  <button class="btn" onclick="openLiveHashtag()" style="background:#1877F2;border-color:#1877F2" title="Build filtered live searches — hashtag + known threat terms — so results are the nefarious posts, not benign pictures (no login needed)">🔎 Find nefarious posts</button>
+  <input id="tagQ" placeholder="#Will2Rise" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:220px;font-size:13.5px" onkeydown="if(event.key==='Enter')runSystemSearch()">
+  <button class="btn" onclick="runSystemSearch()" style="background:#1877F2;border-color:#1877F2" title="The system searches the web for nefarious posts and brings the results in here — no leaving the app">🔎 Find nefarious posts</button>
   <button class="btn sec" onclick="exportHashtagXLSX()">⬇ Build spreadsheet (.xlsx)</button>
   <button class="btn sec" onclick="generateHashtagReport()">📄 .html report</button>
-  <span class="note" id="tagStat" style="margin:0">Type a hashtag → <b>Find live posts</b> opens the real platform pages; capture the posts you see, then build a live report for Meta.</span>
+  <span class="note" id="tagStat" style="margin:0">Type a hashtag and press <b>Find nefarious posts</b> — the system searches and brings the results in here. You only click out to read a post.</span>
 </div>
 <div id="tagLivePanel" class="findresults" style="display:none">
   <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-    <b id="tagLiveTitle">Live hashtag pages</b>
+    <b id="tagLiveTitle">Search results</b>
     <button class="btn mute" onclick="document.getElementById('tagLivePanel').style.display='none'">Close</button>
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px">
-    <div style="flex:1;min-width:200px;background:#eef5fb;border:2px solid var(--cyan);border-radius:10px;padding:10px 13px"><b style="font-size:15px;color:var(--navy)">1️⃣ Open a search below</b><div class="note" style="margin:3px 0 0">It already filters your hashtag to the <b>bad content only</b> — no login needed.</div></div>
-    <div style="flex:1;min-width:200px;background:#eef5fb;border:2px solid var(--cyan);border-radius:10px;padding:10px 13px"><b style="font-size:15px;color:var(--navy)">2️⃣ Copy the whole page</b><div class="note" style="margin:3px 0 0">Press <b>Ctrl+A</b> (select all), then <b>Ctrl+C</b> (copy). That's it — no picking links one by one.</div></div>
-    <div style="flex:1;min-width:200px;background:#eef5fb;border:2px solid var(--cyan);border-radius:10px;padding:10px 13px"><b style="font-size:15px;color:var(--navy)">3️⃣ Paste below &amp; press the green button</b><div class="note" style="margin:3px 0 0">The system finds <b>every Facebook/Instagram post link</b> in your paste — dozens at once — and scores them all.</div></div>
+  <div class="row" style="gap:8px;flex-wrap:wrap;margin:6px 0 8px;align-items:center">
+    <input id="tagFocusTerms" placeholder="Add your own threat terms (optional): day of the rope, 1488, tribe and train…" style="flex:1;min-width:240px;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px" onkeydown="if(event.key==='Enter')runSystemSearch()">
+    <button class="btn sec" onclick="runSystemSearch()">↻ Search again</button>
   </div>
-  <div class="row" style="gap:8px;flex-wrap:wrap;margin:0 0 8px;align-items:center">
-    <input id="tagFocusTerms" placeholder="Add your own threat terms (optional): day of the rope, 1488, tribe and train…" style="flex:1;min-width:240px;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px" onkeydown="if(event.key==='Enter')openLiveHashtag()">
-    <button class="btn sec" onclick="openLiveHashtag()">↻ Rebuild searches</button>
-  </div>
-  <div id="tagLiveLinks" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
-  <div class="note" id="tagTermsUsed" style="margin:0 0 10px"></div>
-  <textarea id="tagPosts" placeholder="PASTE HERE (Ctrl+V) — paste the whole copied page, or individual post links. The system pulls out every Facebook / Instagram / X / TikTok / Telegram post link automatically." style="width:100%;min-height:110px;border:2px solid #2F855A;border-radius:8px;padding:11px 13px;font-size:14px;font-family:inherit;box-sizing:border-box" oninput="tagPasteCount()"></textarea>
-  <div class="note" id="tagPasteN" style="margin:4px 0 0"></div>
-  <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
-    <button class="btn" style="background:#2F855A;border-color:#2F855A;font-size:15px;padding:10px 18px" onclick="captureHashtagPosts(true)">✅ Grab the posts &amp; build the Meta spreadsheet</button>
-    <button class="btn sec" onclick="captureHashtagPosts()" title="Capture and score the posts without building the spreadsheet yet">Capture only</button>
+  <div class="note" id="tagTermsUsed" style="margin:0 0 8px"></div>
+  <div id="tagResults"></div>
+  <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+    <button class="btn" id="tagCaptureAll" style="background:#2F855A;border-color:#2F855A;font-size:15px;padding:10px 18px;display:none" onclick="captureAllResults(true)">✅ Capture all &amp; build the Meta spreadsheet</button>
     <span class="note" id="tagLiveStat" style="margin:0"></span>
   </div>
+  <details style="margin-top:10px"><summary class="note" style="cursor:pointer">Manual fallback — paste links if a search ever won't load</summary>
+    <textarea id="tagPosts" placeholder="Paste post links or a copied results page here…" style="width:100%;min-height:80px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;box-sizing:border-box;margin-top:6px" oninput="tagPasteCount()"></textarea>
+    <div class="note" id="tagPasteN" style="margin:4px 0 0"></div>
+    <div class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap"><button class="btn sec" onclick="captureHashtagPosts(true)">Capture pasted &amp; build spreadsheet</button></div>
+  </details>
 </div>
 
 <div class="livebar" style="padding-top:10px">
@@ -1416,14 +1413,16 @@ function _orGroup(terms){return '('+terms.map(t=>/\s/.test(t)?`"${t}"`:t).join('
 // X native live search takes the operators directly.
 function _hashtagSearchURLs(t,terms){
   const org=_orGroup(terms);
-  const g=(site)=>'https://www.google.com/search?q='+encodeURIComponent(`site:${site} "${t}" ${org}`);
+  // &filter=0 turns off Google's "we omitted similar results" collapsing, so ALL matches show.
+  const g=(site)=>'https://www.google.com/search?filter=0&num=40&q='+encodeURIComponent(`site:${site} "${t}" ${org}`);
   return [
     ['🔎 Instagram — filtered', g('instagram.com')],
     ['🔎 Facebook — filtered', g('facebook.com')],
     ['🔎 TikTok — filtered', g('tiktok.com')],
     ['🔎 Telegram — filtered', g('t.me')],
     ['🔎 X — live filtered', 'https://x.com/search?q='+encodeURIComponent(`#${t} ${org}`)+'&f=live'],
-    ['🌐 All platforms (web)', 'https://www.google.com/search?q='+encodeURIComponent(`"#${t}" ${org}`)],
+    ['🌐 All platforms (web)', 'https://www.google.com/search?filter=0&num=40&q='+encodeURIComponent(`"#${t}" ${org}`)],
+    ['➕ Instagram — hashtag only (widest)', 'https://www.google.com/search?filter=0&num=40&q='+encodeURIComponent(`site:instagram.com "#${t}"`)],
   ];
 }
 function openLiveHashtag(){
@@ -1464,19 +1463,44 @@ function extractPostURLs(blob){
     const c=clean(host+'/'+path);if(c)found.add(c);}
   return [...found].slice(0,150);
 }
+// From a copied Google/search RESULTS page, pull out the accounts you can see (handles, "@names",
+// "name's profile picture", and result breadcrumbs) and turn them into real profile/post links.
+function _dominantPlatform(blob){
+  const c={instagram:0,facebook:0,tiktok:0,x:0,telegram:0};
+  c.instagram=(blob.match(/instagram\.com/gi)||[]).length;
+  c.facebook=(blob.match(/facebook\.com/gi)||[]).length;
+  c.tiktok=(blob.match(/tiktok\.com/gi)||[]).length;
+  c.x=(blob.match(/\b(?:x|twitter)\.com/gi)||[]).length;
+  c.telegram=(blob.match(/t\.me/gi)||[]).length;
+  let best=null,bv=0;for(const k in c){if(c[k]>bv){bv=c[k];best=k}}return best;
+}
+function _profileURL(plat,handle){const h=(handle||'').replace(/^@/,'').replace(/[^a-z0-9_.]/gi,'').replace(/\.$/,'');
+  if(h.length<3||/^(com|www|the|and|for|photo|reel|profile|follow|view|instagram|facebook|tiktok|telegram)$/i.test(h))return null;
+  return ({instagram:'https://www.instagram.com/'+h+'/',facebook:'https://www.facebook.com/'+h,tiktok:'https://www.tiktok.com/@'+h,x:'https://x.com/'+h,telegram:'https://t.me/'+h})[plat]||null;}
+function extractAccounts(blob){
+  const plat=_dominantPlatform(blob);if(!plat)return [];
+  const out=new Set();let m;
+  (blob.match(/@[a-z0-9_.]{3,30}/gi)||[]).forEach(h=>{const u=_profileURL(plat,h);if(u)out.add(u)});
+  const re=/([a-z0-9][a-z0-9_.]{2,29})[’'`]s profile/gi;while((m=re.exec(blob))){const u=_profileURL(plat,m[1]);if(u)out.add(u)}
+  const bc=/(?:instagram\.com|facebook\.com|tiktok\.com|x\.com|twitter\.com|t\.me)\s*›\s*([A-Za-z0-9_-]{4,})/gi;
+  while((m=bc.exec(blob))){const code=m[1];if(plat==='instagram'&&!/^(p|reel|tv|explore|accounts|www)$/i.test(code))out.add('https://www.instagram.com/p/'+code+'/');}
+  return [...out];
+}
+// everything usable in a paste: real links + accounts pulled from a results page
+function extractAll(blob){return [...new Set([...extractPostURLs(blob),...extractAccounts(blob)])].slice(0,150);}
 // live counter under the paste box — instant feedback so Eric knows it worked
 function tagPasteCount(){
   const el=document.getElementById('tagPasteN');if(!el)return;
-  const n=extractPostURLs(document.getElementById('tagPosts').value||'').length;
-  el.innerHTML=n?`<b style="color:#2F855A;font-size:14px">✔ ${n} post link(s) found in your paste</b> — press the green button.`:'';
+  const n=extractAll(document.getElementById('tagPosts').value||'').length;
+  el.innerHTML=n?`<b style="color:#2F855A;font-size:14px">✔ ${n} account/post link(s) found in your paste</b> — press the green button.`:'';
 }
 async function captureHashtagPosts(alsoBuild){
   const tag=window.__liveTag||((document.getElementById('tagQ').value||'').trim());
   const blob=document.getElementById('tagPosts').value||'';
-  const urls=extractPostURLs(blob);
+  const urls=extractAll(blob);
   const st=document.getElementById('tagLiveStat');
-  if(!urls.length){st.innerHTML='<span style="color:#B42318">No post links found in what you pasted. Tip: on the results page press <b>Ctrl+A</b> then <b>Ctrl+C</b>, then paste it ALL here — the system finds the links for you.</span>';return}
-  st.innerHTML='<span style="color:#B42318">●</span> Found <b>'+urls.length+'</b> post link(s) in your paste…';
+  if(!urls.length){st.innerHTML='<span style="color:#B42318">No accounts or post links found in what you pasted. Tip: on the results page press <b>Ctrl+A</b> then <b>Ctrl+C</b>, then paste it ALL here — the system finds the accounts for you.</span>';return}
+  st.innerHTML='<span style="color:#B42318">●</span> Found <b>'+urls.length+'</b> account/post link(s) in your paste…';
   st.innerHTML='<span style="color:#B42318">●</span> Analyzing '+urls.length+' real post(s)…';
   let n=0;for(const u of urls){setBusy(true,`Analyzing captured post ${++n} of ${urls.length}…`);
     // append the hashtag so the tag-report builders pick these up, keeping the real URL first
@@ -2113,37 +2137,106 @@ function stepGo(s){
   else if(s==='teach'){showTab('ai');flash(document.getElementById('aiInput'));const el=document.getElementById('aiInput');if(el)el.focus();
     toast('Step 6 — TEACH: ask the AI anything, or describe a new threat and press “📚 Teach the system this”.');}
 }
-// ---- Affiliate finder: from ONE confirmed account, pivot to the affiliated network — they share the same
-//      brands, coded terms, collaborators and hashtags. Builds filtered searches (no login); paste the results
-//      back and the same extractor captures the whole network for scoring & human review. ----
+// ================= IN-SYSTEM WEB SEARCH: results come back INTO the dashboard (no leaving the app) =================
+// A browser page cannot read Facebook/Instagram directly, so the request is routed through a free public relay
+// that fetches a web search and returns it here. Results render inside the panel; the ONLY outside click is
+// opening a post to read it. If every relay is busy, a manual paste fallback stays available.
+const CORS_PROXIES=[
+  u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+  u=>'https://corsproxy.io/?url='+encodeURIComponent(u),
+  u=>'https://thingproxy.freeboard.io/fetch/'+u
+];
+async function fetchThrough(url){
+  for(const mk of CORS_PROXIES){try{
+    const r=await fetch(mk(url));if(!r.ok)continue;const t=await r.text();
+    if(t&&t.length>300)return t;
+  }catch(e){}}
+  return null;
+}
+function _unwrapDDG(href){if(!href)return '';let u=href;
+  const m=u.match(/[?&]uddg=([^&]+)/);if(m){try{u=decodeURIComponent(m[1])}catch(e){}}
+  if(u.startsWith('//'))u='https:'+u;return u;}
+function parseSearchHTML(html){
+  const out=[];let doc;try{doc=new DOMParser().parseFromString(html,'text/html')}catch(e){return out}
+  const seen=new Set();
+  const push=(href,title,snippet)=>{href=_unwrapDDG(href);
+    if(!/^https?:\/\/(www\.)?(instagram\.com|facebook\.com|tiktok\.com|t\.me|x\.com|twitter\.com)\//i.test(href))return;
+    if(/\/(explore|hashtag|tags|accounts\/login|policies|about|help|developers?|business|legal|privacy)\b/i.test(href))return;
+    href=href.split('#')[0].replace(/[)\].,'"”’]+$/,'');
+    if(seen.has(href))return;seen.add(href);
+    out.push({href,title:(title||'').trim().slice(0,140),snippet:(snippet||'').trim().slice(0,300)});};
+  const results=doc.querySelectorAll('.result, .web-result, .result__body, tr');
+  if(results.length)results.forEach(res=>{const a=res.querySelector('a.result__a')||res.querySelector('a');if(!a)return;
+    const sn=res.querySelector('.result__snippet, .result-snippet, td.result-snippet');
+    push(a.getAttribute('href'),a.textContent,sn?sn.textContent:res.textContent)});
+  if(!out.length)doc.querySelectorAll('a').forEach(a=>push(a.getAttribute('href'),a.textContent,''));
+  return out;
+}
+async function _runSearch(titleHTML,termsUsed,queries){
+  const panel=document.getElementById('tagLivePanel');panel.style.display='block';
+  document.getElementById('tagLiveTitle').innerHTML=titleHTML;
+  document.getElementById('tagTermsUsed').innerHTML=termsUsed;
+  document.getElementById('tagLiveStat').textContent='';document.getElementById('tagCaptureAll').style.display='none';
+  const res=document.getElementById('tagResults');
+  res.innerHTML='<div class="note" style="padding:16px;text-align:center"><span class="spin"></span> The system is searching and bringing results in here… this can take 10–20 seconds.</div>';
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  let all=[];
+  for(const q of queries){for(const eng of ['https://html.duckduckgo.com/html/?q=','https://lite.duckduckgo.com/lite/?q=']){
+    const html=await fetchThrough(eng+encodeURIComponent(q));
+    if(html){const part=parseSearchHTML(html);if(part.length){all=all.concat(part);break}}
+  }}
+  const seen=new Set();all=all.filter(r=>{if(seen.has(r.href))return false;seen.add(r.href);return true});
+  all.forEach(r=>{const hits=cbMatch(r.title+' '+r.snippet+' '+r.href,[]);const pr=cbPrior(hits);r.score=pr.score;r.category=pr.category;r.tier=tierOf(pr.score);r.hits=hits.map(h=>h.term)});
+  all.sort((a,b)=>b.score-a.score);
+  window.__sysResults=all;renderSearchResults(all);
+}
+function renderSearchResults(list){
+  const res=document.getElementById('tagResults');const stat=document.getElementById('tagLiveStat');
+  if(!list.length){res.innerHTML='<div class="note" style="padding:14px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px">The live search relay didn\'t return results this time (public relays are sometimes busy or rate-limited). Press <b>↻ Search again</b> in a moment, or open the manual fallback below.</div>';document.getElementById('tagCaptureAll').style.display='none';return;}
+  const plat=h=>{const m=h.match(/(instagram|facebook|tiktok|twitter|t\.me)/i);return m?({['t.me']:'telegram'}[m[1].toLowerCase()]||m[1].toLowerCase()):(/x\.com/.test(h)?'x':'link')};
+  res.innerHTML=`<table><thead><tr><th>Post / account (click only to read)</th><th>Platform</th><th>Score</th><th>Signals</th><th></th></tr></thead><tbody>`+
+    list.map((r,i)=>`<tr>
+      <td><a href="${r.href}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">${(r.title||r.href).replace(/</g,'&lt;').slice(0,80)} ↗</a><br><span class="note" style="margin:0">${r.href.replace(/</g,'&lt;').slice(0,64)}</span></td>
+      <td class="note" style="margin:0">${plat(r.href)}</td>
+      <td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td>
+      <td class="note" style="margin:0">${(r.hits||[]).slice(0,2).join(', ')||'—'}</td>
+      <td><button class="btn" style="padding:3px 10px" onclick="captureResult(${i})">Capture</button></td></tr>`).join('')+
+    `</tbody></table>`;
+  document.getElementById('tagCaptureAll').style.display='';
+  stat.innerHTML=`<b>${list.length}</b> result(s) brought in — sorted by risk. Click a link only to read a post; <b>Capture all</b> sends them to the review queue &amp; Meta spreadsheet.`;
+}
+function captureResult(i){const r=window.__sysResults&&window.__sysResults[i];if(!r)return;addItem(r.href+' ('+(window.__liveTag||'')+' '+(r.hits||[]).slice(0,3).join(' ')+')');toast('Captured to review queue');showTab('queue');}
+async function captureAllResults(build){
+  const list=window.__sysResults||[];if(!list.length){toast('Nothing to capture yet');return}
+  const stat=document.getElementById('tagLiveStat');let n=0;
+  for(const r of list){setBusy(true,`Capturing ${++n} of ${list.length}…`);await addItem(r.href+' ('+(window.__liveTag||'')+' '+(r.hits||[]).slice(0,3).join(' ')+')')}
+  setBusy(false);render();
+  stat.innerHTML='<b>'+list.length+'</b> captured for '+((window.__liveTag||'').replace(/</g,'&lt;'))+'. Building the Meta spreadsheet…';
+  if(build)exportHashtagXLSX(null,window.__liveTag||'');
+}
+async function runSystemSearch(){
+  let tag=(document.getElementById('tagQ').value||'').trim();if(!tag){toast('Type a hashtag first');return}
+  if(!tag.startsWith('#'))tag='#'+tag;const t=tag.replace(/^#/,'').replace(/[^A-Za-z0-9_]/g,'');
+  window.__liveTag=tag;
+  const extra=((document.getElementById('tagFocusTerms')||{}).value||'').split(/[,\n]+/).map(x=>x.trim()).filter(Boolean);
+  const terms=nefariousSearchTerms(extra);const org=_orGroup(terms);
+  await _runSearch('Results for <b>'+tag.replace(/</g,'&lt;')+'</b> — nefarious posts, brought in here',
+    '<b>Filtering for:</b> '+terms.slice(0,12).map(x=>x.replace(/</g,'&lt;')).join(', '),
+    [`site:facebook.com "${t}" ${org}`,`site:instagram.com "${t}" ${org}`]);
+}
+// ---- Affiliate finder: from ONE confirmed account, pivot to its network via the same in-system search ----
 function findAffiliates(id){
   const it=(id!=null&&items.find(x=>x.id===id))||items[0];
   if(!it){toast('Capture an account first, then find its affiliates');return}
   const handle=(it.poster||'').replace(/^@/,'');
   const urlTags=((it.url||'').match(/#[A-Za-z0-9_]+/g)||[]);
-  const terms=[...new Set([
-    ...(it.indicators||[]).filter(t=>t&&t.length>2&&!/no risk/i.test(t)),
-    ...urlTags, handle
-  ].filter(Boolean))].slice(0,10);
+  const terms=[...new Set([...(it.indicators||[]).filter(t=>t&&t.length>2&&!/no risk/i.test(t)),...urlTags,handle].filter(Boolean))].slice(0,8);
   if(!terms.length){toast('This account has no brand/code signals to pivot on yet');return}
-  const org=_orGroup(terms);
-  const g=(site)=>'https://www.google.com/search?q='+encodeURIComponent(`site:${site} ${org}`);
-  const links=[
-    ['🔎 Instagram affiliates',g('instagram.com')],
-    ['🔎 Facebook affiliates',g('facebook.com')],
-    ['🔎 TikTok affiliates',g('tiktok.com')],
-    ['🔎 Telegram affiliates',g('t.me')],
-    ['🔎 X affiliates (live)','https://x.com/search?q='+encodeURIComponent(org)+'&f=live'],
-    ['🌐 Whole network (web)','https://www.google.com/search?q='+encodeURIComponent(org)],
-  ];
   window.__liveTag='@'+(handle||'account')+' network';
-  document.getElementById('tagLiveTitle').innerHTML='Affiliated accounts around <b>'+((it.poster||'this account').replace(/</g,'&lt;'))+'</b> — same brands, codes &amp; collaborators';
-  document.getElementById('tagLiveLinks').innerHTML=links.map(([n,u])=>`<a class="btn sec" href="${u}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">${n} ↗</a>`).join('');
-  document.getElementById('tagTermsUsed').innerHTML='<b>Pivoting on:</b> '+terms.map(x=>x.replace(/</g,'&lt;')).join(', ')+'. <span class="note" style="margin:0">The affiliated network shares these brands, codes and collaborators — open a search, copy the whole page, paste below to capture them all.</span>';
-  document.getElementById('tagPosts').value='';const pn=document.getElementById('tagPasteN');if(pn)pn.innerHTML='';
-  document.getElementById('tagLivePanel').style.display='block';
-  document.getElementById('tagLivePanel').scrollIntoView({behavior:'smooth',block:'center'});
-  toast('Affiliate search built from '+((it.poster)||'this account')+' — open one, copy the page, paste back to capture the network.');
+  const org=_orGroup(terms);
+  _runSearch('Affiliated accounts around <b>'+((it.poster||'this account').replace(/</g,'&lt;'))+'</b> — same brands, codes &amp; collaborators',
+    '<b>Pivoting on:</b> '+terms.map(x=>x.replace(/</g,'&lt;')).join(', '),
+    [`site:facebook.com ${org}`,`site:instagram.com ${org}`]);
 }
 // ---- Connect: flip between the built-in demo analyzer and the live AI backend ----
 async function connectBackend(){
