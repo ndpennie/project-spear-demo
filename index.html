@@ -339,17 +339,22 @@
     <b id="tagLiveTitle">Live hashtag pages</b>
     <button class="btn mute" onclick="document.getElementById('tagLivePanel').style.display='none'">Close</button>
   </div>
-  <div class="note" style="margin:4px 0 8px">These searches <b>combine your hashtag with known threat terms</b>, so the results are the <b>nefarious posts — not benign pictures</b>. They run through web search, which is indexed, so <b>no login</b> is needed. Open one, find the violating posts, copy each post's link, and paste the links below — the report is built only from links you paste, so every link opens for Meta.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px">
+    <div style="flex:1;min-width:200px;background:#eef5fb;border:2px solid var(--cyan);border-radius:10px;padding:10px 13px"><b style="font-size:15px;color:var(--navy)">1️⃣ Open a search below</b><div class="note" style="margin:3px 0 0">It already filters your hashtag to the <b>bad content only</b> — no login needed.</div></div>
+    <div style="flex:1;min-width:200px;background:#eef5fb;border:2px solid var(--cyan);border-radius:10px;padding:10px 13px"><b style="font-size:15px;color:var(--navy)">2️⃣ Copy the whole page</b><div class="note" style="margin:3px 0 0">Press <b>Ctrl+A</b> (select all), then <b>Ctrl+C</b> (copy). That's it — no picking links one by one.</div></div>
+    <div style="flex:1;min-width:200px;background:#eef5fb;border:2px solid var(--cyan);border-radius:10px;padding:10px 13px"><b style="font-size:15px;color:var(--navy)">3️⃣ Paste below &amp; press the green button</b><div class="note" style="margin:3px 0 0">The system finds <b>every Facebook/Instagram post link</b> in your paste — dozens at once — and scores them all.</div></div>
+  </div>
   <div class="row" style="gap:8px;flex-wrap:wrap;margin:0 0 8px;align-items:center">
     <input id="tagFocusTerms" placeholder="Add your own threat terms (optional): day of the rope, 1488, tribe and train…" style="flex:1;min-width:240px;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:13px" onkeydown="if(event.key==='Enter')openLiveHashtag()">
     <button class="btn sec" onclick="openLiveHashtag()">↻ Rebuild searches</button>
   </div>
   <div id="tagLiveLinks" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
   <div class="note" id="tagTermsUsed" style="margin:0 0 10px"></div>
-  <textarea id="tagPosts" placeholder="Paste the real post links you found (one per line):&#10;https://www.instagram.com/p/…&#10;https://www.facebook.com/…/posts/…&#10;https://x.com/…/status/…" style="width:100%;min-height:90px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;box-sizing:border-box"></textarea>
+  <textarea id="tagPosts" placeholder="PASTE HERE (Ctrl+V) — paste the whole copied page, or individual post links. The system pulls out every Facebook / Instagram / X / TikTok / Telegram post link automatically." style="width:100%;min-height:110px;border:2px solid #2F855A;border-radius:8px;padding:11px 13px;font-size:14px;font-family:inherit;box-sizing:border-box" oninput="tagPasteCount()"></textarea>
+  <div class="note" id="tagPasteN" style="margin:4px 0 0"></div>
   <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
-    <button class="btn" onclick="captureHashtagPosts()">✓ Capture posts &amp; analyze</button>
-    <button class="btn sec" onclick="captureHashtagPosts(true)" title="Capture the pasted posts and immediately build the spreadsheet">✓ Capture + build spreadsheet</button>
+    <button class="btn" style="background:#2F855A;border-color:#2F855A;font-size:15px;padding:10px 18px" onclick="captureHashtagPosts(true)">✅ Grab the posts &amp; build the Meta spreadsheet</button>
+    <button class="btn sec" onclick="captureHashtagPosts()" title="Capture and score the posts without building the spreadsheet yet">Capture only</button>
     <span class="note" id="tagLiveStat" style="margin:0"></span>
   </div>
 </div>
@@ -1424,12 +1429,40 @@ function openLiveHashtag(){
   document.getElementById('tagLivePanel').style.display='block';
   document.getElementById('tagStat').innerHTML='Built filtered searches for <b>'+tag.replace(/</g,'&lt;')+'</b> — open one, grab the violating post links, paste them below.';
 }
+// Pull every platform post link out of ANY pasted text — clean URLs, Google-redirect URLs, and the
+// "facebook.com › user › posts" breadcrumb style you get when copying a whole search-results page.
+function extractPostURLs(blob){
+  const found=new Set();
+  const okHost=h=>/(^|\.)((facebook|instagram|tiktok|twitter|x|threads)\.com|t\.me|x\.com)$/i.test(h);
+  const junk=u=>/google\.|webcache|\/policies|\/search\?|\/hashtag\/|\/explore\/|\/tag\/|accounts\/login|\/login/i.test(u);
+  const clean=u=>{u=u.replace(/[),.;'"”’\]]+$/,'');try{const p=new URL(u);
+      if(/google\./i.test(p.hostname)&&p.searchParams.get('q'))u=p.searchParams.get('q');
+      else if(/google\./i.test(p.hostname)&&p.searchParams.get('url'))u=p.searchParams.get('url');
+      const q=new URL(u);if(!okHost(q.hostname))return null;if(q.pathname.length<3)return null;if(junk(u))return null;
+      return q.origin+q.pathname+(q.search&&/story_fbid|fbid|v=/.test(q.search)?q.search:'');
+    }catch(e){return null}};
+  (blob.match(/https?:\/\/[^\s<>"')\]]+/g)||[]).forEach(u=>{const c=clean(u);if(c)found.add(c)});
+  // breadcrumb style: "https://www.facebook.com › willtorise › posts › 12345" or "www.instagram.com › p › Cxyz"
+  const bc=/((?:https?:\/\/)?(?:www\.)?(?:facebook\.com|instagram\.com|tiktok\.com|x\.com|twitter\.com|t\.me))((?:\s*›\s*[A-Za-z0-9_.@%-]+)+)/g;
+  let m;while((m=bc.exec(blob))){
+    const host=m[1].startsWith('http')?m[1]:'https://'+m[1];
+    const path=m[2].split('›').map(x=>x.trim()).filter(Boolean).join('/');
+    const c=clean(host+'/'+path);if(c)found.add(c);}
+  return [...found].slice(0,150);
+}
+// live counter under the paste box — instant feedback so Eric knows it worked
+function tagPasteCount(){
+  const el=document.getElementById('tagPasteN');if(!el)return;
+  const n=extractPostURLs(document.getElementById('tagPosts').value||'').length;
+  el.innerHTML=n?`<b style="color:#2F855A;font-size:14px">✔ ${n} post link(s) found in your paste</b> — press the green button.`:'';
+}
 async function captureHashtagPosts(alsoBuild){
   const tag=window.__liveTag||((document.getElementById('tagQ').value||'').trim());
-  const raw=(document.getElementById('tagPosts').value||'').split(/\s*\n\s*/).map(x=>x.trim()).filter(Boolean);
-  const urls=raw.filter(u=>/^https?:\/\//i.test(u));
+  const blob=document.getElementById('tagPosts').value||'';
+  const urls=extractPostURLs(blob);
   const st=document.getElementById('tagLiveStat');
-  if(!urls.length){st.innerHTML='<span style="color:#B42318">Paste at least one real post link (starting with https://).</span>';return}
+  if(!urls.length){st.innerHTML='<span style="color:#B42318">No post links found in what you pasted. Tip: on the results page press <b>Ctrl+A</b> then <b>Ctrl+C</b>, then paste it ALL here — the system finds the links for you.</span>';return}
+  st.innerHTML='<span style="color:#B42318">●</span> Found <b>'+urls.length+'</b> post link(s) in your paste…';
   st.innerHTML='<span style="color:#B42318">●</span> Analyzing '+urls.length+' real post(s)…';
   let n=0;for(const u of urls){setBusy(true,`Analyzing captured post ${++n} of ${urls.length}…`);
     // append the hashtag so the tag-report builders pick these up, keeping the real URL first
