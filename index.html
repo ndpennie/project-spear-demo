@@ -398,7 +398,13 @@
       </div>
       <div class="photo">
         <b style="font-size:13px">Or upload a screenshot</b>
-        <div class="note" style="margin:3px 0 0">Choose an image, then press <b>Analyze photo(s)</b>.</div>
+        <div class="note" style="margin:3px 0 0">Choose an image, then press <b>Analyze photo(s)</b>. With Vision AI on, the system <b>looks at the image and tells you what it is</b>.</div>
+        <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 2px;background:#eef7fb;border:1px solid var(--cyan);border-radius:7px;padding:7px 9px">
+          <span style="font-size:12.5px;font-weight:700;color:var(--navy)">👁 Vision AI</span>
+          <input id="gKey" type="password" placeholder="Paste your free Google Gemini API key so the system can SEE images…" style="flex:1;min-width:180px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px">
+          <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="saveVisionKey()">Save key</button>
+          <span class="note" id="gStat" style="margin:0;flex-basis:100%">Free key from Google AI Studio (aistudio.google.com/apikey). Stored only in this browser.</span>
+        </div>
         <div style="margin-top:6px"><input type="file" id="photoFile" accept="image/*" multiple></div>
         <input id="photoPoster" placeholder="Poster handle (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
         <input id="photoCaption" placeholder="Caption / audio credit (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
@@ -985,6 +991,34 @@ function videoStrip(it){if(!it.frames||!it.frames.length)return '<div class="not
   return '<div class="filmstrip">'+it.frames.map(fr=>`<div class="filmframe"><img src="${fr.thumb}" alt="frame"><div class="fcap">${fmtTime(fr.t)}</div><div class="fhit">${(fr.hits||[]).join(', ')||'—'}</div></div>`).join('')+'</div>';}
 function videoFramesHTML(it){if(!it.frames||!it.frames.length)return '';
   return `<div style="margin-top:10px"><b>Flagged frames — scanned across the ${it.dur} clip (markers appear mid-video, not in the thumbnail):</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">`+it.frames.map(fr=>`<div style="width:190px;border:1px solid #ccd5e0;border-radius:6px;overflow:hidden"><img src="${fr.thumb}" style="width:190px;display:block"><div style="font-size:11px;padding:3px 6px;background:#152A4E;color:#fff">${fmtTime(fr.t)}</div><div style="font-size:11px;padding:3px 6px;color:#b42318;font-weight:700">${(fr.hits||[]).join(', ')}</div></div>`).join('')+`</div><div style="font-size:11.5px;color:#6b7785;margin-top:6px"><b>How this was produced:</b> the video was sampled frame-by-frame across its full length; each frame's visible text was read by OCR and matched against the codebook, and each frame was fingerprinted against reference watermark logos. Because the scan does not rely on the thumbnail, a marker placed mid-clip or after a delayed start is still caught. Graphic-only logo/flag recognition and audio (nasheed) matching are performed by the backend vision/audio layer on the same codebook.</div></div>`;}
+// ================= VISION AI: let the system SEE images (like Gemini) via the Gemini API =================
+let GEMINI_KEY='', GEMINI_MODEL='gemini-3.7-flash';
+try{GEMINI_KEY=localStorage.getItem('spear_gemini')||''}catch(e){}
+try{GEMINI_MODEL=localStorage.getItem('spear_gmodel')||'gemini-3.7-flash'}catch(e){}
+function saveVisionKey(){const v=(document.getElementById('gKey').value||'').trim();GEMINI_KEY=v;
+  try{v?localStorage.setItem('spear_gemini',v):localStorage.removeItem('spear_gemini')}catch(e){}
+  const gs=document.getElementById('gStat');if(gs)gs.innerHTML=v?'<b style="color:#2F855A">👁 Vision AI is ON</b> — uploaded screenshots will be described and flagged automatically.':'Free key from Google AI Studio (aistudio.google.com/apikey). Stored only in this browser.';
+  toast(v?'Vision AI connected — the system can now see images':'Vision AI key cleared');}
+function initVision(){const gk=document.getElementById('gKey');const gs=document.getElementById('gStat');
+  if(GEMINI_KEY){if(gk)gk.value=GEMINI_KEY;if(gs)gs.innerHTML='<b style="color:#2F855A">👁 Vision AI is ON</b> — uploaded screenshots will be described and flagged automatically.';}}
+function visionSystemPrompt(){
+  const cats=CATS.filter(c=>c!=='benign').join(', ');
+  return `You are a trust & safety threat analyst for GIPEC AI². Analyze the attached image the way an expert human analyst would, looking hard for DISGUISED content. Watch for: ISIS/affiliate media logos or WATERMARKS tucked in a corner (Amaq, Al-Furqan, Al-Thabat, Ajnad, Nashir); the black tawhid / Islamic State banner ("Black Standard"); the slogan "remaining and expanding" (باقية وتتمدد); fake mainstream-news-logo camouflage such as a fake Al Jazeera teardrop calligraphy logo used as benign cover art on a repeated grid; neo-Nazi / antisemitic symbols (Happy Merchant, swastika, SS/runes, Jude star, "goyim", Holocaust denial, Great Replacement, Black Sun); narcotics sales; and inauthentic/scam accounts. SAFETY RULE: if the image appears to sexualize or exploit a minor, DO NOT describe it — set category "child_safety" and note "route to NCMEC; media withheld". Respond ONLY with a JSON object: {"description":"<plainly, what the image actually shows>","category":"<one of: ${cats}, or benign>","risk_score":<integer 0-10>,"threat":"<why it is/isn't a threat and any disguise or bait-and-switch tactic used>","policy":"<the platform policy it would violate, or none>","indicators":["<short signal>","..."],"confidence":<0-1>}`;
+}
+async function visionAnalyze(dataUrl){
+  if(!GEMINI_KEY)return null;
+  const m=(dataUrl||'').match(/^data:(image\/[\w+.-]+);base64,(.+)$/);if(!m)return null;
+  const body={contents:[{parts:[{text:visionSystemPrompt()},{inline_data:{mime_type:m[1],data:m[2]}}]}],
+    generationConfig:{temperature:0.2,responseMimeType:'application/json'}};
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`;
+  try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){const e=await r.text();console.warn('Gemini',r.status,e);toast('Vision AI error '+r.status+(r.status===400?' — check the API key':r.status===404?' — model name; try gemini-2.5-flash':''));return null;}
+    const j=await r.json();const txt=(((j.candidates||[])[0]||{}).content||{}).parts?.map(p=>p.text||'').join('')||'';
+    let out=null;try{out=JSON.parse(txt)}catch(e){const mm=txt.match(/\{[\s\S]*\}/);if(mm){try{out=JSON.parse(mm[0])}catch(e2){}}}
+    if(!out)out={description:(txt||'').slice(0,600),category:'benign',risk_score:1,threat:'',policy:'',indicators:[],confidence:0.4};
+    return out;
+  }catch(e){toast('Vision AI unreachable (network)');return null;}
+}
 async function addPhoto(dataUrl,o){
   const st=document.getElementById('ocrStatus');st.textContent='Fingerprinting…';const im=await loadImg(dataUrl);const dh=dHash(im);
   st.textContent='Reading text in image (OCR)…';const ocr=await ocrImage(dataUrl);document.getElementById('ocrBar').style.width='0';
@@ -1000,6 +1034,22 @@ async function addPhoto(dataUrl,o){
   if(remote&&remote.analysis){ai=remote.analysis;score=ai.risk_score||score;cat=CATS.includes(ai.classification)?ai.classification:cat;reasoning=ai.reasoning||'';conf=ai.confidence||conf;bd=(ai.why_this_score||[]).map(x=>({l:x,d:''}))}
   else{reasoning=hits.length?`Image-derived text and visual labels matched ${hits.length} codebook entr${hits.length===1?'y':'ies'}; the strongest (${hits[0].term}) sets the base and co-occurring codes raise it. Pixels were read by OCR${labels.length?' plus analyst-marked visible elements':''}; no vision model in demo mode.`:'OCR text, caption and handle contain no codebook indicators.'}
   if(!ocr&&!o.caption&&!labels.length){bd.push({l:'No readable text, caption or visible-element labels — pixels not interpreted (needs vision model)',d:0});conf=0.3}
+  // VISION AI: if a Gemini key is set (and no backend vision), let the model SEE the image and describe/flag it
+  let visionDesc='';
+  if(GEMINI_KEY && !(remote&&remote.analysis)){
+    st.textContent='👁 Looking at the image with Vision AI…';
+    const v=await visionAnalyze(dataUrl);
+    if(v){visionDesc=v.description||'';
+      const vcat=CATS.includes(v.category)?v.category:cat;const vscore=Math.max(0,Math.min(10,Math.round(Number(v.risk_score)||0)));
+      if(vscore>score){score=vscore;cat=vcat;} else if(cat==='benign'&&vcat!=='benign'){cat=vcat;score=Math.max(score,vscore);}
+      (v.indicators||[]).forEach(x=>{if(x&&!labels.includes(x))labels.push(x);});
+      if(vcat==='child_safety'){cat='child_safety';score=Math.max(score,8);}
+      reasoning='👁 Vision AI: '+(v.threat||v.description||'').replace(/\s+/g,' ')+(reasoning?(' · Codebook: '+reasoning):'');
+      bd.unshift({l:`👁 Vision AI sees: ${(v.description||'').replace(/</g,'&lt;').slice(0,220)}`,d:0});
+      if(v.policy&&v.policy.toLowerCase()!=='none')bd.push({l:`Vision AI policy read: ${(v.policy||'').replace(/</g,'&lt;').slice(0,160)}`,d:0});
+      conf=Math.max(conf,Number(v.confidence)||0);
+    }
+  }
   // inauthentic AI-account overlay (fake persona pushing counterfeit ads)
   const aiSigns=aiAccountSigns(text,labels);
   if(aiSigns.length>=2){bd.push({l:`Inauthentic AI-account signals (${aiSigns.length}): ${aiSigns.join('; ')}`,d:Math.min(4,aiSigns.length)});
@@ -1010,7 +1060,7 @@ async function addPhoto(dataUrl,o){
   let h=0;for(const c of (o.name||'')+dh)h=(h*7+c.charCodeAt(0))>>>0;
   const it={id:idc++,type:'image',url:o.source_url||('photo:'+(o.name||'upload')),name:o.name||'upload',thumb:dataUrl,dhash:dh,w:im.naturalWidth,h:im.naturalHeight,ocr:visible,labels,caption:o.caption||'',platform:o.platform||'upload',poster:o.poster||'unknown poster',
     captured:new Date().toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],shared:sharedOf(text)+ (o.poster?[]:[]),category:cat,score:Math.max(1,Math.min(10,score)),tier:tierOf(score),recommendation:recOf(score),grade,connection:dupes.length?'operational coordination':(hits.some(x=>x.id==='pt-handle-code')?'audience overlap':CONN[h%CONN.length]),
-    indicators:hits.map(x=>x.term),reasoning,breakdown:bd,hitWords:[],cbHits:hits,ai,confidence:conf,dupes:dupes.map(d=>d.id),refs,libctx:libRetrieve(text+' '+hits.map(h=>h.term).join(' '))};
+    indicators:hits.map(x=>x.term),reasoning,breakdown:bd,hitWords:[],cbHits:hits,ai,confidence:conf,dupes:dupes.map(d=>d.id),refs,visionDesc,libctx:libRetrieve(text+' '+hits.map(h=>h.term).join(' '))};
   it.shared=sharedOf(text);items.unshift(it);log(it,'photo ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade} · OCR ${visible?visible.length+' chars':'none'} · ${labels.length} labels · ${hits.length} codebook hits${API_BASE?' · backend':' · demo'}`);
   st.textContent='';render();return it}
 // ---------- teach / feedback ----------
@@ -2435,7 +2485,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();
 if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
 // crawl is OFF by default — the user starts it with the Start crawl toggle (saves data)
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
