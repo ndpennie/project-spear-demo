@@ -743,8 +743,10 @@ function explain(it){
   const nextTxt=it.ai&&it.ai.what_would_change_this?it.ai.what_would_change_this:NEXT[it.category];
   const bgb=(typeof bgBrandsFor==='function')?bgBrandsFor(it):[];
   const sugg=suggestTerms(it);
+  const visionBlock=it.visionDesc?`<div class="xs" style="background:#eef7fb;border-left:4px solid var(--cyan);padding:9px 12px;border-radius:6px;margin-bottom:6px"><b>👁 Vision AI — what this image is</b><br>${it.visionDesc.replace(/</g,'&lt;')}${it.reasoning&&/Vision AI:/.test(it.reasoning)?`<br><span class="note" style="margin:4px 0 0">Threat read: ${it.reasoning.replace(/^👁 Vision AI:\s*/,'').split(' · Codebook:')[0].replace(/</g,'&lt;')}</span>`:''}</div>`:(it.type==='image'&&it.reasoning&&/did not run|Vision AI is OFF/i.test(it.reasoning)?`<div class="xs" style="background:#fff4e5;border-left:4px solid #f5c77e;padding:9px 12px;border-radius:6px;margin-bottom:6px"><b>👁 Vision AI</b><br>${it.reasoning.replace(/</g,'&lt;').slice(0,220)} — this is a text/OCR-only result. Turn on Vision AI (paste your Gemini key) and re-analyze the image for a full visual report.</div>`:'');
   return `<div class="box explain">
     <div class="xhead">🛈 AI analyst explanation <span class="note" style="font-weight:400">— plain language · confidence ${(it.confidence*100).toFixed(0)}% · ${it.type==='image'?'photo pipeline: fingerprint → OCR → labels → codebook → reasoning':'click the URL to open the source in a new tab'}${isEmerging(it)?' · <b style=\"color:#B7791F\">⚡ EMERGING</b> — novel terms not in the codebook yet':''}</span></div>
+    ${visionBlock}
     <div class="xs"><b>1 · What you are looking at</b><br>${imgSeeing||seeing}<br><span class="note">Framework position: ${LAYER[it.category]}. Connection type detected: <i>${it.connection}</i>.</span></div>
     <div class="xs"><b>2 · Why it is considered threatening</b><br>${HARM[it.category]}${cbHtml}${bgb.length&&it.category!=='benign'?`<div class="bgalert">⚠ <b>BrandGuard:</b> monitored brand ${bgb.join(', ')} appears beside this ${it.category.replace(/_/g,' ')} content — advertiser brand-safety exposure.</div>`:''}${it.libctx&&it.libctx.length?`<div style="margin-top:6px"><b>Related library context</b> <span class="note" style="margin:0">(retrieved from documents you uploaded — the model reasons with this):</span>${it.libctx.map(c=>`<div class="cbhit ctx"><b>${c.doc}</b> · ${c.kind}<br><span class="note" style="margin:0">“${c.text.slice(0,260).replace(/</g,'&lt;')}${c.text.length>260?'…':''}”</span></div>`).join('')}</div>`:''}<br><span class="note">Signals the model weighted: ${it.indicators.join(' · ')||'—'}.</span></div>
     <div class="xs"><b>3 · Why it scored ${it.score}/10 → ${it.tier}</b>
@@ -1003,21 +1005,32 @@ function initVision(){const gk=document.getElementById('gKey');const gs=document
   if(GEMINI_KEY){if(gk)gk.value=GEMINI_KEY;if(gs)gs.innerHTML='<b style="color:#2F855A">👁 Vision AI is ON</b> — uploaded screenshots will be described and flagged automatically.';}}
 function visionSystemPrompt(){
   const cats=CATS.filter(c=>c!=='benign').join(', ');
-  return `You are a trust & safety threat analyst for GIPEC AI². Analyze the attached image the way an expert human analyst would, looking hard for DISGUISED content. Watch for: ISIS/affiliate media logos or WATERMARKS tucked in a corner (Amaq, Al-Furqan, Al-Thabat, Ajnad, Nashir); the black tawhid / Islamic State banner ("Black Standard"); the slogan "remaining and expanding" (باقية وتتمدد); fake mainstream-news-logo camouflage such as a fake Al Jazeera teardrop calligraphy logo used as benign cover art on a repeated grid; neo-Nazi / antisemitic symbols (Happy Merchant, swastika, SS/runes, Jude star, "goyim", Holocaust denial, Great Replacement, Black Sun); narcotics sales; and inauthentic/scam accounts. SAFETY RULE: if the image appears to sexualize or exploit a minor, DO NOT describe it — set category "child_safety" and note "route to NCMEC; media withheld". Respond ONLY with a JSON object: {"description":"<plainly, what the image actually shows>","category":"<one of: ${cats}, or benign>","risk_score":<integer 0-10>,"threat":"<why it is/isn't a threat and any disguise or bait-and-switch tactic used>","policy":"<the platform policy it would violate, or none>","indicators":["<short signal>","..."],"confidence":<0-1>}`;
+  return `You are a trust & safety threat analyst for GIPEC AI². Analyze the attached image the way an expert human analyst would, looking hard for DISGUISED content. Watch for: ISIS/affiliate media logos or WATERMARKS tucked in a corner (Amaq, Al-Furqan, Al-Thabat, Ajnad, Nashir); the black tawhid / Islamic State banner ("Black Standard"); the slogan "remaining and expanding" (باقية وتتمدد); fake mainstream-news-logo camouflage such as a fake Al Jazeera teardrop calligraphy logo used as benign cover art on a repeated grid; neo-Nazi / antisemitic symbols (Happy Merchant, swastika, SS/runes, Jude star, "goyim", Holocaust denial, Great Replacement, Black Sun); narcotics sales; and inauthentic/scam accounts. Special rule: if the image is a PROFILE GRID or cover art made of repeated identical stylized graphics — especially a fake mainstream-news logo such as an Al Jazeera-style teardrop calligraphy mark used as camouflage — treat that pattern itself as a masking/bait-and-switch indicator (category isis_terrorism if the mimic is a jihadist camouflage, risk 6-8) and say the violating payload is likely inside the videos, not the cover. SAFETY RULE: if the image appears to sexualize or exploit a minor, DO NOT describe it — set category "child_safety" and note "route to NCMEC; media withheld". Respond ONLY with a JSON object: {"description":"<plainly, what the image actually shows>","category":"<one of: ${cats}, or benign>","risk_score":<integer 0-10>,"threat":"<why it is/isn't a threat and any disguise or bait-and-switch tactic used>","policy":"<the platform policy it would violate, or none>","indicators":["<short signal>","..."],"confidence":<0-1>}`;
 }
+const GEMINI_MODELS=[GEMINI_MODEL,'gemini-3.7-flash','gemini-2.5-flash','gemini-flash-latest','gemini-2.0-flash','gemini-1.5-flash'].filter((v,i,a)=>v&&a.indexOf(v)===i);
 async function visionAnalyze(dataUrl){
-  if(!GEMINI_KEY)return null;
-  const m=(dataUrl||'').match(/^data:(image\/[\w+.-]+);base64,(.+)$/);if(!m)return null;
+  if(!GEMINI_KEY)return {__error:'no API key saved'};
+  const m=(dataUrl||'').match(/^data:(image\/[\w+.-]+);base64,(.+)$/);if(!m)return {__error:'unsupported image format'};
   const body={contents:[{parts:[{text:visionSystemPrompt()},{inline_data:{mime_type:m[1],data:m[2]}}]}],
     generationConfig:{temperature:0.2,responseMimeType:'application/json'}};
-  const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`;
-  try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!r.ok){const e=await r.text();console.warn('Gemini',r.status,e);toast('Vision AI error '+r.status+(r.status===400?' — check the API key':r.status===404?' — model name; try gemini-2.5-flash':''));return null;}
-    const j=await r.json();const txt=(((j.candidates||[])[0]||{}).content||{}).parts?.map(p=>p.text||'').join('')||'';
-    let out=null;try{out=JSON.parse(txt)}catch(e){const mm=txt.match(/\{[\s\S]*\}/);if(mm){try{out=JSON.parse(mm[0])}catch(e2){}}}
-    if(!out)out={description:(txt||'').slice(0,600),category:'benign',risk_score:1,threat:'',policy:'',indicators:[],confidence:0.4};
-    return out;
-  }catch(e){toast('Vision AI unreachable (network)');return null;}
+  let lastErr='';
+  for(const model of GEMINI_MODELS){
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    // newer 'AQ.' keys and classic 'AIza' keys both work via the x-goog-api-key header
+    try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':GEMINI_KEY},body:JSON.stringify(body)});
+      if(r.status===404){lastErr='model '+model+' not found';continue;}   // try the next model name
+      if(!r.ok){const e=await r.text();lastErr=r.status+' '+e.slice(0,140);console.warn('Gemini',r.status,e);
+        if(r.status===400||r.status===403){return {__error:'API key rejected ('+r.status+') — regenerate the key in Google AI Studio and re-save it'};}
+        continue;}
+      GEMINI_MODEL=model;try{localStorage.setItem('spear_gmodel',model)}catch(e){}   // remember the model that worked
+      const j=await r.json();const txt=(((j.candidates||[])[0]||{}).content||{}).parts?.map(p=>p.text||'').join('')||'';
+      if(!txt){lastErr='empty response (possibly blocked)';continue;}
+      let out=null;try{out=JSON.parse(txt)}catch(e){const mm=txt.match(/\{[\s\S]*\}/);if(mm){try{out=JSON.parse(mm[0])}catch(e2){}}}
+      if(!out)out={description:(txt||'').slice(0,600),category:'benign',risk_score:1,threat:'',policy:'',indicators:[],confidence:0.4};
+      return out;
+    }catch(e){lastErr='network/CORS: '+String(e).slice(0,80);}
+  }
+  return {__error:lastErr||'no model responded'};
 }
 async function addPhoto(dataUrl,o){
   const st=document.getElementById('ocrStatus');st.textContent='Fingerprinting…';const im=await loadImg(dataUrl);const dh=dHash(im);
@@ -1036,10 +1049,15 @@ async function addPhoto(dataUrl,o){
   if(!ocr&&!o.caption&&!labels.length){bd.push({l:'No readable text, caption or visible-element labels — pixels not interpreted (needs vision model)',d:0});conf=0.3}
   // VISION AI: if a Gemini key is set (and no backend vision), let the model SEE the image and describe/flag it
   let visionDesc='';
-  if(GEMINI_KEY && !(remote&&remote.analysis)){
+  if(!GEMINI_KEY){bd.push({l:'👁 Vision AI is OFF — paste a Gemini key to have the system SEE the image. This result is text/OCR only, so a picture with no readable text reads benign.',d:0});}
+  else if(!(remote&&remote.analysis)){
     st.textContent='👁 Looking at the image with Vision AI…';
     const v=await visionAnalyze(dataUrl);
-    if(v){visionDesc=v.description||'';
+    if(v&&v.__error){
+      bd.unshift({l:`⚠️ VISION AI DID NOT RUN — ${v.__error}. The score below is TEXT-ONLY, not a real "benign". Fix the key/connection and re-run.`,d:0});
+      reasoning='⚠️ Vision AI did not run ('+v.__error+') — this is a text/OCR-only result, not a visual determination. '+(reasoning||'');
+      conf=0.2; toast('👁 Vision AI did NOT run: '+v.__error);
+    } else if(v){visionDesc=v.description||'';
       const vcat=CATS.includes(v.category)?v.category:cat;const vscore=Math.max(0,Math.min(10,Math.round(Number(v.risk_score)||0)));
       if(vscore>score){score=vscore;cat=vcat;} else if(cat==='benign'&&vcat!=='benign'){cat=vcat;score=Math.max(score,vscore);}
       (v.indicators||[]).forEach(x=>{if(x&&!labels.includes(x))labels.push(x);});
@@ -1048,6 +1066,7 @@ async function addPhoto(dataUrl,o){
       bd.unshift({l:`👁 Vision AI sees: ${(v.description||'').replace(/</g,'&lt;').slice(0,220)}`,d:0});
       if(v.policy&&v.policy.toLowerCase()!=='none')bd.push({l:`Vision AI policy read: ${(v.policy||'').replace(/</g,'&lt;').slice(0,160)}`,d:0});
       conf=Math.max(conf,Number(v.confidence)||0);
+      toast('👁 Vision AI: '+cat.replace(/_/g,' ')+' '+score+'/10');
     }
   }
   // inauthentic AI-account overlay (fake persona pushing counterfeit ads)
