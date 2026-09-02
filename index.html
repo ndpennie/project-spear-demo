@@ -403,6 +403,7 @@
           <span style="font-size:12.5px;font-weight:700;color:var(--navy)">👁 Vision AI</span>
           <input id="gKey" type="password" placeholder="Paste your free Google Gemini API key so the system can SEE images…" style="flex:1;min-width:180px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px">
           <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="saveVisionKey()">Save key</button>
+          <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="testVisionKey()" title="Run a real test image through Vision AI and show exactly what Google says">🔍 Test</button>
           <span class="note" id="gStat" style="margin:0;flex-basis:100%">Free key from Google AI Studio (aistudio.google.com/apikey). Stored only in this browser. Powers image + text + translation.</span>
         </div>
         <details style="margin:2px 0 0"><summary class="note" style="cursor:pointer;font-weight:700;color:var(--navy)">⚙ More free integrations (optional)</summary>
@@ -1011,14 +1012,12 @@ function videoFramesHTML(it){if(!it.frames||!it.frames.length)return '';
 let GEMINI_KEY='', GEMINI_MODEL='gemini-3.7-flash';
 try{GEMINI_KEY=localStorage.getItem('spear_gemini')||''}catch(e){}
 try{GEMINI_MODEL=localStorage.getItem('spear_gmodel')||'gemini-3.7-flash'}catch(e){}
-async function saveVisionKey(){const v=(document.getElementById('gKey').value||'').trim();GEMINI_KEY=v;GEMINI_WORKING_MODEL='';
+async function saveVisionKey(){const v=(document.getElementById('gKey').value||'').trim();GEMINI_KEY=v;GEMINI_WORKING_MODEL='';GEMINI_MODEL_LIST=[];
   try{v?localStorage.setItem('spear_gemini',v):localStorage.removeItem('spear_gemini');localStorage.removeItem('spear_gmodel')}catch(e){}
   const gs=document.getElementById('gStat');
   if(!v){if(gs)gs.innerHTML='Free key from Google AI Studio (aistudio.google.com/apikey). Stored only in this browser.';toast('Vision AI key cleared');return;}
-  if(gs)gs.innerHTML='<span style="color:#B7791F">⏳ Checking your key with Google…</span>';
-  const d=await geminiDiscoverModel();
-  if(d&&d.__error){if(gs)gs.innerHTML='<b style="color:#B42318">✗ Key problem: '+d.__error+'</b>';toast('Vision AI: '+d.__error);}
-  else{if(gs)gs.innerHTML='<b style="color:#2F855A">👁 Vision AI is ON</b> — connected (using '+d+'). Uploaded screenshots will be seen, described &amp; flagged.';toast('Vision AI connected — using '+d);}
+  // Save = a REAL end-to-end test (list models, then actually analyze a test image), so the status is the truth.
+  await testVisionKey();
 }
 function initVision(){const gk=document.getElementById('gKey');const gs=document.getElementById('gStat');
   if(GEMINI_KEY){if(gk)gk.value=GEMINI_KEY;if(gs)gs.innerHTML='<b style="color:#2F855A">👁 Vision AI is ON</b> — uploaded screenshots will be described and flagged automatically.';}}
@@ -1026,62 +1025,85 @@ function visionSystemPrompt(){
   const cats=CATS.filter(c=>c!=='benign').join(', ');
   return `You are a trust & safety threat analyst for GIPEC AI². Analyze the attached image the way an expert human analyst would, looking hard for DISGUISED content. Watch for: ISIS/affiliate media logos or WATERMARKS tucked in a corner (Amaq, Al-Furqan, Al-Thabat, Ajnad, Nashir); the black tawhid / Islamic State banner ("Black Standard"); the slogan "remaining and expanding" (باقية وتتمدد); fake mainstream-news-logo camouflage such as a fake Al Jazeera teardrop calligraphy logo used as benign cover art on a repeated grid; neo-Nazi / antisemitic symbols (Happy Merchant, swastika, SS/runes, Jude star, "goyim", Holocaust denial, Great Replacement, Black Sun); narcotics sales; and inauthentic/scam accounts. Special rule: if the image is a PROFILE GRID or cover art made of repeated identical stylized graphics — especially a fake mainstream-news logo such as an Al Jazeera-style teardrop calligraphy mark used as camouflage — treat that pattern itself as a masking/bait-and-switch indicator (category isis_terrorism if the mimic is a jihadist camouflage, risk 6-8) and say the violating payload is likely inside the videos, not the cover. SAFETY RULE: if the image appears to sexualize or exploit a minor, DO NOT describe it — set category "child_safety" and note "route to NCMEC; media withheld". Respond ONLY with a JSON object: {"description":"<plainly, what the image actually shows>","category":"<one of: ${cats}, or benign>","risk_score":<integer 0-10>,"threat":"<why it is/isn't a threat and any disguise or bait-and-switch tactic used>","policy":"<the platform policy it would violate, or none>","indicators":["<short signal>","..."],"confidence":<0-1>}`;
 }
-let GEMINI_BASE='https://generativelanguage.googleapis.com/v1beta', GEMINI_WORKING_MODEL='';
+// ===================== GEMINI CLIENT (built to be robust) =====================
+// 1) Ask Google for EVERY model this key can use (both API versions).
+// 2) Try each model until one actually answers — a model that is listed but not callable can never block us.
+// 3) Remember the model that worked. 4) Surface Google's exact error text so problems are diagnosable.
+const GEMINI_BASES=['https://generativelanguage.googleapis.com/v1beta','https://generativelanguage.googleapis.com/v1'];
+let GEMINI_BASE=GEMINI_BASES[0], GEMINI_WORKING_MODEL='', GEMINI_MODEL_LIST=[], GEMINI_LAST_ERRORS=[];
 try{GEMINI_WORKING_MODEL=localStorage.getItem('spear_gmodel')||''}catch(e){}
-// Ask Google which models THIS key actually has (instead of guessing names). Tries v1beta then v1.
-async function geminiDiscoverModel(){
-  const bases=['https://generativelanguage.googleapis.com/v1beta','https://generativelanguage.googleapis.com/v1'];
-  let lastErr='';
-  for(const base of bases){
-    try{const r=await fetch(base+'/models',{headers:{'x-goog-api-key':GEMINI_KEY}});
-      if(!r.ok){lastErr='list '+r.status;if(r.status===400||r.status===403)lastErr='key rejected ('+r.status+')';continue;}
-      const j=await r.json();
-      const ok=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>(m.name||'').replace(/^models\//,''));
-      const pick=ok.find(n=>/flash/i.test(n)&&!/(thinking|tts|image|embedding|live|audio|learnlm)/i.test(n))
-              || ok.find(n=>/flash/i.test(n)) || ok.find(n=>/gemini/i.test(n)) || ok[0];
-      if(pick){GEMINI_BASE=base;GEMINI_WORKING_MODEL=pick;try{localStorage.setItem('spear_gmodel',pick)}catch(e){}return pick;}
-      lastErr='no image-capable models on this key';
-    }catch(e){lastErr='network/CORS: '+String(e).slice(0,70);}
+const _gHeaders=()=>({'Content-Type':'application/json','x-goog-api-key':GEMINI_KEY});
+// vision-capable flash models first, then other flash, then pro, then anything gemini
+const _gRank=n=>(/flash/i.test(n)&&!/(thinking|tts|image-generation|embedding|live|audio|learnlm|native|robotics|computer-use)/i.test(n))?0:/flash/i.test(n)?1:/pro/i.test(n)?2:/gemini/i.test(n)?3:4;
+async function geminiListModels(){
+  const errs=[];
+  for(const base of GEMINI_BASES){
+    try{const r=await fetch(base+'/models?pageSize=200',{headers:{'x-goog-api-key':GEMINI_KEY}});const t=await r.text();
+      if(!r.ok){errs.push(base.split('/').pop()+': '+r.status+' '+t.replace(/\s+/g,' ').slice(0,120));continue;}
+      let j={};try{j=JSON.parse(t)}catch(e){}
+      const ms=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>(m.name||'').replace(/^models\//,'')).filter(Boolean);
+      ms.sort((a,b)=>_gRank(a)-_gRank(b));
+      if(ms.length)return {base,models:ms};
+      errs.push(base.split('/').pop()+': no generateContent models on this key');
+    }catch(e){errs.push(base.split('/').pop()+': network '+String(e).slice(0,60));}
   }
-  return {__error:(lastErr.indexOf('rejected')>=0?lastErr+' — regenerate the key at aistudio.google.com/apikey and re-save':'could not list your models ('+lastErr+') — regenerate the key and re-save')};
+  return {__error:errs.join(' | ')};
+}
+async function geminiEnsureModels(){
+  if(GEMINI_MODEL_LIST.length)return GEMINI_MODEL_LIST;
+  const d=await geminiListModels();if(d.__error)return d;
+  GEMINI_BASE=d.base;GEMINI_MODEL_LIST=d.models;return GEMINI_MODEL_LIST;
+}
+async function _gAttempt(base,model,parts,useJson){
+  const body={contents:[{parts}],generationConfig:useJson?{temperature:0.2,responseMimeType:'application/json'}:{temperature:0.2}};
+  const r=await fetch(base+'/models/'+encodeURIComponent(model)+':generateContent',{method:'POST',headers:_gHeaders(),body:JSON.stringify(body)});
+  const t=await r.text();
+  if(!r.ok)return {ok:false,status:r.status,msg:t.replace(/\s+/g,' ').slice(0,160)};
+  let j={};try{j=JSON.parse(t)}catch(e){}
+  const txt=(((j.candidates||[])[0]||{}).content||{}).parts?.map(p=>p.text||'').join('')||'';
+  if(!txt){const fr=((j.candidates||[])[0]||{}).finishReason||(j.promptFeedback||{}).blockReason||'empty';return {ok:false,status:0,msg:'empty response ('+fr+')'};}
+  let out=null;try{out=JSON.parse(txt)}catch(e){const mm=txt.match(/\{[\s\S]*\}/);if(mm)try{out=JSON.parse(mm[0])}catch(e2){}}
+  return {ok:true,out:out||{description:txt.slice(0,600),category:'benign',risk_score:1,threat:'',policy:'',indicators:[],confidence:0.4}};
+}
+async function geminiCall(parts){
+  if(!GEMINI_KEY)return {__error:'no API key saved'};
+  const models=await geminiEnsureModels();if(models.__error)return {__error:'could not list your models — '+models.__error};
+  const order=(GEMINI_WORKING_MODEL&&models.includes(GEMINI_WORKING_MODEL))?[GEMINI_WORKING_MODEL,...models.filter(m=>m!==GEMINI_WORKING_MODEL)]:models.slice();
+  GEMINI_LAST_ERRORS=[];
+  for(const model of order){
+    for(const base of [GEMINI_BASE,...GEMINI_BASES.filter(b=>b!==GEMINI_BASE)]){
+      let a;
+      try{a=await _gAttempt(base,model,parts,true);}catch(e){GEMINI_LAST_ERRORS.push(model+': network '+String(e).slice(0,60));break;}
+      if(!a.ok&&a.status===400&&/mime|json|schema/i.test(a.msg)){try{a=await _gAttempt(base,model,parts,false);}catch(e){}}   // JSON mode unsupported → plain
+      if(a.ok){GEMINI_WORKING_MODEL=model;GEMINI_BASE=base;try{localStorage.setItem('spear_gmodel',model)}catch(e){}return a.out;}
+      GEMINI_LAST_ERRORS.push(model+'@'+base.split('/').pop()+' → '+a.status+' '+a.msg);
+      if(a.status===403||(a.status===400&&/API key not valid|API_KEY_INVALID|invalid api key|PERMISSION_DENIED/i.test(a.msg)))return {__error:'Google rejected the API key ('+a.status+'). Regenerate it at aistudio.google.com/apikey and re-save.'};
+      if(a.status===429)return {__error:'Google rate limit / free-tier quota hit (429). Wait a minute and retry.'};
+      if(a.status===404)continue;   // not on this API version → try the other version, then the next model
+      break;                        // any other error → next model
+    }
+  }
+  return {__error:'no model accepted the request. Google said: '+GEMINI_LAST_ERRORS.slice(0,3).join(' | ')};
 }
 async function visionAnalyze(dataUrl){
-  if(!GEMINI_KEY)return {__error:'no API key saved'};
   const m=(dataUrl||'').match(/^data:(image\/[\w+.-]+);base64,(.+)$/);if(!m)return {__error:'unsupported image format'};
-  let model=GEMINI_WORKING_MODEL;
-  if(!model){const d=await geminiDiscoverModel();if(d&&d.__error)return d;model=d;}
-  const body={contents:[{parts:[{text:visionSystemPrompt()},{inline_data:{mime_type:m[1],data:m[2]}}]}],
-    generationConfig:{temperature:0.2,responseMimeType:'application/json'}};
-  const url=GEMINI_BASE+'/models/'+encodeURIComponent(model)+':generateContent';
-  try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':GEMINI_KEY},body:JSON.stringify(body)});
-    if(r.status===404){GEMINI_WORKING_MODEL='';try{localStorage.removeItem('spear_gmodel')}catch(e){}
-      const d=await geminiDiscoverModel();if(d&&d.__error)return d; // re-discover and retry once
-      if(typeof d==='string'){const r2=await fetch(GEMINI_BASE+'/models/'+encodeURIComponent(d)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':GEMINI_KEY},body:JSON.stringify(body)});
-        if(r2.ok){const j2=await r2.json();const t2=(((j2.candidates||[])[0]||{}).content||{}).parts?.map(p=>p.text||'').join('')||'';let o2=null;try{o2=JSON.parse(t2)}catch(e){const mm=t2.match(/\{[\s\S]*\}/);if(mm)try{o2=JSON.parse(mm[0])}catch(e2){}}return o2||{__error:'empty response'};}
-        return {__error:'model unavailable ('+r2.status+')'};}
-      return {__error:'no working model found'};}
-    if(r.status===400||r.status===403){const e=await r.text();return {__error:'key rejected ('+r.status+') — regenerate the key at aistudio.google.com/apikey and re-save. '+e.slice(0,80)};}
-    if(!r.ok){const e=await r.text();return {__error:r.status+' '+e.slice(0,120)};}
-    const j=await r.json();const txt=(((j.candidates||[])[0]||{}).content||{}).parts?.map(p=>p.text||'').join('')||'';
-    if(!txt)return {__error:'empty response (possibly safety-blocked)'};
-    let out=null;try{out=JSON.parse(txt)}catch(e){const mm=txt.match(/\{[\s\S]*\}/);if(mm){try{out=JSON.parse(mm[0])}catch(e2){}}}
-    if(!out)out={description:(txt||'').slice(0,600),category:'benign',risk_score:1,threat:'',policy:'',indicators:[],confidence:0.4};
-    return out;
-  }catch(e){return {__error:'network/CORS: '+String(e).slice(0,80)};}
+  return geminiCall([{text:visionSystemPrompt()},{inline_data:{mime_type:m[1],data:m[2]}}]);
+}
+// Real end-to-end self-test: pushes a tiny image through the whole path and shows exactly what Google said.
+async function testVisionKey(){
+  const gs=document.getElementById('gStat');if(!GEMINI_KEY){if(gs)gs.innerHTML='<b style="color:#B42318">Paste a key and press Save first.</b>';return;}
+  if(gs)gs.innerHTML='<span style="color:#B7791F">⏳ Running a real test image through Vision AI…</span>';
+  const px='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const r=await visionAnalyze(px);
+  if(r&&r.__error){if(gs)gs.innerHTML='<b style="color:#B42318">✗ Vision AI failed:</b> '+r.__error.replace(/</g,'&lt;')+(GEMINI_MODEL_LIST.length?'<br><span class="note" style="margin:0">Models on this key: '+GEMINI_MODEL_LIST.slice(0,6).join(', ')+(GEMINI_MODEL_LIST.length>6?'…':'')+'</span>':'');toast('Vision AI test failed — see the message under the box');}
+  else{if(gs)gs.innerHTML='<b style="color:#2F855A">✓ Vision AI WORKS</b> — answered using <b>'+GEMINI_WORKING_MODEL+'</b>. Upload a screenshot and press Analyze photo(s).';toast('Vision AI works — using '+GEMINI_WORKING_MODEL);}
 }
 // ---- Extend the SAME Gemini key to analyze TEXT / links + translate foreign content (no new key) ----
 async function geminiAnalyzeText(text){
   if(!GEMINI_KEY||!text||!text.trim())return null;
-  let model=GEMINI_WORKING_MODEL;if(!model){const d=await geminiDiscoverModel();if(d&&d.__error)return {__error:d.__error};model=d;}
   const prompt=`You are a trust & safety threat analyst for GIPEC AI². Analyze this captured social-media post text / URL for extremist, terrorist, hateful, narcotics, child-safety, or other policy-violating signals — including DISGUISED or coded language and non-English content (e.g., ISIS Arabic slogans, neo-Nazi codes). If any text is not in English, translate it. Respond ONLY with JSON: {"description":"<what this post is, plainly>","category":"<one of: ${CATS.filter(c=>c!=='benign').join(', ')}, or benign>","risk_score":<integer 0-10>,"threat":"<why it is/isn't a threat and any disguise>","policy":"<the platform policy it would violate, or none>","translation":"<English translation of any non-English text, or empty>","indicators":["<short signal>"],"confidence":<0-1>}\n\nCAPTURED POST: ${text.slice(0,4000)}`;
-  const body={contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.2,responseMimeType:'application/json'}};
-  try{const r=await fetch(GEMINI_BASE+'/models/'+encodeURIComponent(model)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':GEMINI_KEY},body:JSON.stringify(body)});
-    if(r.status===404){GEMINI_WORKING_MODEL='';return null;}
-    if(!r.ok)return {__error:r.status};
-    const j=await r.json();const txt=(((j.candidates||[])[0]||{}).content||{}).parts?.map(p=>p.text||'').join('')||'';
-    let out=null;try{out=JSON.parse(txt)}catch(e){const mm=txt.match(/\{[\s\S]*\}/);if(mm)try{out=JSON.parse(mm[0])}catch(e2){}}
-    return out;
-  }catch(e){return null;}
+  const out=await geminiCall([{text:prompt}]);
+  return (out&&out.__error)?null:out;   // text path degrades quietly to the codebook; the image path surfaces errors loudly
 }
 // ---- Free multilingual OCR (OCR.space) — better on Arabic/foreign text; optional 2nd OCR source ----
 let OCRSPACE_KEY='';try{OCRSPACE_KEY=localStorage.getItem('spear_ocrspace')||''}catch(e){}
