@@ -2394,14 +2394,22 @@ function parseSearchHTML(html){
 }
 async function serverSearch(tag,terms){
   const base=API_BASE||BACKEND_DEFAULT;
+  // Telegram channels we already follow get their real messages pulled in.
+  let chans=[];
+  try{chans=(HUNTSEEDS.accounts||[]).filter(x=>/t\.me\/|^@/.test(x))
+      .map(x=>x.replace(/^https?:\/\/t\.me\/(s\/)?/,'').replace(/^@/,'').split(/[/?]/)[0])
+      .filter(Boolean).slice(0,6);}catch(e){}
   try{
     const r=await fetch(base+'/api/search',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({tag:tag||'',terms:(terms||[]).slice(0,12)})});
+      body:JSON.stringify({tag:tag||'',terms:(terms||[]).slice(0,12),channels:chans})});
     if(!r.ok)return null;
     const j=await r.json();
     if(!j||!j.results)return null;
+    window.__searchNotice=j.notice||'';
+    window.__searchSources=j.sources||{};
     return j.results.map(x=>({href:x.url,title:x.title||x.url,snippet:x.snippet||'',
-      platform:x.platform||'link',reference:!!x.reference}));
+      platform:x.platform||'link',reference:!!x.reference,author:x.author||'',
+      source:x.source||'',where:x.where||''}));
   }catch(e){return null;}
 }
 async function _runSearch(titleHTML,termsUsed,queries,tag,terms){
@@ -2412,7 +2420,7 @@ async function _runSearch(titleHTML,termsUsed,queries,tag,terms){
   const res=document.getElementById('tagResults');
   res.innerHTML='<div class="note" style="padding:16px;text-align:center"><span class="spin"></span> The system is searching and bringing results in here… this can take 10–20 seconds.<br><span style="font-size:12px;opacity:.75">Searching on the server — the browser is not allowed to query search engines directly.</span></div>';
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
-  let all=null;
+  let all=null;window.__searchNotice='';
   // Server-side search first: no CORS limit, so this is the path that works.
   if(tag||(terms&&terms.length))all=await serverSearch(tag,terms);
   // Browser relay fallback (public proxies; unreliable, kept as a backstop).
@@ -2426,32 +2434,38 @@ async function _runSearch(titleHTML,termsUsed,queries,tag,terms){
   }
   all=all||[];
   const seen=new Set();all=all.filter(r=>{if(seen.has(r.href))return false;seen.add(r.href);return true});
-  all.forEach(r=>{const hits=cbMatch((r.title||'')+' '+(r.snippet||'')+' '+r.href,[]);const pr=cbPrior(hits);
-    r.score=pr.score;r.category=pr.category;r.tier=tierOf(pr.score);r.hits=hits.map(h=>h.term)});
-  // Platform accounts rank above background reading, then by risk score.
-  all.sort((a,b)=>(a.reference?1:0)-(b.reference?1:0)||b.score-a.score);
+  // NOTE: search results are deliberately NOT scored here. Running the codebook
+  // over search-engine snippets produced false positives (a chocolate retailer
+  // scored 5/10 "counterfeit stimulant sale"). Scoring happens on CAPTURE, when
+  // the system has the real post content.
+  all.forEach(r=>{r.score=null;r.hits=[];});
+  all.sort((a,b)=>(a.reference?1:0)-(b.reference?1:0)||((b.author?1:0)-(a.author?1:0)));
   window.__sysResults=all;renderSearchResults(all);
 }
 function renderSearchResults(list){
   const res=document.getElementById('tagResults');const stat=document.getElementById('tagLiveStat');
-  if(!list.length){res.innerHTML='<div class="note" style="padding:14px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px">No indexed results for this term. Note: <b>Facebook and Instagram posts are not in any search index</b> — Meta blocks crawlers — so this search finds the surrounding network (Telegram, X, storefronts, mirrors, reporting), not in-feed Meta posts. For Meta posts, capture them with the paste box below or apply for <b>Meta Content Library</b> access. Press <b>↻ Search again</b> to retry, or use the manual fallback.</div>';document.getElementById('tagCaptureAll').style.display='none';return;}
+  const note=window.__searchNotice?'<div class="note" style="padding:11px 13px;margin-bottom:10px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px"><b>⚠ Low-signal tag.</b> '+window.__searchNotice+'</div>':'';
+  if(!list.length){res.innerHTML=note+'<div class="note" style="padding:14px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px">No indexed results for this term. Note: <b>Facebook and Instagram posts are not in any search index</b> — Meta blocks crawlers — so this search finds the surrounding network (Telegram, X, storefronts, mirrors, reporting), not in-feed Meta posts. For Meta posts, capture them with the paste box below or apply for <b>Meta Content Library</b> access. Press <b>↻ Search again</b> to retry, or use the manual fallback.</div>';document.getElementById('tagCaptureAll').style.display='none';return;}
   const plat=r=>{if(r.platform&&r.platform!=='web')return r.platform;const h=r.href||'';const m=h.match(/(instagram|facebook|tiktok|twitter|t\.me)/i);return m?({['t.me']:'telegram'}[m[1].toLowerCase()]||m[1].toLowerCase()):(/x\.com/.test(h)?'x':'link')};
-  res.innerHTML=`<table><thead><tr><th>Post / account (click only to read)</th><th>Platform</th><th>Score</th><th>Signals</th><th></th></tr></thead><tbody>`+
+  const esc=x=>String(x||'').replace(/</g,'&lt;');
+  res.innerHTML=note+`<table><thead><tr><th>Post / account (click only to read)</th><th>Platform</th><th>Who</th><th>Risk</th><th></th></tr></thead><tbody>`+
     list.map((r,i)=>`<tr>
-      <td><a href="${r.href}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">${(r.title||r.href).replace(/</g,'&lt;').slice(0,80)} ↗</a><br><span class="note" style="margin:0">${r.href.replace(/</g,'&lt;').slice(0,64)}</span></td>
+      <td><a href="${r.href}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">${esc(r.title||r.href).slice(0,80)} ↗</a>
+        ${r.snippet?`<br><span class="note" style="margin:0;color:#334">${esc(r.snippet).slice(0,150)}</span>`:''}
+        <br><span class="note" style="margin:0">${esc(r.href).slice(0,64)}</span></td>
       <td class="note" style="margin:0">${plat(r)}${r.reference?' <span class="badge" style="background:#e8eef7;color:#152A4E">research</span>':''}</td>
-      <td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td>
-      <td class="note" style="margin:0">${(r.hits||[]).slice(0,2).join(', ')||'—'}</td>
+      <td class="note" style="margin:0">${esc(r.author||r.where||'—')}</td>
+      <td class="note" style="margin:0">not scored yet —<br>press Capture to analyze</td>
       <td><button class="btn" style="padding:3px 10px" onclick="captureResult(${i})">Capture</button></td></tr>`).join('')+
     `</tbody></table>`;
   document.getElementById('tagCaptureAll').style.display='';
-  stat.innerHTML=`<b>${list.length}</b> result(s) brought in — sorted by risk. Click a link only to read a post; <b>Capture all</b> sends them to the review queue &amp; Meta spreadsheet.`;
+  stat.innerHTML=`<b>${list.length}</b> real social result(s) brought in — from Bluesky, Reddit, Telegram and discovered accounts. Nothing here is scored yet — <b>Capture</b> runs the codebook and Vision AI on the real content.`;
 }
-function captureResult(i){const r=window.__sysResults&&window.__sysResults[i];if(!r)return;addItem(r.href+' ('+(window.__liveTag||'')+' '+(r.hits||[]).slice(0,3).join(' ')+')');toast('Captured to review queue');showTab('queue');}
+function captureResult(i){const r=window.__sysResults&&window.__sysResults[i];if(!r)return;addItem(r.href+' '+(r.snippet||'')+' ('+(window.__liveTag||'')+')');toast('Captured to review queue');showTab('queue');}
 async function captureAllResults(build){
   const list=window.__sysResults||[];if(!list.length){toast('Nothing to capture yet');return}
   const stat=document.getElementById('tagLiveStat');let n=0;
-  for(const r of list){setBusy(true,`Capturing ${++n} of ${list.length}…`);await addItem(r.href+' ('+(window.__liveTag||'')+' '+(r.hits||[]).slice(0,3).join(' ')+')')}
+  for(const r of list){setBusy(true,`Capturing ${++n} of ${list.length}…`);await addItem(r.href+' '+(r.snippet||'')+' ('+(window.__liveTag||'')+')')}
   setBusy(false);render();
   stat.innerHTML='<b>'+list.length+'</b> captured for '+((window.__liveTag||'').replace(/</g,'&lt;'))+'. Building the Meta spreadsheet…';
   if(build)exportHashtagXLSX(null,window.__liveTag||'');
