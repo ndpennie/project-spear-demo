@@ -1020,7 +1020,9 @@ async function saveVisionKey(){const v=(document.getElementById('gKey').value||'
   await testVisionKey();
 }
 function initVision(){const gk=document.getElementById('gKey');const gs=document.getElementById('gStat');
-  if(GEMINI_KEY){if(gk)gk.value=GEMINI_KEY;if(gs)gs.innerHTML='<b style="color:#2F855A">👁 Vision AI is ON</b> — uploaded screenshots will be described and flagged automatically.';}}
+  if(GEMINI_KEY){if(gk)gk.value=GEMINI_KEY;if(gs)gs.innerHTML='<b style="color:#2F855A">👁 Vision AI is ON</b> — uploaded screenshots will be described and flagged automatically.';}
+  checkBackendVision();   // server-held key takes over automatically if configured
+}
 function visionSystemPrompt(){
   const cats=CATS.filter(c=>c!=='benign').join(', ');
   return `You are a trust & safety threat analyst for GIPEC AI². Analyze the attached image the way an expert human analyst would, looking hard for DISGUISED content. Watch for: ISIS/affiliate media logos or WATERMARKS tucked in a corner (Amaq, Al-Furqan, Al-Thabat, Ajnad, Nashir); the black tawhid / Islamic State banner ("Black Standard"); the slogan "remaining and expanding" (باقية وتتمدد); fake mainstream-news-logo camouflage such as a fake Al Jazeera teardrop calligraphy logo used as benign cover art on a repeated grid; neo-Nazi / antisemitic symbols (Happy Merchant, swastika, SS/runes, Jude star, "goyim", Holocaust denial, Great Replacement, Black Sun); narcotics sales; and inauthentic/scam accounts. Special rule: if the image is a PROFILE GRID or cover art made of repeated identical stylized graphics — especially a fake mainstream-news logo such as an Al Jazeera-style teardrop calligraphy mark used as camouflage — treat that pattern itself as a masking/bait-and-switch indicator (category isis_terrorism if the mimic is a jihadist camouflage, risk 6-8) and say the violating payload is likely inside the videos, not the cover. SAFETY RULE: if the image appears to sexualize or exploit a minor, DO NOT describe it — set category "child_safety" and note "route to NCMEC; media withheld". Respond ONLY with a JSON object: {"description":"<plainly, what the image actually shows>","category":"<one of: ${cats}, or benign>","risk_score":<integer 0-10>,"threat":"<why it is/isn't a threat and any disguise or bait-and-switch tactic used>","policy":"<the platform policy it would violate, or none>","indicators":["<short signal>","..."],"confidence":<0-1>}`;
@@ -1085,8 +1087,34 @@ async function geminiCall(parts){
   }
   return {__error:'no model accepted the request. Google said: '+GEMINI_LAST_ERRORS.slice(0,3).join(' | ')};
 }
-async function visionAnalyze(dataUrl){
+// ---- SERVER-SIDE Vision AI: if the backend holds GEMINI_API_KEY, use it — no key in the browser, works on any device ----
+const BACKEND_DEFAULT='https://project-spear-backend.onrender.com';
+let BACKEND_VISION=false;
+async function checkBackendVision(){
+  const base=API_BASE||BACKEND_DEFAULT;
+  try{const r=await fetch(base+'/api/vision-health',{cache:'no-store'});BACKEND_VISION=r.ok&&!!((await r.json()).configured);}catch(e){BACKEND_VISION=false;}
+  const gs=document.getElementById('gStat');
+  if(BACKEND_VISION&&gs)gs.innerHTML='<b style="color:#2F855A">👁 Vision AI is ON (server)</b> — the key is held on your server; nothing to paste here. Images, text &amp; translation run automatically.';
+  return BACKEND_VISION;
+}
+async function backendVision(dataUrl,context){
+  const base=API_BASE||BACKEND_DEFAULT;
+  try{const r=await fetch(base+'/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl,context:context||''})});
+    if(!r.ok){let d='';try{d=(await r.json()).detail||''}catch(e){}return {__error:'server vision '+r.status+(d?(' — '+String(d).slice(0,140)):'')};}
+    const j=await r.json();return j.analysis||{__error:'empty server response'};
+  }catch(e){return {__error:'server unreachable (it may be waking up — try again in 30s)'};}
+}
+async function backendVisionText(text){
+  const base=API_BASE||BACKEND_DEFAULT;
+  try{const r=await fetch(base+'/api/vision-text',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    if(!r.ok)return null;const j=await r.json();return j.analysis||null;
+  }catch(e){return null;}
+}
+async function visionAnalyze(dataUrl,context){
   const m=(dataUrl||'').match(/^data:(image\/[\w+.-]+);base64,(.+)$/);if(!m)return {__error:'unsupported image format'};
+  // 1) server first (no browser key needed)  2) browser key as fallback
+  if(BACKEND_VISION){const s=await backendVision(dataUrl,context);if(s&&!s.__error)return s;if(!GEMINI_KEY)return s;}
+  if(!GEMINI_KEY)return {__error:'no Vision AI available — set GEMINI_API_KEY on the server, or paste a key here'};
   return geminiCall([{text:visionSystemPrompt()},{inline_data:{mime_type:m[1],data:m[2]}}]);
 }
 // Real end-to-end self-test: pushes a tiny image through the whole path and shows exactly what Google said.
@@ -1100,7 +1128,9 @@ async function testVisionKey(){
 }
 // ---- Extend the SAME Gemini key to analyze TEXT / links + translate foreign content (no new key) ----
 async function geminiAnalyzeText(text){
-  if(!GEMINI_KEY||!text||!text.trim())return null;
+  if(!text||!text.trim())return null;
+  if(BACKEND_VISION){const s=await backendVisionText(text);if(s)return s;}
+  if(!GEMINI_KEY)return null;
   const prompt=`You are a trust & safety threat analyst for GIPEC AI². Analyze this captured social-media post text / URL for extremist, terrorist, hateful, narcotics, child-safety, or other policy-violating signals — including DISGUISED or coded language and non-English content (e.g., ISIS Arabic slogans, neo-Nazi codes). If any text is not in English, translate it. Respond ONLY with JSON: {"description":"<what this post is, plainly>","category":"<one of: ${CATS.filter(c=>c!=='benign').join(', ')}, or benign>","risk_score":<integer 0-10>,"threat":"<why it is/isn't a threat and any disguise>","policy":"<the platform policy it would violate, or none>","translation":"<English translation of any non-English text, or empty>","indicators":["<short signal>"],"confidence":<0-1>}\n\nCAPTURED POST: ${text.slice(0,4000)}`;
   const out=await geminiCall([{text:prompt}]);
   return (out&&out.__error)?null:out;   // text path degrades quietly to the codebook; the image path surfaces errors loudly
@@ -1150,10 +1180,10 @@ async function addPhoto(dataUrl,o){
   if(!ocr&&!o.caption&&!labels.length){bd.push({l:'No readable text, caption or visible-element labels — pixels not interpreted (needs vision model)',d:0});conf=0.3}
   // VISION AI: if a Gemini key is set (and no backend vision), let the model SEE the image and describe/flag it
   let visionDesc='';
-  if(!GEMINI_KEY){bd.push({l:'👁 Vision AI is OFF — paste a Gemini key to have the system SEE the image. This result is text/OCR only, so a picture with no readable text reads benign.',d:0});}
+  if(!GEMINI_KEY&&!BACKEND_VISION){bd.push({l:'👁 Vision AI is OFF — set GEMINI_API_KEY on the server (or paste a key) to have the system SEE the image. This result is text/OCR only, so a picture with no readable text reads benign.',d:0});}
   else if(!(remote&&remote.analysis)){
     st.textContent='👁 Looking at the image with Vision AI…';
-    const v=await visionAnalyze(dataUrl);
+    const v=await visionAnalyze(dataUrl,(o.poster||'')+' '+(o.caption||''));
     if(v&&v.__error){
       bd.unshift({l:`⚠️ VISION AI DID NOT RUN — ${v.__error}. The score below is TEXT-ONLY, not a real "benign". Fix the key/connection and re-run.`,d:0});
       reasoning='⚠️ Vision AI did not run ('+v.__error+') — this is a text/OCR-only result, not a visual determination. '+(reasoning||'');
@@ -2362,32 +2392,54 @@ function parseSearchHTML(html){
   if(!out.length)doc.querySelectorAll('a').forEach(a=>push(a.getAttribute('href'),a.textContent,''));
   return out;
 }
-async function _runSearch(titleHTML,termsUsed,queries){
+async function serverSearch(tag,terms){
+  const base=API_BASE||BACKEND_DEFAULT;
+  try{
+    const r=await fetch(base+'/api/search',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tag:tag||'',terms:(terms||[]).slice(0,12)})});
+    if(!r.ok)return null;
+    const j=await r.json();
+    if(!j||!j.results)return null;
+    return j.results.map(x=>({href:x.url,title:x.title||x.url,snippet:x.snippet||'',
+      platform:x.platform||'link',reference:!!x.reference}));
+  }catch(e){return null;}
+}
+async function _runSearch(titleHTML,termsUsed,queries,tag,terms){
   const panel=document.getElementById('tagLivePanel');panel.style.display='block';
   document.getElementById('tagLiveTitle').innerHTML=titleHTML;
   document.getElementById('tagTermsUsed').innerHTML=termsUsed;
   document.getElementById('tagLiveStat').textContent='';document.getElementById('tagCaptureAll').style.display='none';
   const res=document.getElementById('tagResults');
-  res.innerHTML='<div class="note" style="padding:16px;text-align:center"><span class="spin"></span> The system is searching and bringing results in here… this can take 10–20 seconds.</div>';
+  res.innerHTML='<div class="note" style="padding:16px;text-align:center"><span class="spin"></span> The system is searching and bringing results in here… this can take 10–20 seconds.<br><span style="font-size:12px;opacity:.75">Searching on the server — the browser is not allowed to query search engines directly.</span></div>';
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
-  let all=[];
-  for(const q of queries){for(const eng of ['https://html.duckduckgo.com/html/?q=','https://lite.duckduckgo.com/lite/?q=']){
-    const html=await fetchThrough(eng+encodeURIComponent(q));
-    if(html){const part=parseSearchHTML(html);if(part.length){all=all.concat(part);break}}
-  }}
+  let all=null;
+  // Server-side search first: no CORS limit, so this is the path that works.
+  if(tag||(terms&&terms.length))all=await serverSearch(tag,terms);
+  // Browser relay fallback (public proxies; unreliable, kept as a backstop).
+  if(!all||!all.length){
+    let acc=[];
+    for(const q of (queries||[])){for(const eng of ['https://html.duckduckgo.com/html/?q=','https://lite.duckduckgo.com/lite/?q=']){
+      const html=await fetchThrough(eng+encodeURIComponent(q));
+      if(html){const part=parseSearchHTML(html);if(part.length){acc=acc.concat(part);break}}
+    }}
+    if(acc.length)all=acc;
+  }
+  all=all||[];
   const seen=new Set();all=all.filter(r=>{if(seen.has(r.href))return false;seen.add(r.href);return true});
-  all.forEach(r=>{const hits=cbMatch(r.title+' '+r.snippet+' '+r.href,[]);const pr=cbPrior(hits);r.score=pr.score;r.category=pr.category;r.tier=tierOf(pr.score);r.hits=hits.map(h=>h.term)});
-  all.sort((a,b)=>b.score-a.score);
+  all.forEach(r=>{const hits=cbMatch((r.title||'')+' '+(r.snippet||'')+' '+r.href,[]);const pr=cbPrior(hits);
+    r.score=pr.score;r.category=pr.category;r.tier=tierOf(pr.score);r.hits=hits.map(h=>h.term)});
+  // Platform accounts rank above background reading, then by risk score.
+  all.sort((a,b)=>(a.reference?1:0)-(b.reference?1:0)||b.score-a.score);
   window.__sysResults=all;renderSearchResults(all);
 }
 function renderSearchResults(list){
   const res=document.getElementById('tagResults');const stat=document.getElementById('tagLiveStat');
-  if(!list.length){res.innerHTML='<div class="note" style="padding:14px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px">The live search relay didn\'t return results this time (public relays are sometimes busy or rate-limited). Press <b>↻ Search again</b> in a moment, or open the manual fallback below.</div>';document.getElementById('tagCaptureAll').style.display='none';return;}
-  const plat=h=>{const m=h.match(/(instagram|facebook|tiktok|twitter|t\.me)/i);return m?({['t.me']:'telegram'}[m[1].toLowerCase()]||m[1].toLowerCase()):(/x\.com/.test(h)?'x':'link')};
+  if(!list.length){res.innerHTML='<div class="note" style="padding:14px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px">No indexed results for this term. Note: <b>Facebook and Instagram posts are not in any search index</b> — Meta blocks crawlers — so this search finds the surrounding network (Telegram, X, storefronts, mirrors, reporting), not in-feed Meta posts. For Meta posts, capture them with the paste box below or apply for <b>Meta Content Library</b> access. Press <b>↻ Search again</b> to retry, or use the manual fallback.</div>';document.getElementById('tagCaptureAll').style.display='none';return;}
+  const plat=r=>{if(r.platform&&r.platform!=='web')return r.platform;const h=r.href||'';const m=h.match(/(instagram|facebook|tiktok|twitter|t\.me)/i);return m?({['t.me']:'telegram'}[m[1].toLowerCase()]||m[1].toLowerCase()):(/x\.com/.test(h)?'x':'link')};
   res.innerHTML=`<table><thead><tr><th>Post / account (click only to read)</th><th>Platform</th><th>Score</th><th>Signals</th><th></th></tr></thead><tbody>`+
     list.map((r,i)=>`<tr>
       <td><a href="${r.href}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">${(r.title||r.href).replace(/</g,'&lt;').slice(0,80)} ↗</a><br><span class="note" style="margin:0">${r.href.replace(/</g,'&lt;').slice(0,64)}</span></td>
-      <td class="note" style="margin:0">${plat(r.href)}</td>
+      <td class="note" style="margin:0">${plat(r)}${r.reference?' <span class="badge" style="background:#e8eef7;color:#152A4E">research</span>':''}</td>
       <td class="score">${r.score}/10 <span class="badge tier-${r.tier}">${r.tier}</span></td>
       <td class="note" style="margin:0">${(r.hits||[]).slice(0,2).join(', ')||'—'}</td>
       <td><button class="btn" style="padding:3px 10px" onclick="captureResult(${i})">Capture</button></td></tr>`).join('')+
@@ -2412,7 +2464,7 @@ async function runSystemSearch(){
   const terms=nefariousSearchTerms(extra);const org=_orGroup(terms);
   await _runSearch('Results for <b>'+tag.replace(/</g,'&lt;')+'</b> — nefarious posts, brought in here',
     '<b>Filtering for:</b> '+terms.slice(0,12).map(x=>x.replace(/</g,'&lt;')).join(', '),
-    [`site:facebook.com "${t}" ${org}`,`site:instagram.com "${t}" ${org}`]);
+    [`site:facebook.com "${t}" ${org}`,`site:instagram.com "${t}" ${org}`], tag, terms);
 }
 // ---- Affiliate finder: from ONE confirmed account, pivot to its network via the same in-system search ----
 function findAffiliates(id){
@@ -2426,7 +2478,7 @@ function findAffiliates(id){
   const org=_orGroup(terms);
   _runSearch('Affiliated accounts around <b>'+((it.poster||'this account').replace(/</g,'&lt;'))+'</b> — same brands, codes &amp; collaborators',
     '<b>Pivoting on:</b> '+terms.map(x=>x.replace(/</g,'&lt;')).join(', '),
-    [`site:facebook.com ${org}`,`site:instagram.com ${org}`]);
+    [`site:facebook.com ${org}`,`site:instagram.com ${org}`], handle||terms[0], terms);
 }
 // ---- Connect: flip between the built-in demo analyzer and the live AI backend ----
 async function connectBackend(){
@@ -2442,7 +2494,7 @@ async function connectBackend(){
 async function addItem(u){
   let a=await analyzeRemote(u);if(!a)a=analyze(u);let h=0;for(const c of u)h=(h*7+c.charCodeAt(0))>>>0;
   // Gemini text/URL analysis + translation (same key as Vision AI) — a real AI read on every capture
-  if(GEMINI_KEY){const g=await geminiAnalyzeText(u);
+  if(GEMINI_KEY||BACKEND_VISION){const g=await geminiAnalyzeText(u);
     if(g&&!g.__error){const gcat=CATS.includes(g.category)?g.category:a.category;const gscore=Math.max(0,Math.min(10,Math.round(Number(g.risk_score)||0)));
       if(gscore>a.score){a.score=gscore;a.category=gcat;} else if(a.category==='benign'&&gcat!=='benign'){a.category=gcat;a.score=Math.max(a.score,gscore);}
       a.tier=tierOf(a.score);a.recommendation=recOf(a.score);a.visionDesc=g.description||'';a.translation=g.translation||'';
