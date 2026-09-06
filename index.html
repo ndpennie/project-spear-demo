@@ -333,6 +333,9 @@ body.simple .cmdhint{margin-top:9px}
 .vidbox:hover{border-color:var(--cyan);background:#f7fbfd}
 body.simple .vidbox{margin-top:0}
 body.simple .card > .photo.vidbox{border-top:none}
+
+.btn.findmore{background:#B7791F;border-color:#B7791F;color:#fff;font-weight:800}
+.btn.findmore:hover{background:#9c6619}
 </style>
 </head>
 <body>
@@ -1050,10 +1053,14 @@ function dHash(img){const c=document.createElement('canvas');c.width=9;c.height=
   return BigInt('0b'+bits).toString(16).padStart(16,'0')}
 function ham(a,b){let x=BigInt('0x'+a)^BigInt('0x'+b),n=0;while(x){n+=Number(x&1n);x>>=1n}return n}
 // ---------- OCR (Tesseract.js from CDN, lazy-loaded; runs fully in the browser) ----------
+// Arabic matters here: ISIS slogans and watermarks are usually Arabic script, and an
+// English-only reader silently returns nothing for them (which reads as "benign").
+let OCR_LANGS=['eng','ara'];
+try{const _l=localStorage.getItem('spear_ocr_langs'); if(_l)OCR_LANGS=JSON.parse(_l);}catch(e){}
 let _ocrWorker=null;
 async function getOCR(){if(_ocrWorker)return _ocrWorker;
   if(!window.Tesseract){await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)})}
-  _ocrWorker=await Tesseract.createWorker('eng',1,{workerPath:'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/worker.min.js',corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',langPath:'https://tessdata.projectnaptha.com/4.0.0_fast',logger:m=>{if(m.status==='recognizing text'){document.getElementById('ocrBar').style.width=Math.round(m.progress*100)+'%'}}});
+  _ocrWorker=await Tesseract.createWorker(OCR_LANGS,1,{workerPath:'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/worker.min.js',corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',langPath:'https://tessdata.projectnaptha.com/4.0.0_fast',logger:m=>{if(m.status==='recognizing text'){document.getElementById('ocrBar').style.width=Math.round(m.progress*100)+'%'}}});
   return _ocrWorker}
 function preprocess(im){const sc=im.naturalWidth<1200?2:1;const c=document.createElement('canvas');c.width=im.naturalWidth*sc;c.height=im.naturalHeight*sc;const x=c.getContext('2d');x.filter='grayscale(1) contrast(1.25)';x.drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/png')}
 async function ocrImage(dataUrl){try{const w=await getOCR();const im=await loadImg(dataUrl);const r=await w.recognize(preprocess(im));return (r.data.text||'').replace(/\n{2,}/g,'\n').trim()}catch(e){toast('OCR unavailable offline — using caption/labels only');return ''}}
@@ -1098,6 +1105,37 @@ async function heroPick(files){
   if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
+
+// ================= FIND MORE LIKE THIS =================
+// Eric finds one bad thing and needs to show it isn't a one-off. This takes the
+// signals the system just pulled out of that item — visual, audio, codebook,
+// handle — and goes looking for corroborating material across the sources.
+function corroborate(id){
+  const it=(id!=null&&items.find(x=>x.id===id))||items[0];
+  if(!it){toast('Analyze something first');return}
+  const v=it.visionRaw||{}, a=(it.audio&&!it.audio.__error)?it.audio:{};
+  let terms=[...new Set([
+    ...(v.indicators||[]), ...(a.indicators||[]),
+    ...(it.indicators||[]), ...((it.cbHits||[]).map(h=>h.term))
+  ])].map(x=>String(x||'').trim())
+     .filter(t=>t.length>2 && !/^no risk/i.test(t))
+     .slice(0,8);
+  const handle=String(it.poster||'').replace(/^@/,'').trim();
+  const tags=String(it.url||'').match(/#[A-Za-z0-9_]+/g)||[];
+  if(!terms.length && handle && handle!=='unknown poster' && handle!=='unknown source')terms=[handle];
+  if(!terms.length && tags.length)terms=tags;
+  if(!terms.length){toast('Nothing distinctive enough to search on yet — open the full report and add a signal');return}
+  const lead=tags[0]||terms[0];
+  window.__liveTag=lead;
+  const esc=x=>String(x).replace(/</g,'&lt;');
+  _runSearch(
+    'More like this — corroborating <b>'+esc(lead)+'</b>',
+    '<b>Looking for:</b> '+terms.map(esc).join(', ')+(handle&&handle!=='unknown poster'?' &nbsp;·&nbsp; <b>account:</b> '+esc(handle):''),
+    [], lead, terms
+  );
+  setTimeout(()=>{const el=document.getElementById('tagLivePanel');if(el)el.scrollIntoView({behavior:'smooth',block:'center'})},150);
+}
+
 function renderVisionCard(it){
   const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
   const v=it.visionRaw||{};
@@ -1138,9 +1176,10 @@ function renderVisionCard(it){
     ${ocr?`<div class="vsec"><div class="lbl">Text read in the image</div><div class="val" style="font-size:13.2px;color:#39424e">${e(ocr.slice(0,400))}</div></div>`:''}
     ${sigs.length?`<div class="vsec"><div class="lbl">Signals</div><div class="vpills">${sigs.map(x=>`<span class="vsig">${e(x)}</span>`).join('')}</div></div>`:''}
     <div class="vsec"><div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="btn findmore" onclick="corroborate(${it.id})">🔎 Find more like this</button>
       <button class="btn" onclick="select(${it.id});showTab('queue');document.getElementById('queuePane').scrollIntoView({behavior:'smooth',block:'center'})">Open full report</button>
       <button class="btn sec" onclick="this.closest('.vcard').remove()">Dismiss</button>
-      <span class="note" style="margin:0">Saved to the review queue — you decide what gets reported.</span>
+      <span class="note" style="margin:0">Saved to the review queue. <b>Find more like this</b> searches for other posts carrying the same signals.</span>
     </div></div>
   </div>`;
 }
@@ -1170,6 +1209,51 @@ async function ingestPhotos(){const inp=document.getElementById('photoFile');con
   inp.value='';document.querySelectorAll('#visChips .chip.on').forEach(c=>c.classList.remove('on'));render();showTab('queue')}
 function fmtTime(s){s=Math.max(0,Math.floor(s));const m=Math.floor(s/60);return m+':'+String(s%60).padStart(2,'0')}
 // ---------- VIDEO scan: step through the whole clip, OCR + codebook-match each sampled frame (catches mid-clip watermarks) ----------
+
+// ================= VIDEO AUDIO =================
+// Frame scanning misses everything that is only SPOKEN or SUNG — nasheeds,
+// incitement in speech, foreign-language narration. This pulls the audio track
+// out in the browser, downsamples it, and sends it to the same Gemini endpoint
+// the images use (Gemini reads audio as well as pictures).
+function _wavFromBuffer(ab){
+  const ch=ab.getChannelData(0), n=ch.length, sr=ab.sampleRate;
+  const buf=new ArrayBuffer(44+n*2), dv=new DataView(buf);
+  const wr=(o,str)=>{for(let i=0;i<str.length;i++)dv.setUint8(o+i,str.charCodeAt(i))};
+  wr(0,'RIFF');dv.setUint32(4,36+n*2,true);wr(8,'WAVE');wr(12,'fmt ');
+  dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+  dv.setUint32(24,sr,true);dv.setUint32(28,sr*2,true);dv.setUint16(32,2,true);
+  dv.setUint16(34,16,true);wr(36,'data');dv.setUint32(40,n*2,true);
+  let o=44;for(let i=0;i<n;i++){let v=Math.max(-1,Math.min(1,ch[i]));dv.setInt16(o,v<0?v*0x8000:v*0x7FFF,true);o+=2}
+  let bin='';const bytes=new Uint8Array(buf);
+  for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+  return 'data:audio/wav;base64,'+btoa(bin);
+}
+async function extractAudioWav(file,maxSec){
+  maxSec=maxSec||120;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)return null;
+  const ctx=new AC();
+  let decoded=null;
+  try{ decoded=await ctx.decodeAudioData(await file.arrayBuffer()); }
+  catch(e){ try{ctx.close()}catch(_){} return null; }
+  try{ctx.close()}catch(_){}
+  if(!decoded||!decoded.duration)return null;
+  const SR=16000, dur=Math.min(decoded.duration,maxSec);
+  const off=new OfflineAudioContext(1,Math.ceil(dur*SR),SR);
+  const src=off.createBufferSource(); src.buffer=decoded; src.connect(off.destination); src.start(0);
+  const rendered=await off.startRendering();
+  return {wav:_wavFromBuffer(rendered), seconds:dur, full:decoded.duration};
+}
+async function analyzeVideoAudio(file){
+  if(!GEMINI_KEY&&!BACKEND_VISION)return {__error:'Vision AI is off — audio needs it'};
+  const a=await extractAudioWav(file);
+  if(!a)return {__error:'no readable audio track in this file'};
+  const ctx='This is the AUDIO TRACK of a video, not a picture. Transcribe what is spoken or sung, give the English translation, and say whether it is a nasheed/jihadi chant, incitement, threat, or benign.';
+  const v=await visionAnalyze(a.wav,ctx);
+  if(v&&!v.__error){v.__seconds=a.seconds;v.__full=a.full;}
+  return v;
+}
+
 async function ingestVideo(){
   const inp=document.getElementById('videoFile');const f=inp.files&&inp.files[0];
   if(!f){toast('Choose a video file first');return}
@@ -1198,11 +1282,27 @@ async function ingestVideo(){
     if(text)allText.push(text);
     if(hits.length||refs.length)frames.push({t,thumb:du,text:(text||'').replace(/\s+/g,' ').slice(0,160),hits:[...new Set([...hits.map(h=>h.term),...refs.map(r=>r.label)])],cbHits:hits});
   }
-  URL.revokeObjectURL(url);bar.style.width='0';setBusy(false);
+  URL.revokeObjectURL(url);bar.style.width='0';
+  // ---- listen to the soundtrack ----
+  st.textContent='🎧 Listening to the audio track…';setBusy(true,'Listening to the audio…');
+  let audioFinding=null;
+  try{audioFinding=await analyzeVideoAudio(f)}catch(e){audioFinding={__error:String(e.message||e).slice(0,140)}}
+  setBusy(false);
   const unionHits=[],seen=new Set();
   for(const fr of frames)for(const h of fr.cbHits)if(!seen.has(h.id)){seen.add(h.id);unionHits.push(h)}
   const pr=cbPrior(unionHits);
-  const cat=unionHits.length?pr.category:'benign', score=unionHits.length?pr.score:1;
+  let cat=unionHits.length?pr.category:'benign', score=unionHits.length?pr.score:1;
+  const audBits=[];
+  if(audioFinding&&audioFinding.__error){audBits.push({l:`🎧 Audio not analyzed — ${audioFinding.__error}. This result is picture-only; a spoken or sung threat would not be caught.`,d:0});}
+  else if(audioFinding){
+    const as=Math.max(0,Math.min(10,Math.round(Number(audioFinding.risk_score)||0)));
+    audBits.push({l:`🎧 Audio (${Math.round(audioFinding.__seconds||0)}s listened${audioFinding.__full>audioFinding.__seconds?` of ${Math.round(audioFinding.__full)}s`:''}): ${(audioFinding.description||'').replace(/</g,'&lt;').slice(0,400)}`,d:as||''});
+    if(audioFinding.translation)audBits.push({l:`🎧 Translation: ${(audioFinding.translation||'').replace(/</g,'&lt;').slice(0,300)}`,d:''});
+    if(audioFinding.threat)audBits.push({l:`🎧 Why it matters: ${(audioFinding.threat||'').replace(/</g,'&lt;').slice(0,300)}`,d:''});
+    (audioFinding.indicators||[]).forEach(x=>{if(x)audBits.push({l:`🎧 Audio signal: ${String(x).replace(/</g,'&lt;').slice(0,120)}`,d:''})});
+    if(as>score){score=as;if(CATS.includes(audioFinding.category))cat=audioFinding.category;}
+    else if(cat==='benign'&&audioFinding.category&&audioFinding.category!=='benign'&&CATS.includes(audioFinding.category)){cat=audioFinding.category;score=Math.max(score,as);}
+  }
   const grade=unionHits.some(x=>!x.context_required&&x.severity>=4)?'Corroborated':unionHits.length?'Inferred':'Unverified';
   const it={id:idc++,type:'video',url:'video:'+f.name,name:f.name,thumb:frames.length?frames[0].thumb:null,frames,duration:dur,dur:fmtTime(dur),
     ocr:allText.join(' ').replace(/\s+/g,' ').slice(0,1200),labels:[],caption:'',platform:'video upload',poster:poster||'unknown source',
@@ -1210,7 +1310,7 @@ async function ingestVideo(){
     category:cat,score:Math.max(1,Math.min(10,score)),tier:tierOf(score),recommendation:recOf(score),grade,connection:'narrative similarity',
     indicators:unionHits.map(x=>x.term),
     reasoning:frames.length?`Sampled ${scanned} frames across ${fmtTime(dur)}. ${frames.length} frame(s) carried codebook markers — e.g. ${frames.slice(0,3).map(fr=>fr.hits[0]+' at '+fmtTime(fr.t)).join(', ')}. Markers that appear mid-clip (not in the thumbnail) are exactly the concealment the scan is built to defeat. Frame text read by in-browser OCR and matched to reference logos in the Library; graphic-only logo/flag shape recognition and audio (nasheed) fingerprinting are the backend vision/audio layer.`:`Sampled ${scanned} frames across ${fmtTime(dur)}; no codebook markers found in frame text. Note: a purely graphic logo or flag with no text, or an audio nasheed, needs the backend vision/audio layer — add reference watermark images to the Library to catch logos by fingerprint.`,
-    breakdown:[...(unionHits.length?[{l:`Codebook markers matched across ${frames.length} sampled frame(s) — strongest: ${unionHits[0].term}`,d:score}]:[{l:'No codebook markers in sampled frame text',d:1}]),...frames.map(fr=>({l:`${fmtTime(fr.t)} — ${fr.hits.join(', ')}`,d:''}))],cbHits:unionHits,confidence:0.5+Math.min(0.4,unionHits.length*0.08)};
+    breakdown:[...(unionHits.length?[{l:`Codebook markers matched across ${frames.length} sampled frame(s) — strongest: ${unionHits[0].term}`,d:score}]:[{l:'No codebook markers in sampled frame text',d:1}]),...frames.map(fr=>({l:`${fmtTime(fr.t)} — ${fr.hits.join(', ')}`,d:''})),...audBits],cbHits:unionHits,audio:audioFinding,confidence:0.5+Math.min(0.4,unionHits.length*0.08)};
   items.unshift(it);log(it,'video scanned',`${scanned} frames · ${frames.length} flagged · ${cat} ${it.score}/10${API_BASE?'':' · demo'}`);
   st.textContent=`Done — scanned ${scanned} frame(s), flagged ${frames.length}.`;inp.value='';
   selId=it.id;render();showTab('queue');
@@ -1323,11 +1423,15 @@ async function backendVisionText(text){
   }catch(e){return null;}
 }
 async function visionAnalyze(dataUrl,context){
-  const m=(dataUrl||'').match(/^data:(image\/[\w+.-]+);base64,(.+)$/);if(!m)return {__error:'unsupported image format'};
+  // images AND audio (Gemini reads both); audio comes from the video scanner
+  const m=(dataUrl||'').match(/^data:((?:image|audio)\/[\w+.-]+);base64,(.+)$/);
+  if(!m)return {__error:'unsupported media format'};
   // 1) server first (no browser key needed)  2) browser key as fallback
   if(BACKEND_VISION){const s=await backendVision(dataUrl,context);if(s&&!s.__error)return s;if(!GEMINI_KEY)return s;}
   if(!GEMINI_KEY)return {__error:'no Vision AI available — set GEMINI_API_KEY on the server, or paste a key here'};
-  return geminiCall([{text:visionSystemPrompt()},{inline_data:{mime_type:m[1],data:m[2]}}]);
+  const isAudio=/^audio\//.test(m[1]);
+  const prompt=isAudio?((context||'')+' Respond ONLY with JSON: {"description":"<transcript and what it is>","category":"<threat category or benign>","risk_score":<0-10>,"threat":"<why>","policy":"<platform policy or none>","translation":"<English translation>","indicators":["<signal>"],"confidence":<0-1>}'):visionSystemPrompt();
+  return geminiCall([{text:prompt},{inline_data:{mime_type:m[1],data:m[2]}}]);
 }
 // Real end-to-end self-test: pushes a tiny image through the whole path and shows exactly what Google said.
 async function testVisionKey(){
@@ -1395,7 +1499,7 @@ async function addPhoto(dataUrl,o){
   if(!GEMINI_KEY&&!BACKEND_VISION){bd.push({l:'👁 Vision AI is OFF — set GEMINI_API_KEY on the server (or paste a key) to have the system SEE the image. This result is text/OCR only, so a picture with no readable text reads benign.',d:0});}
   else if(!(remote&&remote.analysis)){
     st.textContent='👁 Looking at the image with Vision AI…';
-    const v=await visionAnalyze(dataUrl,(o.poster||'')+' '+(o.caption||''));
+    const v=await visionAnalyze(dataUrl,'If any text in this image is not English, transcribe it AND give the English translation inside the description. '+(o.poster||'')+' '+(o.caption||''));
     if(v&&v.__error){
       bd.unshift({l:`⚠️ VISION AI DID NOT RUN — ${v.__error}. The score below is TEXT-ONLY, not a real "benign". Fix the key/connection and re-run.`,d:0});
       reasoning='⚠️ Vision AI did not run ('+v.__error+') — this is a text/OCR-only result, not a visual determination. '+(reasoning||'');
@@ -2942,7 +3046,7 @@ function renderDetail(){
      <button class="btn mute" onclick="act('Dismissed')">Dismiss (FP)</button>
    </div>
    ${it.tier==='CRITICAL'?`<div class="twoman">CRITICAL tier: escalation requires two-analyst confirmation (${it.reviewers.length}/2 recorded).</div>`:''}
-   <div class="row" style="margin-top:8px"><span class="pill">report.md</span><span class="pill">metadata.json</span><span class="pill">screenshot.png</span><span class="pill">media/</span><button class="btn" style="margin-left:auto;background:#6B46C1;border-color:#6B46C1" onclick="findAffiliates(${it.id})" title="Pivot from this account to affiliated accounts that share its brands, codes and collaborators">🔗 Find affiliated accounts</button><button class="btn sec" onclick="openReport()">Generate report</button></div>
+   <div class="row" style="margin-top:8px"><span class="pill">report.md</span><span class="pill">metadata.json</span><span class="pill">screenshot.png</span><span class="pill">media/</span><button class="btn findmore" style="margin-left:auto" onclick="corroborate(${it.id})" title="Search the connected sources for other posts carrying these same signals — build the pattern, not just the one example">🔎 Find more like this</button><button class="btn adv" style="background:#6B46C1;border-color:#6B46C1" onclick="findAffiliates(${it.id})" title="Pivot from this account to affiliated accounts that share its brands, codes and collaborators">🔗 Find affiliated accounts</button><button class="btn sec" onclick="openReport()">Generate report</button></div>
    <h3 style="margin-top:14px">Audit log</h3>
    <div class="audit">${audit.filter(a=>a.id===it.id).map(a=>`<div><b>${a.t}</b> · ${a.who} · ${a.action} — ${a.detail}</div>`).join('')||'<div>—</div>'}</div>`;
 }
