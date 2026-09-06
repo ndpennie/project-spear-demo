@@ -329,8 +329,8 @@ body.simple .card{border-radius:13px}
 body.simple .vcard{padding:17px 19px}
 body.simple .cmdhint{margin-top:9px}
 
-.vidbox{border:2px dashed #B7C6D6;border-radius:12px;padding:14px 16px;background:#fbfcfe;transition:.15s}
-.vidbox:hover{border-color:var(--cyan);background:#f7fbfd}
+.vidbox{border:2px dashed #F0B27A;border-radius:12px;padding:14px 16px;background:#fffaf5;transition:.15s}
+.vidbox:hover{border-color:#E8720C;background:#fff6ee}
 body.simple .vidbox{margin-top:0}
 body.simple .card > .photo.vidbox{border-top:none}
 
@@ -338,8 +338,8 @@ body.simple .card > .photo.vidbox{border-top:none}
 .btn.findmore:hover{background:#9c6619}
 
 /* one colour per job, so the button says what it does */
-.btn-video{background:#1877F2;border-color:#1877F2;color:#fff;font-weight:700}
-.btn-video:hover{background:#1466d2}
+.btn-video{background:#E8720C;border-color:#E8720C;color:#fff;font-weight:700}
+.btn-video:hover{background:#cc6209}
 .btn-audio{background:#6B46C1;border-color:#6B46C1;color:#fff;font-weight:700}
 .btn-audio:hover{background:#5a39a6}
 .audbox{border:2px dashed #C3B2E8;border-radius:12px;padding:14px 16px;background:#fbfaff;transition:.15s}
@@ -378,6 +378,12 @@ body.simple .card > .photo.vidbox{border-top:none}
 .logicon{width:54px;height:44px;border-radius:6px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:21px;background:#f6f8fb}
 .vtag{border-radius:14px;padding:3px 10px;font-size:11.6px;font-weight:800;white-space:nowrap;display:inline-block}
 .vtag.red{background:#FDECEA;color:#8A1C12}.vtag.amber{background:#FFF4E5;color:#8A5A00}.vtag.green{background:#EAF8F0;color:#1B5E33}
+
+/* the decision action — red, and bigger than the things around it */
+.btn.btn-decide{background:#C0261A;border-color:#C0261A;color:#fff;font-weight:800;
+  padding:10px 20px;font-size:14.5px;box-shadow:0 2px 0 #8A1C12}
+.btn.btn-decide:hover{background:#a51f15}
+.btn.btn-decide:active{transform:translateY(2px);box-shadow:0 0 0 #8A1C12}
 </style>
 </head>
 <body>
@@ -1385,7 +1391,7 @@ function renderVisionCard(it){
     <div class="vsec"><div class="row" style="gap:8px;flex-wrap:wrap">
       ${it.type!=='audio'?`<button class="btn btn-retry" onclick="retryVision(${it.id},this)" title="Run Vision AI on this image again — no need to upload it a second time">🔁 Re-analyze</button>`:''}
       <button class="btn findmore" onclick="corroborate(${it.id})">🔎 Find more like this</button>
-      <button class="btn" onclick="select(${it.id});showTab('queue');document.getElementById('queuePane').scrollIntoView({behavior:'smooth',block:'center'})">Open full report</button>
+      <button class="btn btn-decide" onclick="select(${it.id});showTab('queue');document.getElementById('queuePane').scrollIntoView({behavior:'smooth',block:'center'})">📄 Open full report</button>
       <button class="btn sec" onclick="this.closest('.vcard').remove()">Dismiss</button>
       <span class="note" style="margin:0">Saved to the review queue. <b>Find more like this</b> searches for other posts carrying the same signals.</span>
     </div></div>
@@ -3439,7 +3445,7 @@ function renderDetail(){
    </div>
    <div class="actions">
      <button class="btn ok" onclick="act('Confirmed')">Confirm</button>
-     <button class="btn warn" onclick="act('Escalated')">Report to platform</button>
+     <button class="btn btn-decide" onclick="act('Escalated')">🚩 Report to platform</button>
      <button class="btn mute" onclick="act('Dismissed')">Dismiss (FP)</button>
    </div>
    ${it.tier==='CRITICAL'?`<div class="twoman">CRITICAL tier: escalation requires two-analyst confirmation (${it.reviewers.length}/2 recorded).</div>`:''}
