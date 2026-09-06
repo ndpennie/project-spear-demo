@@ -11,6 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Project Spear">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
   :root{--navy:#152A4E;--cyan:#2FA8CC;--bg:#F4F7FA;--card:#FFFFFF;--ink:#1F2933;--muted:#6B7785;--line:#E1E7EE;
     --crit:#B42318;--high:#D9480F;--med:#B7791F;--low:#2F855A;--min:#5A6472;--critbg:#FDECEA;--highbg:#FFF1E6;--medbg:#FFF8E1;--lowbg:#EAF7EF;--minbg:#EEF1F4;}
@@ -413,6 +414,79 @@ body.simple .card > .photo.vidbox{border-top:none}
 .btn.btn-policy:hover{background:#5a39a6}
 .btn.btn-missed{background:#152A4E;border-color:#152A4E;color:#fff;font-weight:800}
 .btn.btn-missed:hover{background:#0e1f3a}
+
+/* ============ FUTURISTIC LIGHT ============
+   The look of Eric's pipeline poster — squared technical type, stage numbers,
+   angular corners, faint circuitry — on a WHITE working surface. Display face
+   is used for headings and labels only; body copy stays a plain readable sans,
+   because this is read for hours by someone who does not want small stylised text. */
+:root{
+  --disp:'Chakra Petch','Segoe UI',Arial,sans-serif;
+  --body:'Inter','Segoe UI',Arial,sans-serif;
+  --mono:'JetBrains Mono',Consolas,Menlo,monospace;
+  --glow:rgba(47,168,204,.30);
+  --s1:#2FA8CC; --s2:#B7791F; --s3:#2F855A; --s4:#C0261A;   /* hunt · capture · flag · act */
+}
+body{font-family:var(--body);
+  background:
+    linear-gradient(rgba(21,42,78,.028) 1px,transparent 1px) 0 0/100% 34px,
+    linear-gradient(90deg,rgba(21,42,78,.028) 1px,transparent 1px) 0 0/34px 100%,
+    radial-gradient(1200px 380px at 50% -140px,rgba(47,168,204,.10),transparent 70%),
+    var(--bg);
+}
+h1,h2,h3,h4,.cmdgo,.bigphoto,.vtxt,.aaTitle,.refhead,.newbox h4,.vpill,.tab,.stepcard b,
+.reftitle,.lbl,.verdict .vtxt,.btn{font-family:var(--disp)}
+h3{letter-spacing:1.1px;font-weight:700}
+.lbl,.reftitle{letter-spacing:1.1px}
+code,.mono,#cmdQ::placeholder{font-family:var(--mono)}
+
+/* angular corners — the poster's cut-corner panels */
+.cmdwrap,.hero,.vcard,.acceptbox,.newbox,.refbox{
+  clip-path:polygon(13px 0,100% 0,100% calc(100% - 13px),calc(100% - 13px) 100%,0 100%,0 13px);
+}
+/* a thin scan of colour along the top of the main panels */
+.cmdwrap,.refbox{position:relative}
+.cmdwrap:before,.refbox:before{content:"";position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,var(--s1),var(--s2) 33%,var(--s3) 66%,var(--s4));opacity:.85}
+
+/* stage numbering, like 01 / 02 / 03 / 04 on the poster */
+.hero:before{content:"02";position:absolute;top:10px;right:16px;font-family:var(--disp);
+  font-size:34px;font-weight:700;color:rgba(47,133,90,.13);letter-spacing:1px;pointer-events:none}
+.hero{position:relative}
+.cmdwrap .cmdrow:before{content:"01";font-family:var(--disp);font-size:15px;font-weight:700;
+  color:var(--s1);letter-spacing:1.5px;align-self:center;margin-right:2px;opacity:.75}
+
+/* headings get a technical tick */
+h3:before{content:"▍";color:var(--cyan);margin-right:7px;font-weight:400}
+
+/* interactive glow instead of flat focus */
+#cmdQ:focus{box-shadow:0 0 0 3px var(--glow),0 0 18px rgba(47,168,204,.22)}
+.btn{letter-spacing:.5px;font-weight:700}
+.btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.bigphoto{letter-spacing:.6px}
+.vpill,.vsig,.vtag{font-family:var(--disp);letter-spacing:.6px}
+
+/* the verdict band reads like a status readout */
+.verdict{clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  position:relative;overflow:hidden}
+.verdict:after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,0) 0 6px,rgba(255,255,255,.35) 6px 7px);opacity:.30}
+.verdict .vtxt{letter-spacing:1.6px}
+
+/* tabs as angled console tabs */
+.tab{clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px);letter-spacing:.7px}
+
+/* section labels in the report read as telemetry fields */
+.vsec .lbl{font-family:var(--disp);font-weight:700}
+.vsec .lbl:before{content:"◇ ";color:var(--cyan);font-size:10px}
+
+/* keep long-form reading plain and large enough */
+.vdesc,.vsec .val,.note,.refitem,td,li,p{font-family:var(--body)}
+.vdesc{font-size:15px;line-height:1.65}
+
+@media (prefers-reduced-motion:reduce){
+  .vcard,.verdict,.newbox,.acceptbox{animation:none!important}
+}
 </style>
 </head>
 <body>
