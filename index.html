@@ -472,6 +472,10 @@ body.simple .card > .photo.vidbox{border-top:none}
     </div>
   </div>
 </div>
+<div id="demoBanner" style="display:none;background:#FFF4E5;border:2px solid #E8720C;border-radius:12px;padding:12px 16px;margin:0 0 12px;font-size:14px;color:#8A5A00;font-weight:700">
+  ⚠ DEMO EXAMPLES ARE LOADED — the queue contains invented posts for layout only. They are not real findings and must not be reported or exported as evidence.
+  <button class="btn" style="background:#C0261A;border-color:#C0261A;margin-left:10px;padding:6px 14px" onclick="clearDemo()">Remove demo items</button>
+</div>
 <div id="pushPanel"></div>
 <div id="heroResults"></div>
 
@@ -507,6 +511,17 @@ body.simple .card > .photo.vidbox{border-top:none}
     <button class="btn sec" onclick="runSystemSearch()">↻ Search again</button>
   </div>
   <div class="note" id="tagTermsUsed" style="margin:0 0 8px"></div>
+  <details style="margin:0 0 9px"><summary class="note" style="cursor:pointer;font-weight:700;color:var(--navy)">Which platforms this searches — and which it cannot</summary>
+    <div class="note" style="margin:6px 0 0;line-height:1.65">
+      <b style="color:#1B5E33">Searched directly:</b> Telegram (public channels) · Bluesky · Mastodon / fediverse · 8kun (text only) · Odysee · open-web account discovery.<br>
+      <b style="color:#8A5A00">Not searchable by anyone, free:</b>
+      <b>Facebook &amp; Instagram</b> — Meta blocks crawlers; posts come from analyst capture or Meta Content Library access.
+      <b>X / Twitter</b> — search requires a paid API tier (about $100–200/month); the open-web pass still surfaces X <i>accounts</i>, just not their posts.
+      <b>Snapchat</b> — no public search API exists at all.
+      <b>Gab</b> and <b>Rumble</b> block automated access.<br>
+      <span style="color:#8A1C12"><b>Imageboards are pulled text-only.</b> No image from 8kun is ever downloaded or shown — those boards carry illegal material and the tool will not fetch it.</span>
+    </div>
+  </details>
   <div id="tagResults"></div>
   <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
     <button class="btn" id="tagCaptureAll" style="background:#2F855A;border-color:#2F855A;font-size:15px;padding:10px 18px;display:none" onclick="captureAllResults(true)">✅ Capture all &amp; build the Meta spreadsheet</button>
@@ -557,7 +572,7 @@ body.simple .card > .photo.vidbox{border-top:none}
       <textarea id="urls" class="adv" placeholder="Paste one or more post / profile / group / video URLs, one per line…"></textarea>
       <div class="row adv" style="margin-top:8px">
         <button class="btn" onclick="ingest()">Capture &amp; flag URLs</button>
-        <button class="btn mute" onclick="loadSamples()">Load sample batch</button>
+        <button class="btn mute" onclick="loadSamples()" title="Loads 10 invented posts to demonstrate the layout. Never real.">Load DEMO examples (fake)</button>
       </div>
       <div class="photo adv">
         <b style="font-size:13px">Or upload a screenshot</b>
@@ -3171,6 +3186,91 @@ function parseSearchHTML(html){
   if(!out.length)doc.querySelectorAll('a').forEach(a=>push(a.getAttribute('href'),a.textContent,''));
   return out;
 }
+
+// ================= EXTRA SOURCES (browser-side) =================
+// These three allow direct browser calls, so they widen coverage without any
+// backend change. X/Twitter, Facebook, Instagram and Snapchat have no free
+// legitimate search API — see the note in the search panel rather than pretending.
+//
+// SAFETY: imageboards are pulled TEXT-ONLY. No image URL from those boards is
+// ever fetched, stored or displayed — those sites carry illegal imagery and the
+// tool must not download it. The analyst gets the text and a link to the thread.
+const EXTRA_SRC = {
+  imageboards: ['pnd','pol'],                       // 8kun boards
+  mastodon: ['mastodon.social','kolektiva.social'], // public fediverse instances
+  enabled: {imageboards:true, mastodon:true, odysee:true}
+};
+try{const c=localStorage.getItem('spear_extra'); if(c)Object.assign(EXTRA_SRC,JSON.parse(c));}catch(e){}
+
+const _strip=h=>String(h||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&[a-z]+;/gi,' ').replace(/\s+/g,' ').trim();
+
+async function src8kun(tag,terms){
+  const bare=String(tag||'').replace(/^#/,'').trim(); if(!bare)return [];
+  const rx=new RegExp('(?<![A-Za-z0-9])('+[bare,...(terms||[])].filter(t=>t&&t.length>2)
+      .map(t=>String(t).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')(?![A-Za-z0-9])','i');
+  const out=[];
+  for(const board of (EXTRA_SRC.imageboards||[]).slice(0,2)){
+    try{
+      const r=await fetch(`https://8kun.top/${encodeURIComponent(board)}/catalog.json`,{cache:'no-store'});
+      if(!r.ok)continue;
+      for(const page of await r.json()){
+        for(const th of (page.threads||[])){
+          const text=_strip((th.sub||'')+' '+(th.com||''));      // text only — never th.tim/th.ext
+          if(!text||!rx.test(text))continue;
+          out.push({href:`https://8kun.top/${board}/res/${th.no}.html`,
+                    title:`/${board}/ thread ${th.no}`,snippet:text.slice(0,300),
+                    platform:'8kun',author:'/'+board+'/',reference:false});
+          if(out.length>=20)return out;
+        }
+      }
+    }catch(e){}
+  }
+  return out;
+}
+async function srcMastodon(tag){
+  const bare=String(tag||'').replace(/^#/,'').replace(/[^A-Za-z0-9_]/g,'').trim(); if(!bare)return [];
+  const out=[];
+  for(const host of (EXTRA_SRC.mastodon||[]).slice(0,3)){
+    try{
+      const r=await fetch(`https://${host}/api/v1/timelines/tag/${encodeURIComponent(bare)}?limit=15`,{cache:'no-store'});
+      if(!r.ok)continue;
+      for(const st of await r.json()){
+        const text=_strip(st.content);
+        if(!text)continue;
+        out.push({href:st.url||'',title:'@'+((st.account||{}).acct||host),snippet:text.slice(0,300),
+                  platform:'mastodon',author:'@'+((st.account||{}).acct||''),reference:false});
+      }
+    }catch(e){}
+  }
+  return out.filter(x=>x.href);
+}
+async function srcOdysee(tag,terms){
+  const q=String(tag||'').replace(/^#/,'').trim(); if(!q)return [];
+  const out=[];
+  for(const term of [q,...(terms||[]).slice(0,1)]){
+    try{
+      const r=await fetch(`https://lighthouse.odysee.tv/search?s=${encodeURIComponent(term)}&size=10`,{cache:'no-store'});
+      if(!r.ok)continue;
+      for(const c of await r.json()){
+        if(!c||!c.name)continue;
+        out.push({href:`https://odysee.com/${c.name}:${String(c.claimId||'').slice(0,1)}`,
+                  title:String(c.name).replace(/-/g,' ').slice(0,90),
+                  snippet:'Odysee video · '+String(c.name).replace(/-/g,' '),
+                  platform:'odysee',author:'',reference:false});
+      }
+    }catch(e){}
+  }
+  return out;
+}
+async function browserSources(tag,terms){
+  const jobs=[];
+  if(EXTRA_SRC.enabled.imageboards)jobs.push(src8kun(tag,terms));
+  if(EXTRA_SRC.enabled.mastodon)   jobs.push(srcMastodon(tag));
+  if(EXTRA_SRC.enabled.odysee)     jobs.push(srcOdysee(tag,terms));
+  const settled=await Promise.allSettled(jobs);
+  return settled.filter(x=>x.status==='fulfilled').flatMap(x=>x.value||[]);
+}
+
 async function serverSearch(tag,terms){
   const base=API_BASE||BACKEND_DEFAULT;
   // Telegram channels we already follow get their real messages pulled in.
@@ -3186,10 +3286,21 @@ async function serverSearch(tag,terms){
     if(!j||!j.results)return null;
     window.__searchNotice=j.notice||'';
     window.__searchSources=j.sources||{};
-    return j.results.map(x=>({href:x.url,title:x.title||x.url,snippet:x.snippet||'',
+    const server=j.results.map(x=>({href:x.url,title:x.title||x.url,snippet:x.snippet||'',
       platform:x.platform||'link',reference:!!x.reference,author:x.author||'',
       source:x.source||'',where:x.where||''}));
-  }catch(e){return null;}
+    let extra=[];
+    try{extra=await browserSources(tag,terms)}catch(e){}
+    const seen=new Set(server.map(r=>String(r.href).split('?')[0].replace(/\/$/,'').toLowerCase()));
+    for(const r of extra){
+      const k=String(r.href).split('?')[0].replace(/\/$/,'').toLowerCase();
+      if(!k||seen.has(k))continue; seen.add(k); server.push(r);
+    }
+    return server;
+  }catch(e){
+    // server down: still try the browser-side sources so he gets something
+    try{const only=await browserSources(tag,terms);return only.length?only:null}catch(_){return null}
+  }
 }
 async function _runSearch(titleHTML,termsUsed,queries,tag,terms){
   const panel=document.getElementById('tagLivePanel');panel.style.display='block';
@@ -3304,6 +3415,12 @@ async function addItem(u){
   items.unshift(it);log(it,'ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade}${API_BASE?' · backend':' · demo'}`);render();
 }
 function loadSamples(){
+  // These URLs are INVENTED. They exist to show the layout in a demo, and they are
+  // no longer loaded automatically — an analyst queue that fills itself with fake
+  // incidents can end up in a real export to Meta. Loading them is now deliberate.
+  if(!confirm('Load DEMO examples?\n\nThese are 10 INVENTED posts used to show the layout. They are NOT real findings and must never be reported or exported as evidence.\n\nContinue?'))return;
+  const banner=document.getElementById('demoBanner');
+  if(banner){banner.style.display='';}
   ['https://www.facebook.com/groups/reclaim-chapter-1122/posts/88012 (join, apply — recruitment flyer)',
    'https://www.facebook.com/PatriotSupplyMerch/posts/55019 (store, donate, btc wallet)',
    'https://t.me/activeclub_training/4410 (training drill, meet, map coordinates)',
@@ -3315,6 +3432,13 @@ function loadSamples(){
    'https://www.tiktok.com/@ironfront.supply/video/9901 (merch drop, honor the fallen)',
    'https://www.facebook.com/groups/northgate-patriots/posts/1201 (poster, reclaim america)'
   ].forEach(u=>addItem(u));render();
+  toast('Demo examples loaded — not real findings');
+}
+function clearDemo(){
+  const before=items.length;
+  items=items.filter(i=>!/reclaim-chapter-1122|PatriotSupplyMerch|activeclub_training\/4410|p\/AbC123|freedomsignal\/status\/1877001|citizen\.watch\.tx\/posts\/77120|watch\?v=Zq9x|r\/localnews\/comments\/ab12|ironfront\.supply\/video\/9901|northgate-patriots\/posts\/1201/.test(i.url||''));
+  const b=document.getElementById('demoBanner'); if(b)b.style.display='none';
+  selId=null; render(); toast(`Removed ${before-items.length} demo item(s)`);
 }
 function log(it,action,detail){audit.unshift({t:new Date().toLocaleTimeString(),id:it.id,action,detail,who:'Strategic'})}
 function sortBy(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='score'?-1:1}render()}
@@ -3463,7 +3587,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();initSimple();initHero();initPush();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();initSimple();initHero();initPush();
 if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
 // crawl is OFF by default — the user starts it with the Start crawl toggle (saves data)
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
