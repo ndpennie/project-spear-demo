@@ -57,8 +57,8 @@
   .livebar .livestat .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#B42318;margin-right:5px;animation:pulse 1.3s infinite;vertical-align:middle}
   .realtoggle{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#1b5e33;background:#e9f7ef;border:1px solid #b7e4c7;border-radius:8px;padding:7px 11px;cursor:pointer;user-select:none}
   .realtoggle input{width:15px;height:15px;cursor:pointer}
-  .tab.ai{color:#fff;font-weight:800;background:#B42318;border-color:#B42318;border-radius:6px 6px 0 0}
-  .tab.ai.on{background:#8f1a12;border-color:#8f1a12;color:#fff}
+  .tab.ai{color:#3d2f00;font-weight:800;background:#F5C518;border-color:#F5C518;border-radius:6px 6px 0 0}
+  .tab.ai.on{background:#DCA905;border-color:#DCA905;color:#2b2100}
   .ailabel{display:inline-block;background:#B42318;color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;padding:5px 12px;border-radius:7px;margin:0 0 6px}
   .aimsg{margin:0 0 10px;padding:9px 12px;border-radius:10px;font-size:13.5px;line-height:1.55}
   .aimsg.u{background:#eef2fb;border:1px solid #d6e0f5;margin-left:12%}
@@ -336,6 +336,48 @@ body.simple .card > .photo.vidbox{border-top:none}
 
 .btn.findmore{background:#B7791F;border-color:#B7791F;color:#fff;font-weight:800}
 .btn.findmore:hover{background:#9c6619}
+
+/* one colour per job, so the button says what it does */
+.btn-video{background:#1877F2;border-color:#1877F2;color:#fff;font-weight:700}
+.btn-video:hover{background:#1466d2}
+.btn-audio{background:#6B46C1;border-color:#6B46C1;color:#fff;font-weight:700}
+.btn-audio:hover{background:#5a39a6}
+.audbox{border:2px dashed #C3B2E8;border-radius:12px;padding:14px 16px;background:#fbfaff;transition:.15s}
+.audbox:hover{border-color:#6B46C1;background:#f8f5ff}
+.vcard.audio{border-left-color:#6B46C1}
+.noart{width:190px;max-width:40vw;height:120px;border-radius:9px;border:1px solid var(--line);
+  background:linear-gradient(135deg,#efeaff,#f7f5ff);display:flex;align-items:center;justify-content:center;
+  font-size:40px;color:#6B46C1}
+
+.btn.pushbtn{background:#e9edf2;border-color:#cfd8e3;color:#5a6675;font-weight:800}
+.btn.pushbtn.on{background:#2F855A;border-color:#2F855A;color:#fff}
+.newbox{background:#fff;border:2px solid #B7791F;border-left-width:7px;border-radius:12px;padding:15px 17px;margin:0 0 12px;animation:riseIn .34s cubic-bezier(.22,.9,.3,1) both}
+.newbox h4{margin:0 0 4px;font-size:16.5px;color:#8a5a00}
+.newbox .sub{font-size:13px;color:#5a6675;margin-bottom:10px}
+.newrow{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-top:1px solid #f0f3f7}
+.newrow:first-of-type{border-top:none}
+.newrow .nm{flex:1;min-width:0}
+.newrow a{color:#1D4ED8;text-decoration:underline;font-weight:600;font-size:14px}
+.newrow .sn{font-size:12.8px;color:#39424e;margin-top:2px}
+.newrow .pl{font-size:11.5px;font-weight:800;color:#fff;background:#5a6675;border-radius:12px;padding:2px 9px;white-space:nowrap}
+
+.warnstrip{background:#FFF4E5;border:1px solid #F0C77E;color:#8A5A00;border-radius:8px;
+  padding:8px 11px;margin:8px 0 2px;font-size:12.8px;font-weight:600;line-height:1.5}
+
+.btn-retry{background:#0F766E;border-color:#0F766E;color:#fff;font-weight:700}
+.btn-retry:hover{background:#0c5f59}
+
+.tab.log{background:#0F766E;border-color:#0F766E;color:#fff;font-weight:800;border-radius:6px 6px 0 0}
+.tab.log.on{background:#0b5b55;border-color:#0b5b55}
+.logf.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.logtable{width:100%;border-collapse:collapse;font-size:13.2px}
+.logtable th{background:#eef5fb;color:#152A4E;font-weight:700;text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);font-size:11.8px;letter-spacing:.4px;text-transform:uppercase}
+.logtable td{padding:8px 9px;border-bottom:1px solid #f0f3f7;vertical-align:top}
+.logtable tr:hover td{background:#fbfcfe}
+.logthumb{width:54px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.logicon{width:54px;height:44px;border-radius:6px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:21px;background:#f6f8fb}
+.vtag{border-radius:14px;padding:3px 10px;font-size:11.6px;font-weight:800;white-space:nowrap;display:inline-block}
+.vtag.red{background:#FDECEA;color:#8A1C12}.vtag.amber{background:#FFF4E5;color:#8A5A00}.vtag.green{background:#EAF8F0;color:#1B5E33}
 </style>
 </head>
 <body>
@@ -403,6 +445,8 @@ body.simple .card > .photo.vidbox{border-top:none}
   <div class="cmdhint"><code>https://…</code> a link &nbsp;·&nbsp; <code>#hashtag</code> &nbsp;·&nbsp; <code>@handle</code> &nbsp;·&nbsp; or just ask a question</div>
   <div class="cmdacts">
     <button class="btn" onclick="exportMetaXLSX()" style="background:#1877F2;border-color:#1877F2">📄 Get report</button>
+    <button class="btn pushbtn" id="pushBtn" onclick="togglePush()">🔔 Watch: OFF</button>
+    <button class="btn sec" onclick="checkSweep(true)" title="Check the server sweep for anything new right now">Check now</button>
     <button class="btn advbtn" id="advBtn" onclick="toggleAdvanced()">⚙ Advanced tools</button>
   </div>
 </div>
@@ -422,12 +466,12 @@ body.simple .card > .photo.vidbox{border-top:none}
     </div>
   </div>
 </div>
+<div id="pushPanel"></div>
 <div id="heroResults"></div>
 
 <div class="livebar adv">
-  <button class="btn golive" id="goLiveBtn" onclick="toggleLive()">▶ Start crawl (auto-discover)</button>
   <button class="btn" id="reportBtn" onclick="exportMetaXLSX()" title="Build a spreadsheet report (with images) of everything the crawl has found" style="background:#1877F2;border-color:#1877F2">📄 Get report</button>
-  <span class="livestat" id="liveStat">stopped · off by default to save data</span>
+  <span class="livestat" id="liveStat">Auto-discover was removed — it invented example accounts. Real sweeps run on a schedule; see 🔔 Watch.</span>
   <div class="findbox">
     <input id="findQ" placeholder="Find nefarious content — type a code, hashtag, handle or emoji (e.g. the juice, RAHOWA, 13_pda, #w2r)" onkeydown="if(event.key==='Enter')findContent()">
     <button class="btn" onclick="findContent()">🔎 Find</button>
@@ -545,8 +589,15 @@ body.simple .card > .photo.vidbox{border-top:none}
         <div class="note" style="margin:3px 0 0">Checks the whole clip for hidden watermarks and flags — not just the thumbnail.</div>
         <div style="margin-top:6px"><input type="file" id="videoFile" accept="video/*"></div>
         <input id="videoPoster" placeholder="Poster handle / source (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
-        <div class="row" style="margin-top:8px"><button class="btn" onclick="ingestVideo()">Scan video</button><span class="note" id="vidStatus" style="margin:0"></span></div>
+        <div class="row" style="margin-top:8px"><button class="btn btn-video" onclick="ingestVideo()">🎬 Scan video</button><span class="note" id="vidStatus" style="margin:0"></span></div>
         <div class="prog"><i id="vidBar"></i></div>
+      </div>
+      <div class="photo audbox" style="margin-top:10px">
+        <b style="font-size:15px;color:var(--navy)">🎧 Interpret audio</b>
+        <div class="note" style="margin:3px 0 0">Upload a voice note, a recording or an audio file. The system <b>listens, writes out what is said, and translates it into English</b> so you can read it — whatever language it's in.</div>
+        <div style="margin-top:7px"><input type="file" id="audioFile" accept="audio/*,video/*"></div>
+        <input id="audioPoster" placeholder="Who posted it / where from (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:6px;margin-top:6px;font-size:13px">
+        <div class="row" style="margin-top:8px"><button class="btn btn-audio" onclick="ingestAudio()">🎧 Interpret audio</button><span class="note" id="audStatus" style="margin:0"></span></div>
       </div>
     </div>
     <div class="card adv" style="margin-top:12px">
@@ -562,7 +613,27 @@ body.simple .card > .photo.vidbox{border-top:none}
 
   <!-- CENTER: queue -->
   <div class="card">
-    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab ai" id="tabAI" onclick="showTab('ai')">💬 AI CHAT</div><div class="tab adv" id="tabN" onclick="showTab('net')">Network view</div><div class="tab adv" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib adv" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt adv" id="tabH" onclick="showTab('hunt')">Active Hunt</div><div class="tab bg adv" id="tabBG" onclick="showTab('bg')">BrandGuard™</div><span class="mode adv" id="modeTag">demo analyzer</span></div>
+    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab ai" id="tabAI" onclick="showTab('ai')">💬 AI CHAT</div><div class="tab log" id="tabLog" onclick="showTab('log')">📒 Log</div><div class="tab adv" id="tabN" onclick="showTab('net')">Network view</div><div class="tab adv" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib adv" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt adv" id="tabH" onclick="showTab('hunt')">Active Hunt</div><div class="tab bg adv" id="tabBG" onclick="showTab('bg')">BrandGuard™</div><span class="mode adv" id="modeTag">demo analyzer</span></div>
+    <div id="logPane" style="display:none">
+      <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+        <h3 style="margin:0"><span class="hstep">LOG</span>Everything you have run through the system</h3>
+        <span class="note" id="logCount" style="margin:0"></span>
+      </div>
+      <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin:9px 0 4px">
+        <span class="note" style="margin:0;font-weight:700">Show:</span>
+        <button class="btn sec logf" data-r="1"  onclick="setLogRange('1')">Today</button>
+        <button class="btn sec logf" data-r="7"  onclick="setLogRange('7')">Last 7 days</button>
+        <button class="btn sec logf" data-r="30" onclick="setLogRange('30')">Last 30 days</button>
+        <button class="btn sec logf on" data-r="all" onclick="setLogRange('all')">All</button>
+        <span class="note" style="margin:0 0 0 8px">or from</span>
+        <input type="date" id="logFrom" onchange="setLogRange('custom')" style="border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:13px">
+        <span class="note" style="margin:0">to</span>
+        <input type="date" id="logTo" onchange="setLogRange('custom')" style="border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:13px">
+        <button class="btn sec" onclick="exportLogCSV()" style="margin-left:auto">⬇ Export list</button>
+        <button class="btn" onclick="resetLog()" style="background:#B42318;border-color:#B42318">Reset list</button>
+      </div>
+      <div id="logBody"></div>
+    </div>
     <div id="aiPane" style="display:none">
       <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
         <h3 style="margin:0"><span class="hstep">ASK</span>Analyst AI — ask about a threat, or teach the system one</h3>
@@ -905,7 +976,7 @@ const SHARED=['iron-front-supply.store','btc:1A1zP…f9x','freedom-signal.link',
 function sharedOf(u){let h=0;for(const c of u)h=(h*13+c.charCodeAt(0))>>>0;const s=u.toLowerCase();const out=[];
   if(/merch|store|supply/.test(s))out.push(SHARED[0]);if(/btc|wallet|donate|crypto/.test(s))out.push(SHARED[1]);if(/signal|truth|manifesto|wake/.test(s))out.push(SHARED[2]);if(/flyer|poster|reclaim/.test(s))out.push(SHARED[3]);
   return out}
-function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('aiPane').style.display=t==='ai'?'':'none';document.getElementById('tabAI').classList.toggle('on',t==='ai');if(t==='ai')renderAIKB();document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');document.getElementById('huntPane').style.display=t==='hunt'?'':'none';document.getElementById('tabH').classList.toggle('on',t==='hunt');if(t==='net')drawNet();if(t==='cb')renderCodebook();if(t==='hunt')renderHunt();document.getElementById('bgPane').style.display=t==='bg'?'':'none';document.getElementById('tabBG').classList.toggle('on',t==='bg');if(t==='bg'){bgRender();if(typeof bgRenderTenant==='function')bgRenderTenant()}}
+function showTab(t){document.getElementById('queuePane').style.display=t==='queue'?'':'none';document.getElementById('aiPane').style.display=t==='ai'?'':'none';document.getElementById('tabAI').classList.toggle('on',t==='ai');if(t==='ai')renderAIKB();document.getElementById('netPane').style.display=t==='net'?'':'none';document.getElementById('cbPane').style.display=t==='cb'?'':'none';document.getElementById('libPane').style.display=t==='lib'?'':'none';document.getElementById('tabL').classList.toggle('on',t==='lib');if(t==='lib')renderLibrary();document.getElementById('tabQ').classList.toggle('on',t==='queue');document.getElementById('tabN').classList.toggle('on',t==='net');document.getElementById('tabC').classList.toggle('on',t==='cb');document.getElementById('huntPane').style.display=t==='hunt'?'':'none';document.getElementById('tabH').classList.toggle('on',t==='hunt');if(t==='net')drawNet();if(t==='cb')renderCodebook();if(t==='hunt')renderHunt();document.getElementById('bgPane').style.display=t==='bg'?'':'none';document.getElementById('tabBG').classList.toggle('on',t==='bg');if(t==='bg'){bgRender();if(typeof bgRenderTenant==='function')bgRenderTenant()}document.getElementById('logPane').style.display=t==='log'?'':'none';document.getElementById('tabLog').classList.toggle('on',t==='log');if(t==='log')renderLog();}
 function drawNet(){
   const svg=document.getElementById('netSvg');const W=760,H=520;const nodes=[],edges=[];const idx={};
   const add=(key,n)=>{if(idx[key]===undefined){idx[key]=nodes.length;nodes.push(n)}return idx[key]};
@@ -1136,6 +1207,137 @@ function corroborate(id){
   setTimeout(()=>{const el=document.getElementById('tagLivePanel');if(el)el.scrollIntoView({behavior:'smooth',block:'center'})},150);
 }
 
+
+// Vision AI was asleep or down when this image ran — try it again on demand.
+async function retryVision(id,btn){
+  const it=items.find(x=>x.id===id); if(!it||!it.thumb){toast('Original image not available');return}
+  if(btn){btn.disabled=true;btn.textContent='⏳ Waking the server…'}
+  const v=await visionAnalyze(it.thumb,'If any text in this image is not English, transcribe it AND give the English translation inside the description. '+(it.poster||'')+' '+(it.caption||''));
+  if(!v||v.__error){
+    if(btn){btn.disabled=false;btn.textContent='🔁 Try Vision AI again'}
+    toast('Still no Vision AI: '+((v&&v.__error)||'unknown'));return;
+  }
+  it.visionRaw=v; it.visionDesc=v.description||it.visionDesc; it.visionFailed='';
+  const vs=Math.max(0,Math.min(10,Math.round(Number(v.risk_score)||0)));
+  if(vs>it.score){it.score=vs;if(CATS.includes(v.category))it.category=v.category;}
+  it.tier=tierOf(it.score); it.recommendation=recOf(it.score);
+  it.confidence=Math.max(it.confidence||0,Number(v.confidence)||0);
+  it.reasoning='👁 Vision AI: '+String(v.threat||v.description||'').replace(/\s+/g,' ');
+  const card=btn&&btn.closest('.vcard');
+  if(card)card.outerHTML=renderVisionCard(it); 
+  render(); toast('👁 Vision AI: '+String(it.category).replace(/_/g,' ')+' '+it.score+'/10');
+}
+
+
+// ================= RUNNING LOG =================
+// Every image, video and recording Eric puts through the system is written here
+// and kept between sessions, so he has a dated record of his own work. He can
+// filter it by period, export it, or clear it out.
+const LOG_KEY='spear_log', LOG_MAX=400;
+let LOG_RANGE='all';
+function logLoad(){try{return JSON.parse(localStorage.getItem(LOG_KEY)||'[]')}catch(e){return []}}
+function logSave(a){try{localStorage.setItem(LOG_KEY,JSON.stringify(a.slice(0,LOG_MAX)))}catch(e){
+  try{localStorage.setItem(LOG_KEY,JSON.stringify(a.slice(0,120).map(x=>({...x,thumb:''}))))}catch(_){}}}
+
+// small thumbnail so hundreds of entries still fit in browser storage
+function logThumb(dataUrl){
+  return new Promise(res=>{
+    if(!dataUrl)return res('');
+    const im=new Image();
+    im.onload=()=>{try{
+      const w=96,h=Math.max(1,Math.round(im.naturalHeight*(w/im.naturalWidth)));
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(im,0,0,w,h);
+      res(c.toDataURL('image/jpeg',0.55));
+    }catch(e){res('')}};
+    im.onerror=()=>res('');
+    im.src=dataUrl;
+  });
+}
+async function logAnalysis(it){
+  if(!it)return;
+  const arr=logLoad();
+  const v=it.visionRaw||{}, tf=it.textFallback||{};
+  arr.unshift({
+    id:it.id, ts:Date.now(), type:it.type||'image', name:it.name||'',
+    poster:it.poster||'', category:it.category||'benign', score:it.score||0, tier:it.tier||'',
+    desc:String(it.visionDesc||v.description||tf.description||'').slice(0,300),
+    translation:String(v.translation||tf.translation||'').slice(0,300),
+    indicators:(it.indicators||[]).slice(0,6),
+    visionOk:!it.visionFailed,
+    thumb: await logThumb(it.thumb)
+  });
+  logSave(arr);
+  const c=document.getElementById('logCount'); if(c&&document.getElementById('logPane').style.display!=='none')renderLog();
+}
+function setLogRange(r){
+  LOG_RANGE=r;
+  document.querySelectorAll('.logf').forEach(b=>b.classList.toggle('on',b.dataset.r===r));
+  if(r!=='custom'){const f=document.getElementById('logFrom'),t=document.getElementById('logTo');if(f)f.value='';if(t)t.value='';}
+  renderLog();
+}
+function _logFiltered(){
+  let arr=logLoad();
+  const fromEl=document.getElementById('logFrom'), toEl=document.getElementById('logTo');
+  const fv=fromEl&&fromEl.value, tv=toEl&&toEl.value;
+  if(LOG_RANGE==='custom'&&(fv||tv)){
+    const a=fv?new Date(fv+'T00:00:00').getTime():0;
+    const b=tv?new Date(tv+'T23:59:59').getTime():Infinity;
+    return arr.filter(x=>x.ts>=a&&x.ts<=b);
+  }
+  if(LOG_RANGE==='all')return arr;
+  const days=parseInt(LOG_RANGE,10)||1;
+  const cut=(days===1)?new Date(new Date().toDateString()).getTime():Date.now()-days*864e5;
+  return arr.filter(x=>x.ts>=cut);
+}
+function renderLog(){
+  const body=document.getElementById('logBody'), cnt=document.getElementById('logCount');
+  if(!body)return;
+  const all=logLoad(), rows=_logFiltered();
+  cnt.innerHTML=`<b>${rows.length}</b> shown · ${all.length} kept in total`;
+  if(!rows.length){
+    body.innerHTML=`<div class="empty">Nothing in this period.${all.length?' Try a wider range.':' Analyzed images, videos and recordings are recorded here automatically.'}</div>`;
+    return;
+  }
+  const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
+  const band=s=>s>=7?'red':(s>=4?'amber':'green');
+  const word=s=>s>=7?'REPORT':(s>=4?'REVIEW':'CLEAR');
+  const ico={image:'🖼',video:'🎬',audio:'🎧'};
+  body.innerHTML=`<div style="overflow-x:auto"><table class="logtable"><thead><tr>
+    <th>When</th><th></th><th>What it was</th><th>Verdict</th><th>Category</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr>
+      <td style="white-space:nowrap">${new Date(r.ts).toLocaleDateString()}<br><span class="note" style="margin:0">${new Date(r.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span></td>
+      <td>${r.thumb?`<img class="logthumb" src="${r.thumb}" alt="">`:`<div class="logicon">${ico[r.type]||'🖼'}</div>`}</td>
+      <td><b>${e(r.name||r.type)}</b>${r.poster&&!/unknown/i.test(r.poster)?` <span class="note" style="margin:0">· ${e(r.poster)}</span>`:''}
+        ${r.desc?`<div class="note" style="margin:2px 0 0">${e(r.desc).slice(0,150)}</div>`:''}
+        ${r.translation?`<div class="note" style="margin:2px 0 0;color:#0F766E"><b>EN:</b> ${e(r.translation).slice(0,130)}</div>`:''}
+        ${!r.visionOk?`<div class="note" style="margin:2px 0 0;color:#8A5A00">⚠ text-only read</div>`:''}</td>
+      <td><span class="vtag ${band(r.score)}">${word(r.score)} ${r.score}/10</span></td>
+      <td class="note" style="margin:0">${e(String(r.category||'').replace(/_/g,' '))}</td>
+    </tr>`).join('')+`</tbody></table></div>`;
+}
+function resetLog(){
+  const n=logLoad().length;
+  if(!n){toast('The log is already empty');return}
+  if(!confirm(`Clear the whole log?\n\n${n} record(s) will be permanently deleted from this browser. Items already in the review queue are not affected.`))return;
+  try{localStorage.removeItem(LOG_KEY)}catch(e){}
+  renderLog(); toast('Log cleared');
+}
+function exportLogCSV(){
+  const rows=_logFiltered();
+  if(!rows.length){toast('Nothing to export in this period');return}
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""').replace(/\r?\n/g,' ')+'"';
+  const csv=['Date,Time,Type,File,Posted by,Verdict,Score,Category,Description,English translation,Signals,Vision AI']
+    .concat(rows.map(r=>[new Date(r.ts).toLocaleDateString(),new Date(r.ts).toLocaleTimeString(),r.type,r.name,r.poster,
+      (r.score>=7?'REPORT':r.score>=4?'REVIEW':'CLEAR'),r.score,String(r.category||'').replace(/_/g,' '),
+      r.desc,r.translation,(r.indicators||[]).join('; '),r.visionOk?'ran':'text-only'].map(q).join(','))).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='gipec-log-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();a.remove();
+  toast(`Exported ${rows.length} record(s)`);
+}
+
 function renderVisionCard(it){
   const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
   const v=it.visionRaw||{};
@@ -1146,36 +1348,42 @@ function renderVisionCard(it){
   const sigs=[...new Set([...(v.indicators||[]),...(it.indicators||[])])].filter(Boolean).slice(0,10);
   const threat=(v.threat||'').trim();
   const policy=(v.policy||'').trim();
-  const translation=(v.translation||'').trim();
-  const ocr=(it.ocr||'').trim();
-  const off=!desc;
+  const tf=it.textFallback||{};
+  const translation=((v.translation||tf.translation)||'').trim();
+  // OCR text only makes sense for pictures, and never when it just repeats the description
+  const ocr=(it.type==='audio')?'':(it.ocr||'').trim();
+  const off=!desc&&!(it.textFallback&&it.textFallback.description);
   const band = score>=7 ? {c:'red',  i:'⛔', t:'REPORT THIS',              s:'Clear violation — send it to the platform.'}
              : score>=4 ? {c:'amber',i:'⚠',  t:'WORTH A CLOSER LOOK',      s:'Something here needs your eye before deciding.'}
              :            {c:'green',i:'✅', t:'NOTHING HARMFUL FOUND',    s:'No violation detected in this image.'};
   const catName=(it.category||'').replace(/_/g,' ');
-  return `<div class="vcard${risky?' risk':''}">
+  return `<div class="vcard${risky?' risk':''}${it.type==='audio'?' audio':''}">
     <div class="verdict ${band.c}">
       <span class="vico">${band.i}</span>
       <span class="vtxt">${band.t}
-        <span class="vsub">${off?'Vision AI could not read this image':(catName&&catName!=='benign'?catName.toUpperCase()+' — ':'')+band.s}</span>
+        <span class="vsub">${(catName&&catName!=='benign'?catName.toUpperCase()+' — ':'')+band.s}</span>
       </span>
     </div>
     <div class="vtop">
-      <img class="vthumb" src="${it.thumb}" alt="">
+      ${it.thumb?`<img class="vthumb" src="${it.thumb}" alt="">`:'<div class="noart">🎧</div>'}
       <div class="vbody">
-        <h4>👁 What this image is</h4>
+        <h4>${it.type==='audio'?'🎧 What this recording says':(it.visionFailed&&it.textFallback?'🔤 What the words in this image say':'👁 What this image is')}</h4>
+        ${it.visionFailed?`<div class="warnstrip">⚠ Vision AI could not look at the picture (${e(it.visionFailed).slice(0,90)}).${it.textFallback?' The text below was read and translated instead.':''}
+          <button class="btn sec" style="padding:3px 10px;font-size:12px;margin-left:6px" onclick="retryVision(${it.id},this)">🔁 Try Vision AI again</button></div>`:''}
         <div class="vdesc">${off
-          ? '<span style="color:#B42318"><b>Vision AI did not return a description.</b> '+e((it.reasoning||'').slice(0,240))+'</span>'
-          : e(desc)}</div>
+          ? '<span style="color:#B42318"><b>No description available.</b> '+e((it.reasoning||'').slice(0,240))+'</span>'
+          : e(desc||tf.description||'')}</div>
         ${it.dupes&&it.dupes.length?`<div class="vpills"><span class="vsig">⚠ You have already captured ${it.dupes.length} copy(s) of this image</span></div>`:''}
       </div>
     </div>
     ${threat?`<div class="vsec"><div class="lbl">Why it matters</div><div class="val">${e(threat)}</div></div>`:''}
     ${policy&&!/^none$/i.test(policy)?`<div class="vsec"><div class="lbl">Policy it would violate</div><div class="val">${e(policy)}</div></div>`:''}
-    ${translation?`<div class="vsec"><div class="lbl">Translation</div><div class="val">${e(translation)}</div></div>`:''}
-    ${ocr?`<div class="vsec"><div class="lbl">Text read in the image</div><div class="val" style="font-size:13.2px;color:#39424e">${e(ocr.slice(0,400))}</div></div>`:''}
+    ${(v.language||'').trim()?`<div class="vsec"><div class="lbl">Language spoken</div><div class="val">${e(v.language)}</div></div>`:''}
+    ${translation?`<div class="vsec"><div class="lbl">English translation</div><div class="val">${e(translation)}</div></div>`:''}
+    ${(ocr&&ocr.slice(0,80)!==(desc||'').slice(0,80))?`<div class="vsec"><div class="lbl">Text read in the image</div><div class="val" style="font-size:13.2px;color:#39424e">${e(ocr.slice(0,400))}</div></div>`:''}
     ${sigs.length?`<div class="vsec"><div class="lbl">Signals</div><div class="vpills">${sigs.map(x=>`<span class="vsig">${e(x)}</span>`).join('')}</div></div>`:''}
     <div class="vsec"><div class="row" style="gap:8px;flex-wrap:wrap">
+      ${it.type!=='audio'?`<button class="btn btn-retry" onclick="retryVision(${it.id},this)" title="Run Vision AI on this image again — no need to upload it a second time">🔁 Re-analyze</button>`:''}
       <button class="btn findmore" onclick="corroborate(${it.id})">🔎 Find more like this</button>
       <button class="btn" onclick="select(${it.id});showTab('queue');document.getElementById('queuePane').scrollIntoView({behavior:'smooth',block:'center'})">Open full report</button>
       <button class="btn sec" onclick="this.closest('.vcard').remove()">Dismiss</button>
@@ -1248,10 +1456,59 @@ async function analyzeVideoAudio(file){
   if(!GEMINI_KEY&&!BACKEND_VISION)return {__error:'Vision AI is off — audio needs it'};
   const a=await extractAudioWav(file);
   if(!a)return {__error:'no readable audio track in this file'};
-  const ctx='This is the AUDIO TRACK of a video, not a picture. Transcribe what is spoken or sung, give the English translation, and say whether it is a nasheed/jihadi chant, incitement, threat, or benign.';
+  const ctx='This is the AUDIO TRACK of a video, not a picture. Transcribe what is spoken or sung in the original language, name the language, give the English translation, and say whether it is a nasheed/jihadi chant, incitement, threat, or benign.';
   const v=await visionAnalyze(a.wav,ctx);
   if(v&&!v.__error){v.__seconds=a.seconds;v.__full=a.full;}
   return v;
+}
+
+
+// ================= INTERPRET AUDIO =================
+// Upload a recording in any language: the system listens, writes out what is
+// said in the original, and translates it to English so Eric can read it.
+async function ingestAudio(){
+  const inp=document.getElementById('audioFile');
+  const f=inp&&inp.files&&inp.files[0];
+  if(!f){toast('Choose an audio file first');return}
+  const st=document.getElementById('audStatus');
+  const poster=((document.getElementById('audioPoster')||{}).value||'').trim();
+  if(!GEMINI_KEY&&!BACKEND_VISION){st.textContent='';toast('Vision AI is off — audio needs it');return}
+  st.textContent='🎧 Listening…';setBusy(true,'Listening to the recording…');
+  let a=null;
+  try{a=await extractAudioWav(f,300)}catch(e){}
+  if(!a){setBusy(false);st.textContent='Could not read audio from that file — try MP3, M4A, WAV, OGG or a video file.';return}
+  st.textContent=`🎧 Transcribing and translating ${Math.round(a.seconds)}s…`;
+  const ctx='This is an AUDIO recording, not a picture. Write out what is said or sung in the ORIGINAL language, name the language, give a full English translation, and say whether it is a nasheed/chant, incitement, a threat, or benign.';
+  let v=null;
+  try{v=await visionAnalyze(a.wav,ctx)}catch(e){v={__error:String(e.message||e).slice(0,140)}}
+  setBusy(false);
+  if(!v||v.__error){st.textContent='';toast('Audio not interpreted: '+((v&&v.__error)||'unknown error'));return}
+  v.__seconds=a.seconds;v.__full=a.full;
+
+  const score=Math.max(0,Math.min(10,Math.round(Number(v.risk_score)||0)));
+  const cat=CATS.includes(v.category)?v.category:'benign';
+  const bd=[{l:`🎧 Listened to ${Math.round(a.seconds)}s${a.full>a.seconds?` of ${Math.round(a.full)}s`:''} of audio`,d:score||''}];
+  if(v.language)bd.push({l:`Language: ${String(v.language).replace(/</g,'&lt;')}`,d:''});
+  if(v.translation)bd.push({l:`English translation: ${String(v.translation).replace(/</g,'&lt;').slice(0,400)}`,d:''});
+  if(v.threat)bd.push({l:`Why it matters: ${String(v.threat).replace(/</g,'&lt;').slice(0,300)}`,d:''});
+  (v.indicators||[]).forEach(x=>{if(x)bd.push({l:`Audio signal: ${String(x).replace(/</g,'&lt;').slice(0,120)}`,d:''})});
+
+  const hits=cbMatch((v.description||'')+' '+(v.translation||''),[]);
+  const it={id:idc++,type:'audio',url:'audio:'+f.name,name:f.name,thumb:null,duration:a.full,dur:fmtTime(a.full),
+    ocr:(v.description||'').slice(0,1200),labels:(v.indicators||[]).slice(0,8),caption:'',platform:'audio upload',
+    poster:poster||'unknown source',captured:new Date().toISOString().slice(0,16).replace('T',' '),
+    status:'Pending',notes:'',reviewers:[],category:cat,score:Math.max(1,score),tier:tierOf(score),
+    recommendation:recOf(score),grade:hits.length?'Corroborated':'Inferred',connection:'narrative similarity',
+    indicators:[...new Set([...(v.indicators||[]),...hits.map(h=>h.term)])],
+    reasoning:'🎧 Audio: '+String(v.threat||v.description||'').replace(/\s+/g,' '),
+    breakdown:bd,cbHits:hits,visionDesc:v.description||'',visionRaw:v,audio:v,
+    confidence:Number(v.confidence)||0.6};
+  items.unshift(it);logAnalysis(it);
+  log(it,'audio interpreted',`${Math.round(a.seconds)}s · ${cat} ${it.score}/10`);
+  document.getElementById('heroResults').insertAdjacentHTML('afterbegin',renderVisionCard(it));
+  st.textContent=`Done — ${Math.round(a.seconds)}s interpreted. Full text below.`;
+  inp.value='';render();
+  const c=document.querySelector('#heroResults .vcard');if(c)c.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 async function ingestVideo(){
@@ -1311,7 +1568,7 @@ async function ingestVideo(){
     indicators:unionHits.map(x=>x.term),
     reasoning:frames.length?`Sampled ${scanned} frames across ${fmtTime(dur)}. ${frames.length} frame(s) carried codebook markers — e.g. ${frames.slice(0,3).map(fr=>fr.hits[0]+' at '+fmtTime(fr.t)).join(', ')}. Markers that appear mid-clip (not in the thumbnail) are exactly the concealment the scan is built to defeat. Frame text read by in-browser OCR and matched to reference logos in the Library; graphic-only logo/flag shape recognition and audio (nasheed) fingerprinting are the backend vision/audio layer.`:`Sampled ${scanned} frames across ${fmtTime(dur)}; no codebook markers found in frame text. Note: a purely graphic logo or flag with no text, or an audio nasheed, needs the backend vision/audio layer — add reference watermark images to the Library to catch logos by fingerprint.`,
     breakdown:[...(unionHits.length?[{l:`Codebook markers matched across ${frames.length} sampled frame(s) — strongest: ${unionHits[0].term}`,d:score}]:[{l:'No codebook markers in sampled frame text',d:1}]),...frames.map(fr=>({l:`${fmtTime(fr.t)} — ${fr.hits.join(', ')}`,d:''})),...audBits],cbHits:unionHits,audio:audioFinding,confidence:0.5+Math.min(0.4,unionHits.length*0.08)};
-  items.unshift(it);log(it,'video scanned',`${scanned} frames · ${frames.length} flagged · ${cat} ${it.score}/10${API_BASE?'':' · demo'}`);
+  items.unshift(it);logAnalysis(it);log(it,'video scanned',`${scanned} frames · ${frames.length} flagged · ${cat} ${it.score}/10${API_BASE?'':' · demo'}`);
   st.textContent=`Done — scanned ${scanned} frame(s), flagged ${frames.length}.`;inp.value='';
   selId=it.id;render();showTab('queue');
   toast(frames.length?`Video flagged: ${cat.replace(/_/g,' ')} — ${frames.length} frame(s), e.g. ${frames[0].hits[0]} at ${fmtTime(frames[0].t)}`:'Video scanned — no watermark text in sampled frames');
@@ -1411,10 +1668,31 @@ async function checkBackendVision(){
 }
 async function backendVision(dataUrl,context){
   const base=API_BASE||BACKEND_DEFAULT;
-  try{const r=await fetch(base+'/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl,context:context||''})});
-    if(!r.ok){let d='';try{d=(await r.json()).detail||''}catch(e){}return {__error:'server vision '+r.status+(d?(' — '+String(d).slice(0,140)):'')};}
-    const j=await r.json();return j.analysis||{__error:'empty server response'};
-  }catch(e){return {__error:'server unreachable (it may be waking up — try again in 30s)'};}
+  // The free Render instance sleeps and takes ~50s to wake. A single failed call
+  // used to read as "Vision AI could not see this", which is wrong and alarming —
+  // so wake it and try again before giving up.
+  for(let attempt=0;attempt<3;attempt++){
+    try{
+      const r=await fetch(base+'/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl,context:context||''})});
+      if(!r.ok){
+        let d='';try{d=(await r.json()).detail||''}catch(e){}
+        if((r.status===502||r.status===503||r.status===504)&&attempt<2){await _wakeBackend(attempt);continue}
+        return {__error:'server vision '+r.status+(d?(' — '+String(d).slice(0,140)):'')};
+      }
+      const j=await r.json();return j.analysis||{__error:'empty server response'};
+    }catch(e){
+      if(attempt<2){await _wakeBackend(attempt);continue}
+      return {__error:'server unreachable after waking it twice — check the backend is running'};
+    }
+  }
+  return {__error:'server did not wake in time'};
+}
+async function _wakeBackend(attempt){
+  const base=API_BASE||BACKEND_DEFAULT;
+  const st=document.getElementById('heroStat')||document.getElementById('ocrStatus');
+  if(st)st.textContent='⏳ Waking the server (free plan sleeps — about 30 seconds)…';
+  try{await fetch(base+'/api/search-health',{cache:'no-store'})}catch(e){}
+  await new Promise(r=>setTimeout(r,attempt===0?12000:20000));
 }
 async function backendVisionText(text){
   const base=API_BASE||BACKEND_DEFAULT;
@@ -1430,7 +1708,7 @@ async function visionAnalyze(dataUrl,context){
   if(BACKEND_VISION){const s=await backendVision(dataUrl,context);if(s&&!s.__error)return s;if(!GEMINI_KEY)return s;}
   if(!GEMINI_KEY)return {__error:'no Vision AI available — set GEMINI_API_KEY on the server, or paste a key here'};
   const isAudio=/^audio\//.test(m[1]);
-  const prompt=isAudio?((context||'')+' Respond ONLY with JSON: {"description":"<transcript and what it is>","category":"<threat category or benign>","risk_score":<0-10>,"threat":"<why>","policy":"<platform policy or none>","translation":"<English translation>","indicators":["<signal>"],"confidence":<0-1>}'):visionSystemPrompt();
+  const prompt=isAudio?((context||'')+' Respond ONLY with JSON: {"description":"<transcript and what it is>","category":"<threat category or benign>","risk_score":<0-10>,"threat":"<why>","policy":"<platform policy or none>","language":"<language spoken>","translation":"<English translation>","indicators":["<signal>"],"confidence":<0-1>}'):visionSystemPrompt();
   return geminiCall([{text:prompt},{inline_data:{mime_type:m[1],data:m[2]}}]);
 }
 // Real end-to-end self-test: pushes a tiny image through the whole path and shows exactly what Google said.
@@ -1495,15 +1773,36 @@ async function addPhoto(dataUrl,o){
   else{reasoning=hits.length?`Image-derived text and visual labels matched ${hits.length} codebook entr${hits.length===1?'y':'ies'}; the strongest (${hits[0].term}) sets the base and co-occurring codes raise it. Pixels were read by OCR${labels.length?' plus analyst-marked visible elements':''}; no vision model in demo mode.`:'OCR text, caption and handle contain no codebook indicators.'}
   if(!ocr&&!o.caption&&!labels.length){bd.push({l:'No readable text, caption or visible-element labels — pixels not interpreted (needs vision model)',d:0});conf=0.3}
   // VISION AI: if a Gemini key is set (and no backend vision), let the model SEE the image and describe/flag it
-  let visionDesc='',visionRaw=null;
+  let visionDesc='',visionRaw=null,visionFailed='',textFallback=null;
   if(!GEMINI_KEY&&!BACKEND_VISION){bd.push({l:'👁 Vision AI is OFF — set GEMINI_API_KEY on the server (or paste a key) to have the system SEE the image. This result is text/OCR only, so a picture with no readable text reads benign.',d:0});}
   else if(!(remote&&remote.analysis)){
     st.textContent='👁 Looking at the image with Vision AI…';
     const v=await visionAnalyze(dataUrl,'If any text in this image is not English, transcribe it AND give the English translation inside the description. '+(o.poster||'')+' '+(o.caption||''));
     if(v&&v.__error){
-      bd.unshift({l:`⚠️ VISION AI DID NOT RUN — ${v.__error}. The score below is TEXT-ONLY, not a real "benign". Fix the key/connection and re-run.`,d:0});
+      bd.unshift({l:`⚠️ Vision AI did not look at the picture — ${v.__error}.`,d:0});
       reasoning='⚠️ Vision AI did not run ('+v.__error+') — this is a text/OCR-only result, not a visual determination. '+(reasoning||'');
-      conf=0.2; toast('👁 Vision AI did NOT run: '+v.__error);
+      conf=0.2; visionFailed=v.__error;
+      // It could not SEE the image — but OCR read words off it. Translate and read
+      // those instead of handing back untranslated foreign text.
+      const readable=(visible||'').trim();
+      if(readable.length>8){
+        st.textContent='🔤 Vision AI is down — reading and translating the text instead…';
+        try{
+          const g=await geminiAnalyzeText(readable);
+          if(g){
+            textFallback=g;
+            visionDesc=g.description||'';
+            if(g.translation)bd.unshift({l:`🔤 English translation: ${String(g.translation).replace(/</g,'&lt;').slice(0,500)}`,d:''});
+            if(g.description)bd.unshift({l:`🔤 Read from the text (picture not seen): ${String(g.description).replace(/</g,'&lt;').slice(0,400)}`,d:''});
+            const gs=Math.max(0,Math.min(10,Math.round(Number(g.risk_score)||0)));
+            if(gs>score){score=gs;if(CATS.includes(g.category))cat=g.category;}
+            (g.indicators||[]).forEach(x=>{if(x&&!labels.includes(x))labels.push(x)});
+            conf=Math.max(conf,Math.min(0.6,Number(g.confidence)||0.4));
+            reasoning='🔤 Text-only read (Vision AI unavailable): '+String(g.threat||g.description||'').replace(/\s+/g,' ')+' · '+(reasoning||'');
+            toast('Vision AI down — translated the text instead');
+          } else { toast('👁 Vision AI did NOT run: '+v.__error); }
+        }catch(e){ toast('👁 Vision AI did NOT run: '+v.__error); }
+      } else { toast('👁 Vision AI did NOT run: '+v.__error); }
     } else if(v){visionDesc=v.description||'';visionRaw=v;
       const vcat=CATS.includes(v.category)?v.category:cat;const vscore=Math.max(0,Math.min(10,Math.round(Number(v.risk_score)||0)));
       if(vscore>score){score=vscore;cat=vcat;} else if(cat==='benign'&&vcat!=='benign'){cat=vcat;score=Math.max(score,vscore);}
@@ -1526,8 +1825,8 @@ async function addPhoto(dataUrl,o){
   let h=0;for(const c of (o.name||'')+dh)h=(h*7+c.charCodeAt(0))>>>0;
   const it={id:idc++,type:'image',url:o.source_url||('photo:'+(o.name||'upload')),name:o.name||'upload',thumb:dataUrl,dhash:dh,w:im.naturalWidth,h:im.naturalHeight,ocr:visible,labels,caption:o.caption||'',platform:o.platform||'upload',poster:o.poster||'unknown poster',
     captured:new Date().toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],shared:sharedOf(text)+ (o.poster?[]:[]),category:cat,score:Math.max(1,Math.min(10,score)),tier:tierOf(score),recommendation:recOf(score),grade,connection:dupes.length?'operational coordination':(hits.some(x=>x.id==='pt-handle-code')?'audience overlap':CONN[h%CONN.length]),
-    indicators:hits.map(x=>x.term),reasoning,breakdown:bd,hitWords:[],cbHits:hits,ai,confidence:conf,dupes:dupes.map(d=>d.id),refs,visionDesc,visionRaw,libctx:libRetrieve(text+' '+hits.map(h=>h.term).join(' '))};
-  it.shared=sharedOf(text);items.unshift(it);log(it,'photo ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade} · OCR ${visible?visible.length+' chars':'none'} · ${labels.length} labels · ${hits.length} codebook hits${API_BASE?' · backend':' · demo'}`);
+    indicators:hits.map(x=>x.term),reasoning,breakdown:bd,hitWords:[],cbHits:hits,ai,confidence:conf,dupes:dupes.map(d=>d.id),refs,visionDesc,visionRaw,visionFailed,textFallback,libctx:libRetrieve(text+' '+hits.map(h=>h.term).join(' '))};
+  it.shared=sharedOf(text);items.unshift(it);logAnalysis(it);log(it,'photo ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade} · OCR ${visible?visible.length+' chars':'none'} · ${labels.length} labels · ${hits.length} codebook hits${API_BASE?' · backend':' · demo'}`);
   st.textContent='';render();return it}
 // ---------- teach / feedback ----------
 function renderChips(){/* visible-element tags run on the backend now — no manual ticking in the UI */const _vc=document.getElementById('visChips');if(_vc)_vc.innerHTML='';
@@ -2425,6 +2724,11 @@ function toggleRealOnly(){
 // ---- Go Live: auto-discover nefarious content into the queue + run the Active Hunt ----
 let LIVE_ON=false, liveTimer=null;
 function toggleLive(){
+  // REMOVED: auto-discover invented example accounts to demo the layout. That is not
+  // acceptable in a tool used for real referrals, so the button is gone and this is a
+  // no-op. Real sweeps come from the scheduled job (see checkSweep) and from search.
+  const _b=document.getElementById('goLiveBtn');
+  if(!_b){toast('Auto-discover was removed. Use 🔔 Watch for scheduled sweeps, or search a #hashtag.');return}
   // Real-links-only: auto-discovery would have to invent accounts, so it stays off — capture real links instead.
   if(REAL_ONLY&&!LIVE_ON){
     document.getElementById('liveStat').innerHTML='🔒 real links only — auto-discover off. <span class="note" style="margin:0">Capture/paste real links, or turn off “Real links only” to run the demo crawl.</span>';
@@ -2589,6 +2893,99 @@ function aiSynthesize(q,R,backend){
 // ================= ONE COMMAND BOX =================
 // Eric shouldn't have to know which box to use. He types or pastes ONE thing
 // here and the app works out what he meant.
+
+// ================= WATCH / PUSH =================
+// A scheduled job on GitHub Actions runs the same searches Eric runs by hand and
+// commits the hits to sweep.json. With Watch on, the app picks up anything new
+// since he last looked — so findings are waiting for him instead of being hunted.
+let PUSH_ON=false, PUSH_TIMER=null;
+function _seenSet(){try{return new Set(JSON.parse(localStorage.getItem('spear_seen')||'[]'))}catch(e){return new Set()}}
+function _seenSave(set){try{localStorage.setItem('spear_seen',JSON.stringify([...set].slice(-4000)))}catch(e){}}
+function _key(u){return String(u||'').split('?')[0].replace(/\/$/,'').toLowerCase()}
+
+function _pushLabel(){
+  const b=document.getElementById('pushBtn'); if(!b)return;
+  b.textContent=PUSH_ON?'🔔 Watch: ON':'🔔 Watch: OFF';
+  b.classList.toggle('on',PUSH_ON);
+  b.title=PUSH_ON?'Watching for new findings from the scheduled sweep. Click to stop.'
+                 :'Turn on to be told when the scheduled sweep finds something new.';
+}
+function togglePush(){
+  PUSH_ON=!PUSH_ON;
+  try{localStorage.setItem('spear_push',PUSH_ON?'1':'0')}catch(e){}
+  _pushLabel();
+  if(PUSH_ON){
+    if('Notification' in window && Notification.permission==='default'){try{Notification.requestPermission()}catch(e){}}
+    toast('Watch is on — new findings will appear here');
+    checkSweep(false);
+    if(PUSH_TIMER)clearInterval(PUSH_TIMER);
+    PUSH_TIMER=setInterval(()=>checkSweep(false),10*60*1000);
+  }else{
+    if(PUSH_TIMER)clearInterval(PUSH_TIMER); PUSH_TIMER=null;
+    const p=document.getElementById('pushPanel'); if(p)p.innerHTML='';
+    toast('Watch is off');
+  }
+}
+async function checkSweep(manual){
+  const panel=document.getElementById('pushPanel'); if(!panel)return;
+  let data=null;
+  try{
+    const r=await fetch('./sweep.json?t='+Date.now(),{cache:'no-store'});
+    if(r.ok)data=await r.json();
+  }catch(e){}
+  if(!data||!Array.isArray(data.results)){
+    if(manual)panel.innerHTML='<div class="newbox"><h4>No sweep results yet</h4><div class="sub">The scheduled sweep has not written <code>sweep.json</code> yet. Once the scheduled job is switched on it runs on its own and anything new shows up here.</div></div>';
+    return;
+  }
+  const seen=_seenSet();
+  const fresh=data.results.filter(r=>r&&r.url&&!seen.has(_key(r.url)));
+  if(!fresh.length){
+    panel.innerHTML=manual?`<div class="newbox" style="border-color:#A9DCC0"><h4 style="color:#1B5E33">Nothing new</h4><div class="sub">Last sweep ${data.generated_at?('on '+String(data.generated_at).replace('T',' ').slice(0,16)):'—'} · ${data.results.length} item(s) checked, all already seen.</div></div>`:'';
+    return;
+  }
+  const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
+  panel.innerHTML=`<div class="newbox">
+    <h4>🔔 ${fresh.length} new finding${fresh.length===1?'':'s'} since you last looked</h4>
+    <div class="sub">From the scheduled sweep${data.generated_at?' · '+e(String(data.generated_at).replace('T',' ').slice(0,16)):''}. Nothing is scored until you capture it.</div>
+    ${fresh.slice(0,25).map((r,i)=>`<div class="newrow">
+      <span class="pl">${e(r.platform||'web')}</span>
+      <div class="nm"><a href="${e(r.url)}" target="_blank" rel="noopener noreferrer">${e((r.title||r.url)).slice(0,90)} ↗</a>
+        ${r.snippet?`<div class="sn">${e(r.snippet).slice(0,180)}</div>`:''}
+        ${r.found_for?`<div class="sn" style="color:#8a5a00"><b>matched:</b> ${e(r.found_for)}</div>`:''}</div>
+      <button class="btn" style="padding:5px 12px" onclick="sweepCapture(${i})">Capture</button>
+    </div>`).join('')}
+    <div class="row" style="gap:8px;margin-top:11px;flex-wrap:wrap">
+      <button class="btn findmore" onclick="sweepCaptureAll()">Capture all ${fresh.length}</button>
+      <button class="btn sec" onclick="sweepDismiss()">Mark all as seen</button>
+    </div></div>`;
+  window.__sweepNew=fresh;
+  if(!manual && 'Notification' in window && Notification.permission==='granted'){
+    try{new Notification('GIPEC AI² — '+fresh.length+' new finding'+(fresh.length===1?'':'s'),
+      {body:(fresh[0].title||fresh[0].url||'').slice(0,110)});}catch(e){}
+  }
+}
+async function sweepCapture(i){
+  const r=(window.__sweepNew||[])[i]; if(!r)return;
+  const seen=_seenSet(); seen.add(_key(r.url)); _seenSave(seen);
+  await addItem(r.url+' '+(r.snippet||''));
+  toast('Captured to review queue'); render(); checkSweep(true);
+}
+async function sweepCaptureAll(){
+  const list=window.__sweepNew||[]; if(!list.length)return;
+  const seen=_seenSet(); let n=0;
+  for(const r of list){setBusy(true,`Capturing ${++n} of ${list.length}…`);seen.add(_key(r.url));await addItem(r.url+' '+(r.snippet||''))}
+  _seenSave(seen); setBusy(false); render(); checkSweep(true); toast(`Captured ${list.length}`);
+}
+function sweepDismiss(){
+  const seen=_seenSet(); (window.__sweepNew||[]).forEach(r=>seen.add(_key(r.url))); _seenSave(seen);
+  document.getElementById('pushPanel').innerHTML=''; toast('Marked as seen');
+}
+function initPush(){
+  try{PUSH_ON=localStorage.getItem('spear_push')==='1'}catch(e){}
+  _pushLabel();
+  if(PUSH_ON){checkSweep(false);PUSH_TIMER=setInterval(()=>checkSweep(false),10*60*1000);}
+}
+
 function runCommand(){
   const el=document.getElementById('cmdQ');
   const v=(el.value||'').trim();
@@ -3060,7 +3457,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();initSimple();initHero();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();initSimple();initHero();initPush();
 if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
 // crawl is OFF by default — the user starts it with the Start crawl toggle (saves data)
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
