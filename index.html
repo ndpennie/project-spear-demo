@@ -252,6 +252,87 @@
   #repPreview .evsec p{margin:0;font-size:13.5px;line-height:1.55;color:var(--ink)}
   #repPreview .evnotice{border:2px solid #b42318;background:#fff5f5;color:#7a1c12;padding:12px;border-radius:8px;font-weight:700;margin-bottom:12px}
   #repPreview .evnoimg{border:1px dashed #9aa7b4;padding:16px;border-radius:8px;color:var(--muted);margin-bottom:12px}
+
+/* ---- SIMPLE MODE: one command box; everything else folds away ---- */
+body.simple .adv{display:none!important}
+.cmdwrap{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 12px;box-shadow:0 1px 3px rgba(21,42,78,.07)}
+.cmdrow{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+#cmdQ{flex:1;min-width:260px;border:2px solid var(--cyan);border-radius:10px;padding:13px 15px;font-size:15.5px;font-family:inherit;outline:none}
+#cmdQ:focus{border-color:#1877F2;box-shadow:0 0 0 3px rgba(24,119,242,.13)}
+.cmdgo{background:#1877F2;border-color:#1877F2;font-size:15.5px;padding:13px 26px;font-weight:700}
+.cmdhint{font-size:12.4px;color:#5a6675;margin:8px 2px 0;line-height:1.6}
+.cmdhint b{color:var(--navy)}
+.cmdhint code{background:#eef5fb;border-radius:4px;padding:1px 6px;font-family:inherit;font-size:12.2px;color:#152A4E}
+.cmdacts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #eef1f5}
+.advbtn{margin-left:auto;background:#fff;color:#5a6675;border:1px solid var(--line);font-size:12.5px;padding:6px 13px}
+.advbtn:hover{border-color:var(--cyan);color:var(--navy)}
+body.simple .kpis{display:none}
+
+/* ---- PHOTO HERO: the main thing Eric does ---- */
+.hero{background:#fff;border:2.5px dashed #2F855A;border-radius:14px;padding:18px 20px;margin:0 0 12px;transition:.15s}
+.hero.drag{background:#eaf8f0;border-color:#1E8E4E;border-style:solid;box-shadow:0 0 0 4px rgba(47,133,90,.15)}
+.herorow{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.bigphoto{background:#2F855A;border:none;color:#fff;border-radius:12px;padding:20px 30px;font-size:20px;font-weight:800;
+  font-family:inherit;cursor:pointer;line-height:1.25;text-align:left;box-shadow:0 3px 0 #1E8E4E;transition:.12s;min-width:250px}
+.bigphoto:hover{background:#26714a;transform:translateY(-1px);box-shadow:0 4px 0 #1E8E4E}
+.bigphoto:active{transform:translateY(2px);box-shadow:0 1px 0 #1E8E4E}
+.bigphoto span{display:block;font-size:13px;font-weight:600;opacity:.9;margin-top:4px}
+.herotext{flex:1;min-width:230px}
+.herotext b{font-size:15px;color:var(--navy)}
+.herotext .n{font-size:13px;color:#5a6675;margin-top:4px;line-height:1.55}
+.herostat{margin-top:9px;font-size:13.5px;font-weight:700;color:#1E8E4E;min-height:18px}
+.herostat.err{color:#B42318}
+.vcard{background:#fff;border:1px solid var(--line);border-left:6px solid #2F855A;border-radius:12px;padding:15px 17px;margin:0 0 12px;box-shadow:0 1px 3px rgba(21,42,78,.08)}
+.vcard.risk{border-left-color:#B42318}
+.vcard .vtop{display:flex;gap:15px;flex-wrap:wrap}
+.vcard img.vthumb{width:190px;max-width:40vw;border-radius:9px;border:1px solid var(--line);object-fit:cover}
+.vcard .vbody{flex:1;min-width:250px}
+.vcard h4{margin:0 0 7px;font-size:15.5px;color:var(--navy);letter-spacing:.2px}
+.vcard .vdesc{font-size:14.6px;line-height:1.62;color:#1f2933}
+.vsec{margin-top:11px;padding-top:10px;border-top:1px solid #eef1f5}
+.vsec .lbl{font-size:11.5px;font-weight:800;letter-spacing:.5px;color:#5a6675;text-transform:uppercase;margin-bottom:3px}
+.vsec .val{font-size:14px;line-height:1.58}
+.vpills{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:9px}
+.vpill{border-radius:20px;padding:5px 13px;font-size:12.8px;font-weight:800;color:#fff;background:#5a6675}
+.vpill.sc{background:#B42318}.vpill.ok{background:#2F855A}.vpill.md{background:#B7791F}
+.vsig{background:#f3f6fa;border-radius:14px;padding:3px 11px;font-size:12.3px;color:#152A4E;font-weight:600}
+
+.verdict{display:flex;align-items:center;gap:12px;border-radius:10px;padding:12px 16px;margin:0 0 12px;font-weight:800}
+.verdict .vico{font-size:27px;line-height:1}
+.verdict .vtxt{font-size:19px;letter-spacing:.3px}
+.verdict .vsub{display:block;font-size:13.5px;font-weight:600;opacity:.92;margin-top:2px;letter-spacing:0}
+.verdict.red{background:#FDECEA;color:#8A1C12;border:2px solid #E4A9A2}
+.verdict.amber{background:#FFF4E5;color:#8A5A00;border:2px solid #F0C77E}
+.verdict.green{background:#EAF8F0;color:#1B5E33;border:2px solid #A9DCC0}
+
+/* ---- clean + dynamic ---- */
+@keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes softPulse{0%,100%{box-shadow:0 0 0 0 rgba(180,35,24,.30)}50%{box-shadow:0 0 0 9px rgba(180,35,24,0)}}
+@keyframes shimmer{0%{opacity:.45}50%{opacity:1}100%{opacity:.45}}
+.vcard{animation:riseIn .34s cubic-bezier(.22,.9,.3,1) both}
+.verdict.red{animation:riseIn .34s cubic-bezier(.22,.9,.3,1) both, softPulse 2.1s ease-out 3}
+.herostat:not(:empty){animation:shimmer 1.4s ease-in-out infinite}
+.herostat:not(:empty):has(+ *),.herostat.done{animation:none}
+#tagLivePanel,#findResults{animation:riseIn .3s cubic-bezier(.22,.9,.3,1) both}
+.cmdwrap,.hero{transition:box-shadow .18s, border-color .18s}
+.cmdwrap:focus-within{box-shadow:0 4px 18px rgba(21,42,78,.12)}
+.hero:hover{box-shadow:0 4px 18px rgba(47,133,90,.14)}
+.btn{transition:transform .1s, filter .15s, box-shadow .15s}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(1px)}
+/* roomier, calmer canvas in simple mode */
+body.simple{background:#F4F7FA}
+body.simple .cmdwrap{padding:16px 18px;border-radius:14px}
+body.simple .hero{padding:20px 22px}
+body.simple .bigphoto{padding:24px 32px;font-size:21px;min-width:270px}
+body.simple .card{border-radius:13px}
+body.simple .vcard{padding:17px 19px}
+body.simple .cmdhint{margin-top:9px}
+
+.vidbox{border:2px dashed #B7C6D6;border-radius:12px;padding:14px 16px;background:#fbfcfe;transition:.15s}
+.vidbox:hover{border-color:var(--cyan);background:#f7fbfd}
+body.simple .vidbox{margin-top:0}
+body.simple .card > .photo.vidbox{border-top:none}
 </style>
 </head>
 <body>
@@ -294,11 +375,11 @@
       <div class="tallylbl">items found</div>
       <div class="tallysub" id="tally-sub">0 tracked in live corpus</div>
     </div>
-    <div>Analyst: <b>Strategic</b> · Role: Owner/Reviewer<br>Session: Aug 17, 2026 · <span style="color:#9FE0F2">SAMPLE DATA — demonstration mode</span></div>
+    <div class="adv">Analyst: <b>Strategic</b> · Role: Owner/Reviewer<br>Session: Aug 17, 2026 · <span style="color:#9FE0F2">SAMPLE DATA — demonstration mode</span></div>
   </div>
 </header>
 
-<div class="scopebar">
+<div class="scopebar adv">
   <div class="scopetitle">What this system detects</div>
   <div class="scopeline">Violent extremism · Domestic terrorism · Recruitment &amp; glorification · Incitement · Financing · Operational planning · Narcotics · Counterfeit &amp; dangerous meds · Public-safety threats · Child safety · Self-harm promotion · Inauthentic AI accounts · <span class="emerge">⚡ Emerging threats</span></div>
 </div>
@@ -311,7 +392,36 @@
   <div class="kpi"><div class="n" id="k-esc">0</div><div class="l">Reported to platform</div></div>
 </div>
 
-<div class="livebar">
+<div class="cmdwrap">
+  <div class="cmdrow">
+    <input id="cmdQ" placeholder="Paste a link · type a #hashtag · type an @handle · or ask a question" onkeydown="if(event.key==='Enter')runCommand()">
+    <button class="btn cmdgo" onclick="runCommand()">Go</button>
+  </div>
+  <div class="cmdhint"><code>https://…</code> a link &nbsp;·&nbsp; <code>#hashtag</code> &nbsp;·&nbsp; <code>@handle</code> &nbsp;·&nbsp; or just ask a question</div>
+  <div class="cmdacts">
+    <button class="btn" onclick="exportMetaXLSX()" style="background:#1877F2;border-color:#1877F2">📄 Get report</button>
+    <button class="btn advbtn" id="advBtn" onclick="toggleAdvanced()">⚙ Advanced tools</button>
+  </div>
+</div>
+
+<div class="hero" id="heroBox">
+  <div class="herorow">
+    <button class="bigphoto" onclick="document.getElementById('heroFile').click()">
+      📷 Upload a photo
+      <span>See exactly what it is</span>
+    </button>
+    <input type="file" id="heroFile" accept="image/*" multiple style="display:none" onchange="heroPick(this.files)">
+    <div class="herotext">
+      <b>Drop an image here, click the button, or press Ctrl+V to paste a screenshot.</b>
+      <div class="n">Vision AI looks at the picture and tells you what it actually shows — hidden corner watermarks, flags, disguised logos, foreign text with translation, and whether it breaks platform policy. Several images at once is fine.</div>
+      <input id="heroPoster" placeholder="Who posted it? (optional — helps the report)" style="margin-top:9px;width:100%;max-width:390px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;font-family:inherit">
+      <div class="herostat" id="heroStat"></div>
+    </div>
+  </div>
+</div>
+<div id="heroResults"></div>
+
+<div class="livebar adv">
   <button class="btn golive" id="goLiveBtn" onclick="toggleLive()">▶ Start crawl (auto-discover)</button>
   <button class="btn" id="reportBtn" onclick="exportMetaXLSX()" title="Build a spreadsheet report (with images) of everything the crawl has found" style="background:#1877F2;border-color:#1877F2">📄 Get report</button>
   <span class="livestat" id="liveStat">stopped · off by default to save data</span>
@@ -326,7 +436,7 @@
 </div>
 <div id="findResults" class="findresults" style="display:none"></div>
 
-<div class="livebar" style="padding-top:10px">
+<div class="livebar adv" style="padding-top:10px">
   <b style="font-size:13px;color:var(--navy)">📋 Hashtag report</b>
   <input id="tagQ" placeholder="#Will2Rise" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:220px;font-size:13.5px" onkeydown="if(event.key==='Enter')runSystemSearch()">
   <button class="btn" onclick="runSystemSearch()" style="background:#1877F2;border-color:#1877F2" title="The system searches the web for nefarious posts and brings the results in here — no leaving the app">🔎 Find nefarious posts</button>
@@ -356,7 +466,7 @@
   </details>
 </div>
 
-<div class="livebar" style="padding-top:10px">
+<div class="livebar adv" style="padding-top:10px">
   <b style="font-size:13px;color:var(--navy)">👁 Follow</b>
   <input id="followHandles" placeholder="handles to follow (comma or newline): @handle1, @handle2" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:280px;font-size:13.5px">
   <input id="followTags" placeholder="hashtags to follow: #tag1, #tag2" style="border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:220px;font-size:13.5px">
@@ -364,7 +474,7 @@
   <span class="note" id="followStat" style="margin:0">The crawl surfaces content that flows from these; only codebook matches are flagged — <b>you</b> decide what's newsworthy vs. reportable (human-in-the-loop).</span>
 </div>
 
-<div class="stepsguide" title="The full loop — press any step to go there">
+<div class="stepsguide adv" title="The full loop — press any step to go there">
   <div class="stepcard" onclick="stepGo('hunt')"><span class="stepnum">🔎</span><div><b>1 · HUNT</b><span>filtered live search</span></div></div>
   <div class="steparrow">→</div>
   <div class="stepcard" onclick="stepGo('capture')"><span class="stepnum">📥</span><div><b>2 · CAPTURE</b><span>links · photos · video</span></div></div>
@@ -383,30 +493,30 @@
   <!-- LEFT: intake + charts -->
   <div>
     <div class="card">
-      <div class="pipeline">
+      <div class="pipeline adv">
         <span class="pstage be">BE HUNTED</span><span class="pstage hunt">HUNT</span><span class="parrow">→</span>
         <span class="pstage cap">CAPTURE</span><span class="parrow">→</span>
         <span class="pstage flag">FLAG</span><span class="parrow">→</span>
         <span class="pstage rep">REPORT</span>
       </div>
-      <h3><span class="hstep">STEP 1</span>Capture a post</h3>
-      <div class="note" style="margin:0 0 6px">Paste the link (or several, one per line), then press the button.</div>
-      <textarea id="urls" placeholder="Paste one or more post / profile / group / video URLs, one per line…"></textarea>
-      <div class="row" style="margin-top:8px">
+      <h3 class="adv"><span class="hstep">STEP 1</span>Capture a post</h3>
+      <div class="note adv" style="margin:0 0 6px">Paste the link (or several, one per line), then press the button.</div>
+      <textarea id="urls" class="adv" placeholder="Paste one or more post / profile / group / video URLs, one per line…"></textarea>
+      <div class="row adv" style="margin-top:8px">
         <button class="btn" onclick="ingest()">Capture &amp; flag URLs</button>
         <button class="btn mute" onclick="loadSamples()">Load sample batch</button>
       </div>
-      <div class="photo">
+      <div class="photo adv">
         <b style="font-size:13px">Or upload a screenshot</b>
         <div class="note" style="margin:3px 0 0">Choose an image, then press <b>Analyze photo(s)</b>. With Vision AI on, the system <b>looks at the image and tells you what it is</b>.</div>
-        <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 2px;background:#eef7fb;border:1px solid var(--cyan);border-radius:7px;padding:7px 9px">
+        <div class="row adv" style="gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 2px;background:#eef7fb;border:1px solid var(--cyan);border-radius:7px;padding:7px 9px">
           <span style="font-size:12.5px;font-weight:700;color:var(--navy)">👁 Vision AI</span>
           <input id="gKey" type="password" placeholder="Paste your free Google Gemini API key so the system can SEE images…" style="flex:1;min-width:180px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px">
           <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="saveVisionKey()">Save key</button>
           <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="testVisionKey()" title="Run a real test image through Vision AI and show exactly what Google says">🔍 Test</button>
           <span class="note" id="gStat" style="margin:0;flex-basis:100%">Free key from Google AI Studio (aistudio.google.com/apikey). Stored only in this browser. Powers image + text + translation.</span>
         </div>
-        <details style="margin:2px 0 0"><summary class="note" style="cursor:pointer;font-weight:700;color:var(--navy)">⚙ More free integrations (optional)</summary>
+        <details class="adv" style="margin:2px 0 0"><summary class="note" style="cursor:pointer;font-weight:700;color:var(--navy)">⚙ More free integrations (optional)</summary>
           <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 2px">
             <span style="font-size:12px;font-weight:700;color:var(--navy);flex-basis:100%">🔤 OCR.space <span class="note" style="font-weight:400">— free multilingual text reading (Arabic, etc.)</span></span>
             <input id="ocrKey" type="password" placeholder="Free OCR.space API key…" style="flex:1;min-width:160px;border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:11.5px">
@@ -427,20 +537,20 @@
         <div class="row" style="margin-top:8px"><button class="btn" onclick="ingestPhotos()">Analyze photo(s)</button><span class="note" id="ocrStatus" style="margin:0"></span></div>
         <div class="prog"><i id="ocrBar"></i></div>
       </div>
-      <div class="photo" style="border-top:2px solid var(--cyan);margin-top:10px">
-        <b style="font-size:13px">Or upload a video</b>
-        <div class="note" style="margin:3px 0 0">Choose a video, then press <b>Scan video</b>. It checks the whole clip for hidden ISIS watermarks and flags — not just the thumbnail.</div>
+      <div class="photo vidbox" style="margin-top:10px">
+        <b style="font-size:15px;color:var(--navy)">🎬 Scan a video</b>
+        <div class="note" style="margin:3px 0 0">Checks the whole clip for hidden watermarks and flags — not just the thumbnail.</div>
         <div style="margin-top:6px"><input type="file" id="videoFile" accept="video/*"></div>
         <input id="videoPoster" placeholder="Poster handle / source (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
         <div class="row" style="margin-top:8px"><button class="btn" onclick="ingestVideo()">Scan video</button><span class="note" id="vidStatus" style="margin:0"></span></div>
         <div class="prog"><i id="vidBar"></i></div>
       </div>
     </div>
-    <div class="card" style="margin-top:12px">
+    <div class="card adv" style="margin-top:12px">
       <h3>Category distribution</h3>
       <svg id="catChart" width="100%" height="190" viewBox="0 0 270 190"></svg>
     </div>
-    <div class="card" style="margin-top:12px">
+    <div class="card adv" style="margin-top:12px">
       <h3>Risk tiers</h3>
       <svg id="tierChart" width="100%" height="120" viewBox="0 0 270 120"></svg>
       <div class="legend" id="tierLegend"></div>
@@ -449,7 +559,7 @@
 
   <!-- CENTER: queue -->
   <div class="card">
-    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab ai" id="tabAI" onclick="showTab('ai')">💬 AI CHAT</div><div class="tab" id="tabN" onclick="showTab('net')">Network view</div><div class="tab" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt" id="tabH" onclick="showTab('hunt')">Active Hunt</div><div class="tab bg" id="tabBG" onclick="showTab('bg')">BrandGuard™</div><span class="mode" id="modeTag">demo analyzer</span></div>
+    <div class="tabs"><div class="tab on" id="tabQ" onclick="showTab('queue')">Review queue</div><div class="tab ai" id="tabAI" onclick="showTab('ai')">💬 AI CHAT</div><div class="tab adv" id="tabN" onclick="showTab('net')">Network view</div><div class="tab adv" id="tabC" onclick="showTab('cb')">Codebook &amp; teach</div><div class="tab lib adv" id="tabL" onclick="showTab('lib')">Library</div><div class="tab hunt adv" id="tabH" onclick="showTab('hunt')">Active Hunt</div><div class="tab bg adv" id="tabBG" onclick="showTab('bg')">BrandGuard™</div><span class="mode adv" id="modeTag">demo analyzer</span></div>
     <div id="aiPane" style="display:none">
       <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
         <h3 style="margin:0"><span class="hstep">ASK</span>Analyst AI — ask about a threat, or teach the system one</h3>
@@ -950,6 +1060,108 @@ async function ocrImage(dataUrl){try{const w=await getOCR();const im=await loadI
 function readFile(f){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)})}
 function loadImg(src){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=src})}
 function selectedLabels(){return [...document.querySelectorAll('#visChips .chip.on')].map(c=>c.dataset.l)}
+
+// ================= PHOTO HERO — the main workflow =================
+// One big green button. Pick, drop or paste an image; Vision AI looks at it and
+// the full description lands right here instead of being buried in the queue.
+async function heroPick(files){
+  const list=[...(files||[])].filter(f=>/^image\//.test(f.type));
+  if(!list.length){toast('Choose an image file');return}
+  const stat=document.getElementById('heroStat');
+  const out=document.getElementById('heroResults');
+  const poster=((document.getElementById('heroPoster')||{}).value||(document.getElementById('photoPoster')||{}).value||'').trim();
+  const caption=(document.getElementById('photoCaption')||{}).value||'';
+  let n=0;
+  for(const f of list){
+    n++;
+    stat.className='herostat';
+    stat.textContent=list.length>1
+      ? `👁 Looking at image ${n} of ${list.length} — ${f.name}…`
+      : '👁 Vision AI is looking at the image…';
+    setBusy(true, list.length>1?`Analyzing image ${n} of ${list.length}…`:'Analyzing image…');
+    try{
+      const it=await addPhoto(await readFile(f),{name:f.name,poster,caption,labels:[],platform:'upload'});
+      if(it){const card=renderVisionCard(it); out.insertAdjacentHTML('afterbegin',card);}
+    }catch(e){
+      stat.className='herostat err';
+      stat.textContent='Could not analyze that file: '+String(e.message||e).slice(0,120);
+    }
+  }
+  setBusy(false);
+  if(!/Could not/.test(stat.textContent)){
+    stat.className='herostat done';
+    stat.textContent=`✅ Done — ${list.length} image(s) analyzed. Full description below; also saved to the review queue.`;
+  }
+  document.getElementById('heroFile').value='';
+  render();
+  const first=document.querySelector('#heroResults .vcard');
+  if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function renderVisionCard(it){
+  const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
+  const v=it.visionRaw||{};
+  const desc=it.visionDesc||v.description||'';
+  const score=it.score||0;
+  const pill=score>=7?'sc':(score>=4?'md':'ok');
+  const risky=score>=5;
+  const sigs=[...new Set([...(v.indicators||[]),...(it.indicators||[])])].filter(Boolean).slice(0,10);
+  const threat=(v.threat||'').trim();
+  const policy=(v.policy||'').trim();
+  const translation=(v.translation||'').trim();
+  const ocr=(it.ocr||'').trim();
+  const off=!desc;
+  const band = score>=7 ? {c:'red',  i:'⛔', t:'REPORT THIS',              s:'Clear violation — send it to the platform.'}
+             : score>=4 ? {c:'amber',i:'⚠',  t:'WORTH A CLOSER LOOK',      s:'Something here needs your eye before deciding.'}
+             :            {c:'green',i:'✅', t:'NOTHING HARMFUL FOUND',    s:'No violation detected in this image.'};
+  const catName=(it.category||'').replace(/_/g,' ');
+  return `<div class="vcard${risky?' risk':''}">
+    <div class="verdict ${band.c}">
+      <span class="vico">${band.i}</span>
+      <span class="vtxt">${band.t}
+        <span class="vsub">${off?'Vision AI could not read this image':(catName&&catName!=='benign'?catName.toUpperCase()+' — ':'')+band.s}</span>
+      </span>
+    </div>
+    <div class="vtop">
+      <img class="vthumb" src="${it.thumb}" alt="">
+      <div class="vbody">
+        <h4>👁 What this image is</h4>
+        <div class="vdesc">${off
+          ? '<span style="color:#B42318"><b>Vision AI did not return a description.</b> '+e((it.reasoning||'').slice(0,240))+'</span>'
+          : e(desc)}</div>
+        ${it.dupes&&it.dupes.length?`<div class="vpills"><span class="vsig">⚠ You have already captured ${it.dupes.length} copy(s) of this image</span></div>`:''}
+      </div>
+    </div>
+    ${threat?`<div class="vsec"><div class="lbl">Why it matters</div><div class="val">${e(threat)}</div></div>`:''}
+    ${policy&&!/^none$/i.test(policy)?`<div class="vsec"><div class="lbl">Policy it would violate</div><div class="val">${e(policy)}</div></div>`:''}
+    ${translation?`<div class="vsec"><div class="lbl">Translation</div><div class="val">${e(translation)}</div></div>`:''}
+    ${ocr?`<div class="vsec"><div class="lbl">Text read in the image</div><div class="val" style="font-size:13.2px;color:#39424e">${e(ocr.slice(0,400))}</div></div>`:''}
+    ${sigs.length?`<div class="vsec"><div class="lbl">Signals</div><div class="vpills">${sigs.map(x=>`<span class="vsig">${e(x)}</span>`).join('')}</div></div>`:''}
+    <div class="vsec"><div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="select(${it.id});showTab('queue');document.getElementById('queuePane').scrollIntoView({behavior:'smooth',block:'center'})">Open full report</button>
+      <button class="btn sec" onclick="this.closest('.vcard').remove()">Dismiss</button>
+      <span class="note" style="margin:0">Saved to the review queue — you decide what gets reported.</span>
+    </div></div>
+  </div>`;
+}
+
+// Drag an image anywhere onto the panel
+function initHero(){
+  const box=document.getElementById('heroBox'); if(!box)return;
+  ['dragenter','dragover'].forEach(ev=>box.addEventListener(ev,e=>{e.preventDefault();box.classList.add('drag')}));
+  ['dragleave','drop'].forEach(ev=>box.addEventListener(ev,e=>{e.preventDefault();if(ev==='dragleave'&&box.contains(e.relatedTarget))return;box.classList.remove('drag')}));
+  box.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files;if(f&&f.length)heroPick(f)});
+  // Paste a screenshot straight in (Ctrl+V) — but not while typing in a field
+  document.addEventListener('paste',e=>{
+    const t=e.target&&e.target.tagName;
+    if(t==='INPUT'||t==='TEXTAREA')return;
+    const items=[...((e.clipboardData||{}).items||[])].filter(i=>/^image\//.test(i.type));
+    if(!items.length)return;
+    const files=items.map(i=>i.getAsFile()).filter(Boolean);
+    if(files.length){e.preventDefault();heroPick(files)}
+  });
+}
+
 async function ingestPhotos(){const inp=document.getElementById('photoFile');const files=[...inp.files];if(!files.length){toast('Choose an image first');return}
   const poster=document.getElementById('photoPoster').value.trim(),caption=document.getElementById('photoCaption').value.trim(),labels=selectedLabels();
   const st=document.getElementById('ocrStatus');let done=0;
@@ -1179,7 +1391,7 @@ async function addPhoto(dataUrl,o){
   else{reasoning=hits.length?`Image-derived text and visual labels matched ${hits.length} codebook entr${hits.length===1?'y':'ies'}; the strongest (${hits[0].term}) sets the base and co-occurring codes raise it. Pixels were read by OCR${labels.length?' plus analyst-marked visible elements':''}; no vision model in demo mode.`:'OCR text, caption and handle contain no codebook indicators.'}
   if(!ocr&&!o.caption&&!labels.length){bd.push({l:'No readable text, caption or visible-element labels — pixels not interpreted (needs vision model)',d:0});conf=0.3}
   // VISION AI: if a Gemini key is set (and no backend vision), let the model SEE the image and describe/flag it
-  let visionDesc='';
+  let visionDesc='',visionRaw=null;
   if(!GEMINI_KEY&&!BACKEND_VISION){bd.push({l:'👁 Vision AI is OFF — set GEMINI_API_KEY on the server (or paste a key) to have the system SEE the image. This result is text/OCR only, so a picture with no readable text reads benign.',d:0});}
   else if(!(remote&&remote.analysis)){
     st.textContent='👁 Looking at the image with Vision AI…';
@@ -1188,7 +1400,7 @@ async function addPhoto(dataUrl,o){
       bd.unshift({l:`⚠️ VISION AI DID NOT RUN — ${v.__error}. The score below is TEXT-ONLY, not a real "benign". Fix the key/connection and re-run.`,d:0});
       reasoning='⚠️ Vision AI did not run ('+v.__error+') — this is a text/OCR-only result, not a visual determination. '+(reasoning||'');
       conf=0.2; toast('👁 Vision AI did NOT run: '+v.__error);
-    } else if(v){visionDesc=v.description||'';
+    } else if(v){visionDesc=v.description||'';visionRaw=v;
       const vcat=CATS.includes(v.category)?v.category:cat;const vscore=Math.max(0,Math.min(10,Math.round(Number(v.risk_score)||0)));
       if(vscore>score){score=vscore;cat=vcat;} else if(cat==='benign'&&vcat!=='benign'){cat=vcat;score=Math.max(score,vscore);}
       (v.indicators||[]).forEach(x=>{if(x&&!labels.includes(x))labels.push(x);});
@@ -1210,7 +1422,7 @@ async function addPhoto(dataUrl,o){
   let h=0;for(const c of (o.name||'')+dh)h=(h*7+c.charCodeAt(0))>>>0;
   const it={id:idc++,type:'image',url:o.source_url||('photo:'+(o.name||'upload')),name:o.name||'upload',thumb:dataUrl,dhash:dh,w:im.naturalWidth,h:im.naturalHeight,ocr:visible,labels,caption:o.caption||'',platform:o.platform||'upload',poster:o.poster||'unknown poster',
     captured:new Date().toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],shared:sharedOf(text)+ (o.poster?[]:[]),category:cat,score:Math.max(1,Math.min(10,score)),tier:tierOf(score),recommendation:recOf(score),grade,connection:dupes.length?'operational coordination':(hits.some(x=>x.id==='pt-handle-code')?'audience overlap':CONN[h%CONN.length]),
-    indicators:hits.map(x=>x.term),reasoning,breakdown:bd,hitWords:[],cbHits:hits,ai,confidence:conf,dupes:dupes.map(d=>d.id),refs,visionDesc,libctx:libRetrieve(text+' '+hits.map(h=>h.term).join(' '))};
+    indicators:hits.map(x=>x.term),reasoning,breakdown:bd,hitWords:[],cbHits:hits,ai,confidence:conf,dupes:dupes.map(d=>d.id),refs,visionDesc,visionRaw,libctx:libRetrieve(text+' '+hits.map(h=>h.term).join(' '))};
   it.shared=sharedOf(text);items.unshift(it);log(it,'photo ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade} · OCR ${visible?visible.length+' chars':'none'} · ${labels.length} labels · ${hits.length} codebook hits${API_BASE?' · backend':' · demo'}`);
   st.textContent='';render();return it}
 // ---------- teach / feedback ----------
@@ -2269,6 +2481,66 @@ function aiSynthesize(q,R,backend){
   else{h+=`<div class="note" style="margin-top:8px">Grounded in the system's current knowledge. <b>You decide</b> what's newsworthy vs. reportable — use <b>🚨 Draft LE early-warning brief</b> to hand it to law enforcement, or <b>📚 Teach the system</b> to add new context.</div>`;}
   return h;
 }
+
+// ================= ONE COMMAND BOX =================
+// Eric shouldn't have to know which box to use. He types or pastes ONE thing
+// here and the app works out what he meant.
+function runCommand(){
+  const el=document.getElementById('cmdQ');
+  const v=(el.value||'').trim();
+  if(!v){toast('Type or paste something first');el.focus();return}
+
+  // 1) Any link(s) -> capture and score
+  if(/https?:\/\//i.test(v)){
+    const u=document.getElementById('urls'); if(u)u.value=v;
+    toast('Capturing…'); el.value=''; ingest(); return;
+  }
+  // 2) #hashtag -> search that tag across the connected sources
+  if(/^#/.test(v)){
+    const t=document.getElementById('tagQ'); if(t)t.value=v;
+    el.value=''; runSystemSearch(); return;
+  }
+  // 3) @handle -> map that account's network
+  if(/^@/.test(v)){
+    const bare=v.replace(/^@+/,'').trim();
+    const t=document.getElementById('tagQ'); if(t)t.value=bare;
+    el.value=''; runSystemSearch(); return;
+  }
+  // 4) A bare codebook term (not a question) -> look it up straight away
+  const isQuestion=/\?\s*$/.test(v)||/^(what|who|whos|whose|why|how|when|where|is|are|was|were|do|does|did|can|could|should|would|explain|tell|show|find out|meaning)\b/i.test(v);
+  try{
+    if(!isQuestion && typeof cbMatch==='function'){
+      const hits=cbMatch(v,[]);
+      if(hits.length && v.split(/\s+/).length<=4){
+        const f=document.getElementById('findQ'); if(f)f.value=v;
+        el.value=''; findContent(); return;
+      }
+    }
+  }catch(e){}
+  // 5) Anything else is a question for the analyst AI
+  const a=document.getElementById('aiInput');
+  if(a){a.value=v; el.value=''; showTab('ai'); askAssistant();
+        setTimeout(()=>{const p=document.getElementById('aiPane'); if(p)p.scrollIntoView({behavior:'smooth',block:'center'})},120);}
+}
+
+// Simple by default; the full toolset is one click away and remembered.
+function toggleAdvanced(){
+  const on=document.body.classList.toggle('simple');
+  try{localStorage.setItem('spear_simple',on?'1':'0')}catch(e){}
+  _advLabel();
+  if(!on)toast('Advanced tools shown');
+}
+function _advLabel(){
+  const b=document.getElementById('advBtn'); if(!b)return;
+  b.textContent=document.body.classList.contains('simple')?'⚙ Advanced tools':'✕ Hide advanced tools';
+}
+function initSimple(){
+  let simple=true;
+  try{const v=localStorage.getItem('spear_simple'); if(v==='0')simple=false;}catch(e){}
+  document.body.classList.toggle('simple',simple);
+  _advLabel();
+}
+
 async function askAssistant(){
   const inp=document.getElementById('aiInput');const q=(inp.value||'').trim();
   if(!q){toast('Type a question or describe a threat');return}
@@ -2684,7 +2956,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadSamples();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();initSimple();initHero();
 if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
 // crawl is OFF by default — the user starts it with the Start crawl toggle (saves data)
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
