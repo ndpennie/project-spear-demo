@@ -347,6 +347,7 @@ body.simple .kpis{display:none}
 .verdict.red{background:#FDECEA;color:#8A1C12;border:2px solid #E4A9A2}
 .verdict.amber{background:#FFF4E5;color:#8A5A00;border:2px solid #F0C77E}
 .verdict.green{background:#EAF8F0;color:#1B5E33;border:2px solid #A9DCC0}
+.verdict.grey{background:#F2F4F7;color:#3b4756;border:2px dashed #b6bec9}
 
 /* ---- clean + dynamic ---- */
 @keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
@@ -1394,7 +1395,7 @@ async function getOCR(){if(_ocrWorker)return _ocrWorker;
   _ocrWorker=await Tesseract.createWorker(OCR_LANGS,1,{workerPath:'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/worker.min.js',corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',langPath:'https://tessdata.projectnaptha.com/4.0.0_fast',logger:m=>{if(m.status==='recognizing text'){document.getElementById('ocrBar').style.width=Math.round(m.progress*100)+'%'}}});
   return _ocrWorker}
 function preprocess(im){const sc=im.naturalWidth<1200?2:1;const c=document.createElement('canvas');c.width=im.naturalWidth*sc;c.height=im.naturalHeight*sc;const x=c.getContext('2d');x.filter='grayscale(1) contrast(1.25)';x.drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/png')}
-async function ocrImage(dataUrl){try{const w=await getOCR();const im=await loadImg(dataUrl);const r=await w.recognize(preprocess(im));return (r.data.text||'').replace(/\n{2,}/g,'\n').trim()}catch(e){toast('OCR unavailable offline — using caption/labels only');return ''}}
+async function ocrImage(dataUrl){if(window.__fastOCR)return '';try{const w=await getOCR();const im=await loadImg(dataUrl);const r=await w.recognize(preprocess(im));return (r.data.text||'').replace(/\n{2,}/g,'\n').trim()}catch(e){toast('OCR unavailable offline — using caption/labels only');return ''}}
 function readFile(f){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)})}
 function loadImg(src){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=src})}
 function selectedLabels(){return [...document.querySelectorAll('#visChips .chip.on')].map(c=>c.dataset.l)}
@@ -1470,24 +1471,70 @@ function corroborate(id){
 
 // Vision AI was asleep or down when this image ran — try it again on demand.
 async function retryVision(id,btn){
-  const it=items.find(x=>x.id===id); if(!it||!it.thumb){toast('Original image not available');return}
-  if(btn){btn.disabled=true;btn.textContent='⏳ Waking the server…'}
-  const v=await visionAnalyze(it.thumb,'If any text in this image is not English, transcribe it AND give the English translation inside the description. '+(it.poster||'')+' '+(it.caption||''));
-  if(!v||v.__error){
-    if(btn){btn.disabled=false;btn.textContent='🔁 Try Vision AI again'}
-    toast('Still no Vision AI: '+((v&&v.__error)||'unknown'));return;
-  }
+  const it=items.find(x=>x.id===id); if(!it||!(it.media||it.thumb)){toast('The original file is no longer loaded — upload it again');return}
+  if(btn){btn.disabled=true;btn.textContent='⏳ Looking again…'}
+  const ok=await _runVisionOn(it);
+  if(!ok){ if(btn){btn.disabled=false;btn.textContent='🔁 Try again'} toast('Google’s AI is still busy — it will keep trying on its own'); autoRetryVision(id); return; }
+  _refreshCard(it,btn);
+  toast('👁 Vision AI: '+String(it.category).replace(/_/g,' ')+' '+it.score+'/10');
+}
+
+// One place that runs the model and folds the answer back into the item.
+async function _runVisionOn(it){
+  const media=it.media||it.thumb||''; if(!media)return false;
+  const ctx=it.type==='audio'
+    ? 'This is an AUDIO recording, not a picture. Write out what is said or sung in the ORIGINAL language, name the language, give a full English translation, and say whether it is a nasheed/chant, incitement, a threat, or benign.'
+    : 'If any text in this image is not English, transcribe it AND give the English translation inside the description. '+(it.poster||'')+' '+(it.caption||'');
+  const v=await visionAnalyze(media,ctx);
+  if(!v||v.__error){it.visionFailed=(v&&v.__error)||'no answer';return false}
   it.visionRaw=v; it.visionDesc=v.description||it.visionDesc; it.visionFailed='';
+  if(it.type==='audio')it.audio=v;
   const vs=Math.max(0,Math.min(10,Math.round(Number(v.risk_score)||0)));
   if(vs>it.score){it.score=vs;if(CATS.includes(v.category))it.category=v.category;}
   it.tier=tierOf(it.score); it.recommendation=recOf(it.score);
+  if(it.grade==='Unchecked')it.grade=it.score>=8?'Corroborated':it.score>=5?'Inferred':'Observed';
   it.confidence=Math.max(it.confidence||0,Number(v.confidence)||0);
   it.reasoning='👁 Vision AI: '+String(v.threat||v.description||'').replace(/\s+/g,' ');
-  const card=btn&&btn.closest('.vcard');
-  if(card)card.outerHTML=renderVisionCard(it); 
-  render(); toast('👁 Vision AI: '+String(it.category).replace(/_/g,' ')+' '+it.score+'/10');
+  try{logAnalysis(it)}catch(e){}
+  return true;
 }
 
+function _refreshCard(it,btn){
+  const card=(btn&&btn.closest('.vcard'))||document.querySelector('#vcard-'+it.id);
+  if(card)card.outerHTML=renderVisionCard(it);
+  render();
+}
+
+// ---------- KEEP TRYING UNTIL HE HAS AN ANSWER ----------
+// Google's free Gemini tier throws intermittent 503 "high demand". Eric should never
+// be left holding an unanswered image because of that: once the quick tries are spent
+// the app keeps going quietly in the background and fills the card in when it lands.
+// He can walk away; the answer arrives on its own.
+const _AUTO={};
+function autoRetryVision(id,round){
+  round=round||0;
+  const it=items.find(x=>x.id===id);
+  if(!it||!it.visionFailed||round>10){ if(_AUTO[id])delete _AUTO[id]; return; }
+  if(round===0&&_AUTO[id])return;              // already running for this item
+  _AUTO[id]=true;
+  const wait=[15,20,25,30,30,40,40,50,60,60,60][round]||60;
+  const card=document.querySelector('#vcard-'+id);
+  const strip=card&&card.querySelector('.autostrip');
+  if(strip)strip.textContent='⏳ Google’s AI is busy — still trying for you (attempt '+(round+1)+' of 11). You can carry on; this fills in by itself.';
+  setTimeout(async()=>{
+    if(!items.find(x=>x.id===id)){delete _AUTO[id];return}
+    const ok=await _runVisionOn(it);
+    if(ok){
+      delete _AUTO[id];
+      _refreshCard(it,null);
+      toast('👁 Got it — image #'+id+': '+String(it.category).replace(/_/g,' ')+' '+it.score+'/10');
+      try{if('Notification' in window&&Notification.permission==='granted')
+        new Notification('GIPEC AI² — image #'+id+' analyzed',{body:(it.visionDesc||'').slice(0,120)});}catch(e){}
+    } else {
+      autoRetryVision(id,round+1);
+    }
+  },wait*1000);
+}
 
 // ================= RUNNING LOG =================
 // Every image, video and recording Eric puts through the system is written here
@@ -1729,26 +1776,34 @@ function renderVisionCard(it){
   }
   const ocrIsNoise=!!(desc&&ocr);
   const off=!desc&&!(it.textFallback&&it.textFallback.description);
-  const band = score>=7 ? {c:'red',  i:'⛔', t:'REPORT THIS',              s:'Clear violation — send it to the platform.'}
-             : score>=4 ? {c:'amber',i:'⚠',  t:'WORTH A CLOSER LOOK',      s:'Something here needs your eye before deciding.'}
-             :            {c:'green',i:'✅', t:'NOTHING HARMFUL FOUND',    s:'No violation detected in this image.'};
+  // A green "nothing harmful" is a claim that the AI LOOKED and saw nothing. If Vision AI
+  // never ran, the app has looked at no pixels — the harm in most of this material is
+  // visual, so "no violation detected" would be a false all-clear on exactly the images
+  // that matter. When it did not run, say so and make him re-run it.
+  const notChecked = !!it.visionFailed && score<4;
+  const band = notChecked ? {c:'grey', i:'⏳', t:'NOT CHECKED YET',           s:'The AI never saw this picture — press Re-analyze.'}
+             : score>=7  ? {c:'red',  i:'⛔', t:'REPORT THIS',                s:'Clear violation — send it to the platform.'}
+             : score>=4  ? {c:'amber',i:'⚠',  t:'WORTH A CLOSER LOOK',        s:'Something here needs your eye before deciding.'}
+             :             {c:'green',i:'✅', t:'NOTHING HARMFUL FOUND',      s:'No violation detected in this image.'};
   const catName=(it.category||'').replace(/_/g,' ');
-  return `<div class="vcard${risky?' risk':''}${it.type==='audio'?' audio':''}">
+  return `<div class="vcard${risky?' risk':''}${it.type==='audio'?' audio':''}" id="vcard-${it.id}">
     <div class="verdict ${band.c}">
       <span class="vico">${band.i}</span>
       <span class="vtxt">${band.t}
-        <span class="vsub">${(catName&&catName!=='benign'?catName.toUpperCase()+' — ':'')+band.s}</span>
+        <span class="vsub">${notChecked?band.s:((catName&&catName!=='benign'?catName.toUpperCase()+' — ':'')+band.s)}</span>
       </span>
+      ${notChecked?`<button class="btn btn-retry" style="margin-left:auto" onclick="retryVision(${it.id},this)">🔁 Try again</button>`:''}
     </div>
     <div class="vtop">
       ${it.thumb?`<img class="vthumb" src="${it.thumb}" alt="">`:'<div class="noart">🎧</div>'}
       <div class="vbody">
-        <h4>${it.type==='audio'?'🎧 What this recording says':(it.visionFailed&&it.textFallback?'🔤 What the words in this image say':'👁 What this image is')}</h4>
-        ${it.visionFailed?`<div class="warnstrip">⚠ Vision AI could not look at the picture (${e(it.visionFailed).slice(0,90)}).${it.textFallback?' The text below was read and translated instead.':''}
+        <h4>${it.type==='audio'?'🎧 What this recording says':it.type==='video'?'👁 What this video shows':(it.visionFailed&&it.textFallback?'🔤 What the words in this image say':'👁 What this image is')}</h4>
+        ${(it.visionFailed&&!notChecked)?`<div class="warnstrip">⚠ Vision AI could not look at the picture — the text below was read and translated instead.
           <button class="btn sec" style="padding:3px 10px;font-size:12px;margin-left:6px" onclick="retryVision(${it.id},this)">🔁 Try Vision AI again</button></div>`:''}
-        <div class="vdesc">${off
-          ? '<span style="color:#B42318"><b>No description available.</b> '+e((it.reasoning||'').slice(0,240))+'</span>'
-          : e(desc||tf.description||'')}</div>
+        <div class="vdesc">${notChecked
+          ? e(String(it.visionFailed).replace(/^server vision \d+ — ?/,''))+'<div class="autostrip note" style="margin:8px 0 0"></div>' 
+          : (off ? '<span style="color:#B42318"><b>No description available.</b> '+e((it.reasoning||'').slice(0,240))+'</span>'
+                 : e(desc||tf.description||''))}</div>
         ${it.dupes&&it.dupes.length?`<div class="vpills"><span class="vsig">⚠ You have already captured ${it.dupes.length} copy(s) of this image</span></div>`:''}
       </div>
     </div>
@@ -1890,7 +1945,24 @@ async function ingestAudio(){
   let v=null;
   try{v=await visionAnalyze(a.wav,ctx)}catch(e){v={__error:String(e.message||e).slice(0,140)}}
   setBusy(false);
-  if(!v||v.__error){st.textContent='';toast('Audio not interpreted: '+((v&&v.__error)||'unknown error'));return}
+  if(!v||v.__error){
+    // Never leave him with nothing. Put the recording in the queue marked NOT CHECKED,
+    // keep the audio so it can be re-run, and keep trying in the background.
+    const fail=(v&&v.__error)||'no answer from the AI';
+    const it={id:idc++,type:'audio',url:'audio:'+f.name,name:f.name,thumb:null,media:a.wav,
+      duration:a.full,dur:fmtTime(a.full),ocr:'',labels:[],caption:'',platform:'audio upload',
+      poster:poster||'unknown source',captured:new Date().toISOString().slice(0,16).replace('T',' '),
+      status:'Pending',notes:'',reviewers:[],category:'benign',score:1,tier:tierOf(1),
+      recommendation:recOf(1),grade:'Unchecked',connection:'',indicators:[],
+      reasoning:'🎧 Not interpreted yet — '+fail,breakdown:[],cbHits:[],
+      visionDesc:'',visionRaw:null,visionFailed:fail,confidence:0.2};
+    items.unshift(it);logAnalysis(it);log(it,'audio not interpreted',fail);
+    document.getElementById('heroResults').insertAdjacentHTML('afterbegin',renderVisionCard(it));
+    autoRetryVision(it.id);
+    st.textContent='';inp.value='';render();
+    const c0=document.querySelector('#heroResults .vcard');if(c0)c0.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   v.__seconds=a.seconds;v.__full=a.full;
 
   const score=Math.max(0,Math.min(10,Math.round(Number(v.risk_score)||0)));
@@ -1902,7 +1974,7 @@ async function ingestAudio(){
   (v.indicators||[]).forEach(x=>{if(x)bd.push({l:`Audio signal: ${String(x).replace(/</g,'&lt;').slice(0,120)}`,d:''})});
 
   const hits=cbMatch((v.description||'')+' '+(v.translation||''),[]);
-  const it={id:idc++,type:'audio',url:'audio:'+f.name,name:f.name,thumb:null,duration:a.full,dur:fmtTime(a.full),
+  const it={id:idc++,type:'audio',url:'audio:'+f.name,name:f.name,thumb:null,media:a.wav,duration:a.full,dur:fmtTime(a.full),
     ocr:(v.description||'').slice(0,1200),labels:(v.indicators||[]).slice(0,8),caption:'',platform:'audio upload',
     poster:poster||'unknown source',captured:new Date().toISOString().slice(0,16).replace('T',' '),
     status:'Pending',notes:'',reviewers:[],category:cat,score:Math.max(1,score),tier:tierOf(score),
@@ -1933,7 +2005,7 @@ async function ingestVideo(){
   const times=[];for(let t=Math.min(0.3,dur/2);t<dur-0.05;t+=step)times.push(t);
   const cvs=document.createElement('canvas');
   const seek=t=>new Promise(res=>{const h=()=>{v.removeEventListener('seeked',h);res()};v.addEventListener('seeked',h);try{v.currentTime=t}catch(e){res()}});
-  const frames=[],allText=[];let scanned=0;
+  const frames=[],allText=[],kept=[];let scanned=0;
   for(const t of times){
     await seek(t);
     const rw=v.videoWidth||W, rh=v.videoHeight||360, sc=W/rw; cvs.width=W; cvs.height=Math.max(1,Math.round(rh*sc));
@@ -1946,8 +2018,31 @@ async function ingestVideo(){
     const hits=cbMatch(text,refs.map(r=>r.label));
     if(text)allText.push(text);
     if(hits.length||refs.length)frames.push({t,thumb:du,text:(text||'').replace(/\s+/g,' ').slice(0,160),hits:[...new Set([...hits.map(h=>h.term),...refs.map(r=>r.label)])],cbHits:hits});
+    kept.push({t,du});
   }
   URL.revokeObjectURL(url);bar.style.width='0';
+
+  // ---- LOOK at the clip, don't just read text off it ----
+  // OCR only catches watermarks that are TEXT. Eric's whole skill is spotting a LOGO
+  // or flag tucked in a corner — a graphic, with no letters for OCR to find. Without
+  // this, a clip full of Amaq or Al-Furqan branding came back "no markers found".
+  let vframes=[];
+  if(kept.length){
+    const pick=[];
+    const flagged=frames.slice(0,2).map(fr=>({t:fr.t,du:fr.thumb}));
+    pick.push(...flagged);
+    [0,Math.floor(kept.length/2),kept.length-1].forEach(i=>{const k=kept[i];
+      if(k&&!pick.some(p=>Math.abs(p.t-k.t)<0.5))pick.push(k)});
+    const look=pick.slice(0,3);
+    for(let i=0;i<look.length;i++){
+      st.textContent=`👁 Looking at frame ${i+1} of ${look.length} with Vision AI…`;
+      setBusy(true,`Vision AI is looking at the video (${i+1}/${look.length})…`);
+      try{
+        const r=await visionAnalyze(look[i].du,'This is a FRAME from a video at '+fmtTime(look[i].t)+'. Look for media-outlet logos, watermarks, flags or insignia anywhere in the frame INCLUDING the corners, even small, faded or partly cut off. Transcribe and translate any non-English text.');
+        if(r&&!r.__error)vframes.push({t:look[i].t,thumb:look[i].du,v:r});
+      }catch(e){}
+    }
+  }
   // ---- listen to the soundtrack ----
   st.textContent='🎧 Listening to the audio track…';setBusy(true,'Listening to the audio…');
   let audioFinding=null;
@@ -1957,6 +2052,11 @@ async function ingestVideo(){
   for(const fr of frames)for(const h of fr.cbHits)if(!seen.has(h.id)){seen.add(h.id);unionHits.push(h)}
   const pr=cbPrior(unionHits);
   let cat=unionHits.length?pr.category:'benign', score=unionHits.length?pr.score:1;
+  // What Vision AI SAW outranks what OCR could read.
+  let vBest=null;
+  vframes.forEach(f=>{const sc=Math.max(0,Math.min(10,Math.round(Number(f.v.risk_score)||0)));
+    if(!vBest||sc>vBest.sc)vBest={sc,f};});
+  if(vBest&&vBest.sc>score){score=vBest.sc;if(CATS.includes(vBest.f.v.category))cat=vBest.f.v.category;}
   const audBits=[];
   if(audioFinding&&audioFinding.__error){audBits.push({l:`🎧 Audio not analyzed — ${audioFinding.__error}. This result is picture-only; a spoken or sung threat would not be caught.`,d:0});}
   else if(audioFinding){
@@ -1975,10 +2075,25 @@ async function ingestVideo(){
     category:cat,score:Math.max(1,Math.min(10,score)),tier:tierOf(score),recommendation:recOf(score),grade,connection:'narrative similarity',
     indicators:unionHits.map(x=>x.term),
     reasoning:frames.length?`Sampled ${scanned} frames across ${fmtTime(dur)}. ${frames.length} frame(s) carried codebook markers — e.g. ${frames.slice(0,3).map(fr=>fr.hits[0]+' at '+fmtTime(fr.t)).join(', ')}. Markers that appear mid-clip (not in the thumbnail) are exactly the concealment the scan is built to defeat. Frame text read by in-browser OCR and matched to reference logos in the Library; graphic-only logo/flag shape recognition and audio (nasheed) fingerprinting are the backend vision/audio layer.`:`Sampled ${scanned} frames across ${fmtTime(dur)}; no codebook markers found in frame text. Note: a purely graphic logo or flag with no text, or an audio nasheed, needs the backend vision/audio layer — add reference watermark images to the Library to catch logos by fingerprint.`,
-    breakdown:[...(unionHits.length?[{l:`Codebook markers matched across ${frames.length} sampled frame(s) — strongest: ${unionHits[0].term}`,d:score}]:[{l:'No codebook markers in sampled frame text',d:1}]),...frames.map(fr=>({l:`${fmtTime(fr.t)} — ${fr.hits.join(', ')}`,d:''})),...audBits],cbHits:unionHits,audio:audioFinding,confidence:0.5+Math.min(0.4,unionHits.length*0.08)};
+    breakdown:[...(unionHits.length?[{l:`Codebook markers matched across ${frames.length} sampled frame(s) — strongest: ${unionHits[0].term}`,d:score}]:[{l:'No codebook markers in sampled frame text',d:1}]),
+      ...vframes.map(f=>({l:`👁 ${fmtTime(f.t)} — ${String(f.v.description||'').replace(/</g,'&lt;').slice(0,260)}`,d:f.v.risk_score||''})),
+      ...frames.map(fr=>({l:`${fmtTime(fr.t)} — ${fr.hits.join(', ')}`,d:''})),...audBits],
+    cbHits:unionHits,audio:audioFinding,vframes,
+    visionDesc:vBest?(String(vBest.f.v.description||'')+' (seen at '+fmtTime(vBest.f.t)+')'):'',
+    visionRaw:vBest?vBest.f.v:null,
+    visionFailed:vframes.length?'':'Vision AI could not look at the frames',
+    media:(vBest&&vBest.f.thumb)||(vframes[0]&&vframes[0].thumb)||(frames[0]&&frames[0].thumb)||null,
+    confidence:0.5+Math.min(0.4,unionHits.length*0.08)};
+  if(!it.thumb)it.thumb=it.media;
   items.unshift(it);logAnalysis(it);log(it,'video scanned',`${scanned} frames · ${frames.length} flagged · ${cat} ${it.score}/10${API_BASE?'':' · demo'}`);
   st.textContent=`Done — scanned ${scanned} frame(s), flagged ${frames.length}.`;inp.value='';
-  selId=it.id;render();showTab('queue');
+  // He gets the same plain-language answer card he gets for a photo — and if Vision AI
+  // was busy, it keeps trying in the background and fills this in on its own.
+  const hr=document.getElementById('heroResults');
+  if(hr){hr.insertAdjacentHTML('afterbegin',renderVisionCard(it));
+    const c1=document.querySelector('#heroResults .vcard'); if(c1)c1.scrollIntoView({behavior:'smooth',block:'center'});}
+  if(it.visionFailed&&it.media)autoRetryVision(it.id);
+  selId=it.id;render();
   toast(frames.length?`Video flagged: ${cat.replace(/_/g,' ')} — ${frames.length} frame(s), e.g. ${frames[0].hits[0]} at ${fmtTime(frames[0].t)}`:'Video scanned — no watermark text in sampled frames');
 }
 function videoStrip(it){if(!it.frames||!it.frames.length)return '<div class="note">No frames carried readable watermark text. (Graphic-only logos/flags and audio need the backend vision/audio layer; add reference logo images to the Library to catch logos by fingerprint.)</div>';
@@ -2068,6 +2183,9 @@ async function geminiCall(parts){
 const BACKEND_DEFAULT='https://project-spear-backend.onrender.com';
 let BACKEND_VISION=false;
 async function checkBackendVision(){
+  // Free Render instances sleep. Ping on page load so the first real upload of the day
+  // isn't the thing that pays the 50-second wake cost.
+
   const base=API_BASE||BACKEND_DEFAULT;
   try{const r=await fetch(base+'/api/vision-health',{cache:'no-store'});BACKEND_VISION=r.ok&&!!((await r.json()).configured);}catch(e){BACKEND_VISION=false;}
   const gs=document.getElementById('gStat');
@@ -2076,24 +2194,38 @@ async function checkBackendVision(){
 }
 async function backendVision(dataUrl,context){
   const base=API_BASE||BACKEND_DEFAULT;
-  // The free Render instance sleeps and takes ~50s to wake. A single failed call
-  // used to read as "Vision AI could not see this", which is wrong and alarming —
-  // so wake it and try again before giving up.
-  for(let attempt=0;attempt<3;attempt++){
+  // Two very different failures used to look identical here:
+  //   1. the free Render instance is ASLEEP  -> it needs ~30-50s to wake, so wait it out
+  //   2. GOOGLE is busy ("high demand", 503) -> the server is fine, waiting 30s wastes
+  //      the analyst's time; a short backoff usually gets a different, free capacity slot
+  // Treating (2) as (1) burned all three tries on sleeping and gave up saying
+  // "server unreachable", which is not what happened and sent Eric looking at his backend.
+  let lastErr='';
+  for(let attempt=0;attempt<4;attempt++){
     try{
       const r=await fetch(base+'/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl,context:context||''})});
-      if(!r.ok){
-        let d='';try{d=(await r.json()).detail||''}catch(e){}
-        if((r.status===502||r.status===503||r.status===504)&&attempt<2){await _wakeBackend(attempt);continue}
-        return {__error:'server vision '+r.status+(d?(' — '+String(d).slice(0,140)):'')};
-      }
-      const j=await r.json();return j.analysis||{__error:'empty server response'};
+      if(r.ok){const j=await r.json();return j.analysis||{__error:'empty server response'};}
+      let d='';try{d=(await r.json()).detail||''}catch(e){}
+      lastErr=/high demand|UNAVAILABLE|overloaded|RESOURCE_EXHAUSTED/i.test(d)
+        ? 'Google’s AI was too busy to answer just now — press Re-analyze in a minute'
+        : ('server vision '+r.status+(d?(' — '+String(d).slice(0,140)):''));
+      const busy=/high demand|UNAVAILABLE|overloaded|RESOURCE_EXHAUSTED|\b429\b|Gemini 5\d\d/i.test(d);
+      if(busy&&attempt<3){await _aiBusyWait(attempt);continue}
+      if((r.status===502||r.status===503||r.status===504)&&attempt<3){await _wakeBackend(attempt);continue}
+      return {__error:lastErr};
     }catch(e){
-      if(attempt<2){await _wakeBackend(attempt);continue}
-      return {__error:'server unreachable after waking it twice — check the backend is running'};
+      lastErr='could not reach the server';
+      if(attempt<3){await _wakeBackend(attempt);continue}
     }
   }
-  return {__error:'server did not wake in time'};
+  return {__error:lastErr||'Vision AI did not answer after several tries'};
+}
+// Google is busy, not asleep: short backoff, and say so honestly.
+async function _aiBusyWait(attempt){
+  const st=document.getElementById('heroStat')||document.getElementById('ocrStatus');
+  const secs=[3,7,12][attempt]||12;
+  if(st)st.textContent='⏳ Google’s AI is busy right now — trying again in '+secs+'s (attempt '+(attempt+2)+' of 5)…';
+  await new Promise(r=>setTimeout(r,secs*1000));
 }
 async function _wakeBackend(attempt){
   const base=API_BASE||BACKEND_DEFAULT;
@@ -2232,9 +2364,12 @@ async function addPhoto(dataUrl,o){
   const grade=hits.some(h=>!h.context_required&&h.severity>=4)?'Corroborated':hits.length?'Inferred':'Unverified';
   let h=0;for(const c of (o.name||'')+dh)h=(h*7+c.charCodeAt(0))>>>0;
   const it={id:idc++,type:'image',url:o.source_url||('photo:'+(o.name||'upload')),name:o.name||'upload',thumb:dataUrl,dhash:dh,w:im.naturalWidth,h:im.naturalHeight,ocr:visible,labels,caption:o.caption||'',platform:o.platform||'upload',poster:o.poster||'unknown poster',
-    captured:new Date().toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],shared:sharedOf(text)+ (o.poster?[]:[]),category:cat,score:Math.max(1,Math.min(10,score)),tier:tierOf(score),recommendation:recOf(score),grade,connection:dupes.length?'operational coordination':(hits.some(x=>x.id==='pt-handle-code')?'audience overlap':CONN[h%CONN.length]),
+    captured:new Date().toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],shared:sharedOf(text)+ (o.poster?[]:[]),category:cat,score:Math.max(1,Math.min(10,score)),tier:tierOf(score),recommendation:recOf(score),grade:(visionFailed&&!textFallback&&score<4)?'Unchecked':grade,connection:dupes.length?'operational coordination':(hits.some(x=>x.id==='pt-handle-code')?'audience overlap':CONN[h%CONN.length]),
     indicators:hits.map(x=>x.term),reasoning,breakdown:bd,hitWords:[],cbHits:hits,ai,confidence:conf,dupes:dupes.map(d=>d.id),refs,visionDesc,visionRaw,visionFailed,textFallback,libctx:libRetrieve(text+' '+hits.map(h=>h.term).join(' '))};
-  it.shared=sharedOf(text);items.unshift(it);logAnalysis(it);log(it,'photo ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade} · OCR ${visible?visible.length+' chars':'none'} · ${labels.length} labels · ${hits.length} codebook hits${API_BASE?' · backend':' · demo'}`);
+  it.media=dataUrl;
+  it.shared=sharedOf(text);items.unshift(it);logAnalysis(it);
+  if(visionFailed)autoRetryVision(it.id);
+  log(it,'photo ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade} · OCR ${visible?visible.length+' chars':'none'} · ${labels.length} labels · ${hits.length} codebook hits${API_BASE?' · backend':' · demo'}`);
   st.textContent='';render();return it}
 // ---------- teach / feedback ----------
 function renderChips(){/* visible-element tags run on the backend now — no manual ticking in the UI */const _vc=document.getElementById('visChips');if(_vc)_vc.innerHTML='';
