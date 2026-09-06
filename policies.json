@@ -593,7 +593,7 @@
    "index": "https://www.tiktok.com/community-guidelines/en/",
    "verified": false,
    "last_verified": null,
-   "note": "NOT auto-verified \u2014 tiktok.com disallows automated fetching in robots.txt. Names below are from general knowledge; confirm on the page before citing in a formal referral.",
+   "note": "NOT VERIFIED. tiktok.com disallows automated fetching in robots.txt, and the policy page renders empty to automation even in a normal browser session. Names below are from general knowledge. Open the link and confirm before citing TikTok in a formal referral.",
    "policies": [
     {
      "name": "Violent and Hateful Organizations and Individuals",
@@ -648,56 +648,93 @@
   },
   "youtube": {
    "display": "YouTube",
-   "index": "https://www.youtube.com/howyoutubeworks/policies/community-guidelines/",
-   "verified": false,
-   "last_verified": null,
-   "note": "NOT auto-verified \u2014 confirm names on the policy page before citing.",
+   "index": "https://support.google.com/youtube/topic/9223153",
+   "verified": true,
+   "last_verified": "2026-09-06",
+   "note": "Policy titles read directly from YouTube's own Help topics on this date.",
    "policies": [
     {
-     "name": "Violent Extremist or Criminal Organizations",
+     "name": "Violent extremist or criminal organizations policy",
      "url": "https://support.google.com/youtube/answer/9229472",
-     "prohibits": "Content produced by or praising violent extremist or criminal organisations.",
+     "prohibits": "Content produced by, or praising/promoting, violent extremist or criminal organisations.",
      "maps_to": [
       "isis_terrorism",
       "domestic_terrorism",
       "recruitment",
       "glorification",
-      "propaganda"
+      "propaganda",
+      "financing"
      ]
     },
     {
-     "name": "Hate Speech Policy",
+     "name": "Hate speech policy",
      "url": "https://support.google.com/youtube/answer/2801939",
-     "prohibits": "Content promoting violence or hatred against protected groups.",
+     "prohibits": "Content promoting violence or hatred against individuals or groups based on protected attributes.",
      "maps_to": [
       "antisemitism",
       "domestic_terrorism"
      ]
     },
     {
-     "name": "Violent or Graphic Content",
+     "name": "Violent or graphic content policies",
      "url": "https://support.google.com/youtube/answer/2802008",
-     "prohibits": "Violence intended to shock, and glorification of violence.",
+     "prohibits": "Violent or gory content intended to shock, and glorification of violence.",
      "maps_to": [
       "glorification",
+      "public_safety_threat",
+      "incitement"
+     ]
+    },
+    {
+     "name": "Harmful or dangerous content policy",
+     "url": "https://support.google.com/youtube/answer/2801964",
+     "prohibits": "Content encouraging dangerous or illegal activities, including drug use and instructional harm.",
+     "maps_to": [
+      "narcotics",
+      "public_safety_threat",
+      "operational_planning"
+     ]
+    },
+    {
+     "name": "Harassment & cyberbullying policies",
+     "url": "https://support.google.com/youtube/answer/2802268",
+     "prohibits": "Targeted abuse, threats and sustained harassment.",
+     "maps_to": [
+      "antisemitism",
       "public_safety_threat"
      ]
     },
     {
-     "name": "Harmful or Dangerous Content",
-     "url": "https://support.google.com/youtube/answer/2801964",
-     "prohibits": "Content encouraging dangerous or illegal acts, including drug use.",
+     "name": "Child safety policy",
+     "url": "https://support.google.com/youtube/answer/2801999",
+     "prohibits": "Content endangering the emotional or physical well-being of minors.",
      "maps_to": [
-      "narcotics",
+      "child_safety"
+     ]
+    },
+    {
+     "name": "Suicide, self-harm, and eating disorders policy",
+     "url": "https://support.google.com/youtube/answer/2802245",
+     "prohibits": "Content promoting or glorifying suicide, self-harm or eating disorders.",
+     "maps_to": [
       "self_harm_promotion"
      ]
     },
     {
-     "name": "Child Safety Policy",
-     "url": "https://support.google.com/youtube/answer/2801999",
-     "prohibits": "Content endangering the emotional and physical well-being of minors.",
+     "name": "Nudity & Sexual Content Policy",
+     "url": "https://support.google.com/youtube/answer/2802002",
+     "prohibits": "Sexually explicit content.",
      "maps_to": [
-      "child_safety"
+      "public_safety_threat"
+     ]
+    },
+    {
+     "name": "Thumbnails policy",
+     "url": "https://support.google.com/youtube/answer/9229980",
+     "prohibits": "Thumbnails that violate the community guidelines.",
+     "maps_to": [
+      "glorification",
+      "propaganda"
      ]
     }
    ]
@@ -705,35 +742,36 @@
   "x": {
    "display": "X (Twitter)",
    "index": "https://help.x.com/en/rules-and-policies/x-rules",
-   "verified": false,
-   "last_verified": null,
-   "note": "NOT auto-verified \u2014 help.x.com returned 403 to automated access. Confirm before citing.",
+   "verified": true,
+   "last_verified": "2026-09-06",
+   "note": "Titles read from each policy page on help.x.com on this date. Note it is 'Violent Content Policy', not 'Violent Speech'.",
    "policies": [
     {
-     "name": "Violent and Hateful Entities Policy",
+     "name": "Violent and hateful entities policy",
      "url": "https://help.x.com/en/rules-and-policies/violent-entities",
-     "prohibits": "Affiliation with or promotion of violent extremist and hateful entities.",
+     "prohibits": "Affiliation with, or promotion of, violent extremist and hateful entities and their activities.",
      "maps_to": [
       "isis_terrorism",
       "domestic_terrorism",
       "recruitment",
       "glorification",
-      "propaganda"
+      "propaganda",
+      "financing"
      ]
     },
     {
-     "name": "Hateful Conduct Policy",
+     "name": "Hateful Conduct",
      "url": "https://help.x.com/en/rules-and-policies/hateful-conduct-policy",
-     "prohibits": "Attacks on people on the basis of protected categories; hateful imagery and symbols.",
+     "prohibits": "Attacks on people on the basis of protected categories, including hateful imagery and symbols.",
      "maps_to": [
       "antisemitism",
       "domestic_terrorism"
      ]
     },
     {
-     "name": "Violent Speech Policy",
+     "name": "Violent Content Policy",
      "url": "https://help.x.com/en/rules-and-policies/violent-speech",
-     "prohibits": "Threats, wishes of harm and incitement to violence.",
+     "prohibits": "Threats of violence, wishes of harm, and incitement.",
      "maps_to": [
       "incitement",
       "public_safety_threat",
@@ -741,34 +779,61 @@
      ]
     },
     {
-     "name": "Child Sexual Exploitation Policy",
+     "name": "Perpetrators of Violent Attacks",
+     "url": "https://help.x.com/en/rules-and-policies/perpetrators-of-violent-attacks",
+     "prohibits": "Accounts of, and manifestos or media produced by, perpetrators of terrorist and mass-violent attacks.",
+     "maps_to": [
+      "isis_terrorism",
+      "domestic_terrorism",
+      "glorification"
+     ]
+    },
+    {
+     "name": "Our policy on child sexual exploitation",
      "url": "https://help.x.com/en/rules-and-policies/sexual-exploitation-policy",
-     "prohibits": "Any material featuring or promoting child sexual exploitation.",
+     "prohibits": "Any material or conduct that sexually exploits children.",
      "maps_to": [
       "child_safety"
      ]
     },
     {
-     "name": "Illegal or Certain Regulated Goods and Services",
-     "url": "https://help.x.com/en/rules-and-policies/regulated-goods-services",
-     "prohibits": "Trade in drugs, counterfeit goods and weapons.",
+     "name": "Our policy on illegal or certain regulated goods and services",
+     "url": "https://help.x.com/en/rules-and-policies/illegal-regulated-behaviors",
+     "prohibits": "Trade in drugs, counterfeit goods, weapons and other regulated items.",
      "maps_to": [
       "narcotics",
       "counterfeit_meds"
+     ]
+    },
+    {
+     "name": "Abuse and Harassment",
+     "url": "https://help.x.com/en/rules-and-policies/abusive-behavior",
+     "prohibits": "Targeted harassment and abusive behaviour.",
+     "maps_to": [
+      "antisemitism",
+      "public_safety_threat"
+     ]
+    },
+    {
+     "name": "Suicide and Self-harm policy",
+     "url": "https://help.x.com/en/rules-and-policies/glorifying-self-harm",
+     "prohibits": "Promotion or encouragement of suicide and self-harm.",
+     "maps_to": [
+      "self_harm_promotion"
      ]
     }
    ]
   },
   "snapchat": {
    "display": "Snapchat",
-   "index": "https://values.snap.com/privacy/transparency/community-guidelines",
+   "index": "https://values.snap.com/policy/policy-community-guidelines",
    "verified": false,
    "last_verified": null,
-   "note": "NOT auto-verified \u2014 confirm before citing.",
+   "note": "URL confirmed today \u2014 the old values.snap.com/privacy/transparency/community-guidelines redirects to /policy/policy-community-guidelines. The guidelines are one continuous page with no per-policy anchors, so the topic labels below are summarised. Confirm wording on the page before a formal referral.",
    "policies": [
     {
      "name": "Terrorism, Violent Extremism, and Hate",
-     "url": "https://values.snap.com/privacy/transparency/community-guidelines",
+     "url": "https://values.snap.com/policy/policy-community-guidelines",
      "prohibits": "Terrorist and violent extremist content, hate speech and hate group activity.",
      "maps_to": [
       "isis_terrorism",
@@ -781,7 +846,7 @@
     },
     {
      "name": "Illegal or Regulated Activities",
-     "url": "https://values.snap.com/privacy/transparency/community-guidelines",
+     "url": "https://values.snap.com/policy/policy-community-guidelines",
      "prohibits": "Trade in drugs, counterfeit goods and weapons.",
      "maps_to": [
       "narcotics",
@@ -790,7 +855,7 @@
     },
     {
      "name": "Sexual Content Involving Minors",
-     "url": "https://values.snap.com/privacy/transparency/community-guidelines",
+     "url": "https://values.snap.com/policy/policy-community-guidelines",
      "prohibits": "Any sexual exploitation of minors.",
      "maps_to": [
       "child_safety"
@@ -821,14 +886,14 @@
   },
   "reddit": {
    "display": "Reddit",
-   "index": "https://redditinc.com/policies/content-policy",
+   "index": "https://redditinc.com/policies/reddit-rules",
    "verified": false,
    "last_verified": null,
-   "note": "NOT auto-verified \u2014 confirm before citing.",
+   "note": "URL confirmed today (redditinc.com/policies/content-policy now redirects to /policies/reddit-rules, 8 numbered rules). Rule topic labels below are summarised, not quoted \u2014 open the link to confirm exact wording before a formal referral.",
    "policies": [
     {
      "name": "Rule 1 \u2014 Violence and hate",
-     "url": "https://redditinc.com/policies/content-policy",
+     "url": "https://redditinc.com/policies/reddit-rules",
      "prohibits": "Communities or content that incite violence or promote hate based on identity or vulnerability.",
      "maps_to": [
       "antisemitism",
@@ -839,7 +904,7 @@
     },
     {
      "name": "Rule 4 \u2014 Minors",
-     "url": "https://redditinc.com/policies/content-policy",
+     "url": "https://redditinc.com/policies/reddit-rules",
      "prohibits": "Sexual or suggestive content involving minors.",
      "maps_to": [
       "child_safety"
@@ -847,5 +912,28 @@
     }
    ]
   }
+ },
+ "_verification": {
+  "verified_live": [
+   "facebook",
+   "instagram",
+   "threads",
+   "youtube",
+   "x"
+  ],
+  "url_confirmed_only": [
+   "reddit",
+   "snapchat",
+   "telegram"
+  ],
+  "not_verified": [
+   "tiktok"
+  ],
+  "corrections_found": [
+   "Meta renamed 'Hate Speech' to 'Hateful Conduct' (URL slug still hate-speech).",
+   "X policy is titled 'Violent Content Policy', not 'Violent Speech Policy'.",
+   "Reddit content-policy URL now redirects to /policies/reddit-rules.",
+   "Snapchat guidelines moved to values.snap.com/policy/policy-community-guidelines."
+  ]
  }
 }
