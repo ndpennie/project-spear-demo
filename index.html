@@ -427,7 +427,7 @@ body.simple .card > .photo.vidbox{border-top:none}
   --glow:rgba(47,168,204,.30);
   --s1:#2FA8CC; --s2:#B7791F; --s3:#2F855A; --s4:#C0261A;   /* hunt · capture · flag · act */
 }
-body{font-family:var(--body);
+body{font-family:var(--disp);font-size:15px;line-height:1.6;letter-spacing:.1px;
   background:
     linear-gradient(rgba(21,42,78,.028) 1px,transparent 1px) 0 0/100% 34px,
     linear-gradient(90deg,rgba(21,42,78,.028) 1px,transparent 1px) 0 0/34px 100%,
@@ -480,13 +480,40 @@ h3:before{content:"▍";color:var(--cyan);margin-right:7px;font-weight:400}
 .vsec .lbl{font-family:var(--disp);font-weight:700}
 .vsec .lbl:before{content:"◇ ";color:var(--cyan);font-size:10px}
 
-/* keep long-form reading plain and large enough */
-.vdesc,.vsec .val,.note,.refitem,td,li,p{font-family:var(--body)}
-.vdesc{font-size:15px;line-height:1.65}
+/* Chakra Petch throughout, sized up so it reads easily at length */
+body,input,select,textarea,button,table,td,th,li,p,.note,.vdesc,.vsec .val,.refitem,
+.librow,.newrow,.logtable,.aaSub,.cmdhint,.herotext .n{font-family:var(--disp)}
+.vdesc{font-size:16px;line-height:1.7}
+.vsec .val{font-size:15px;line-height:1.65}
+.note{font-size:13.6px;line-height:1.6}
+td,th{font-size:14px}
+input,select,textarea{font-size:15px}
+.refitem{font-size:14px;line-height:1.6}
 
 @media (prefers-reduced-motion:reduce){
   .vcard,.verdict,.newbox,.acceptbox{animation:none!important}
 }
+
+.btn.btn-lib{background:#0F766E;border-color:#0F766E;color:#fff;font-weight:800}
+.btn.btn-lib:hover{background:#0c5f59}
+.libbox{background:#f7fbfb;border:2px dashed #8FCFC9;border-radius:12px;padding:14px 16px;margin-top:11px;transition:.15s;
+  clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
+.libbox.drag{background:#eafaf8;border-color:#0F766E;border-style:solid}
+.libhead{font-family:var(--disp);font-weight:700;font-size:15px;color:var(--navy);letter-spacing:.6px}
+.librow{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-top:1px solid #e6f0ef;font-size:13px}
+.librow:first-child{border-top:none}
+.libtag{font-family:var(--disp);font-size:10.5px;font-weight:800;letter-spacing:.7px;color:#fff;background:#0F766E;
+  border-radius:11px;padding:2px 9px;white-space:nowrap;text-transform:uppercase}
+
+/* navigation: bigger targets, obvious current tab */
+.tabs{gap:7px;padding-bottom:2px;border-bottom:2px solid var(--line);margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:11px 20px;font-size:14.5px;font-weight:700;cursor:pointer;position:relative;top:2px}
+.tab.on{box-shadow:0 -3px 0 var(--cyan) inset}
+.tab:hover{filter:brightness(1.05)}
+.btn{padding:9px 16px;font-size:14px}
+.btn.mute{font-weight:600}
+label,summary{font-size:14px}
+summary{padding:3px 0}
 </style>
 </head>
 <body>
@@ -787,9 +814,31 @@ h3:before{content:"▍";color:var(--cyan);margin-right:7px;font-weight:400}
       <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
         <button class="btn" onclick="askAssistant()">🔎 Ask the system</button>
         <button class="btn sec" onclick="assistantIngest()" title="Add what you just described to the system's knowledge so it develops context and can flag it going forward">📚 Teach the system this</button>
+        <button class="btn btn-lib" onclick="document.getElementById('libUpload').scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('libFile').click()" title="Upload research, a legal ruling, a case study or a codebook so the system can reason from it">📎 Upload a document</button>
         <button class="btn sec" onclick="assistantBrief()" title="Draft a law-enforcement early-warning brief from this conversation and the system's findings">🚨 Draft LE early-warning brief</button>
         <button class="btn mute" onclick="aiClear()">Clear</button>
         <span class="note" id="aiStat" style="margin:0"></span>
+      </div>
+      <div id="libUpload" class="libbox">
+        <div class="libhead">📚 Teach the system — upload what you know</div>
+        <div class="note" style="margin:2px 0 9px">Research papers, legal rulings, court opinions, case studies, threat reports, codebooks, your own findings. The system reads the text, keeps it, and reasons from it when answering — citing what it used. <b>PDF · Word · text · Markdown · CSV.</b></div>
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
+          <select id="libKind" style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13.5px;font-family:inherit">
+            <option value="research">Research / academic paper</option>
+            <option value="legal">Legal ruling / court opinion / statute</option>
+            <option value="case">Case study / incident write-up</option>
+            <option value="codebook">Codebook / glossary of terms</option>
+            <option value="finding">My own finding / field note</option>
+            <option value="policy">Platform policy / ToS</option>
+            <option value="source">Reference source</option>
+          </select>
+          <input type="file" id="libFile" accept=".pdf,.docx,.txt,.md,.csv,.json,text/*" multiple style="flex:1;min-width:220px">
+          <button class="btn btn-lib" onclick="ingestLibraryFiles()">📎 Add to the Library</button>
+        </div>
+        <div class="note" id="libStat" style="margin:8px 0 0"></div>
+        <div id="libRecent" style="margin-top:9px"></div>
+      </div>
+      <div class="row" style="display:none">
       </div>
     </div>
     <div id="libPane" style="display:none">
@@ -955,7 +1004,7 @@ h3:before{content:"▍";color:var(--cyan);margin-right:7px;font-weight:400}
   </div>
 </div>
 <div class="refbox">
-  <div class="refhead">📎 Why some things don't come back in a search</div>
+  <div class="refhead">📎 Important notes about search access</div>
   <div class="refcols">
     <div class="refcol">
       <div class="reftitle ok">✅ The system searches these itself</div>
@@ -3236,6 +3285,176 @@ async function askAssistant(){
   aiPush('assistant',aiSynthesize(q,R,backend),'');
   window.__aiLastFindings={q,R,backend};stat.textContent='';renderAIKB();
 }
+
+// ================= LIBRARY: UPLOAD + PERSIST + LEARN FROM REPORTS =================
+// "Teach the system" was typed text only. This makes it a real library: research
+// papers, legal rulings, case studies, codebooks and Eric's own findings go in as
+// files, are kept between sessions, and are retrieved and cited when the AI answers.
+const LIB_KEY='spear_library', LIB_MAX_DOC=400000, LIB_MAX_TOTAL=3000000;
+
+function libSave(){
+  try{
+    // seeds reload themselves; only persist what the analyst added
+    let mine=LIBRARY.filter(d=>d.ts!=='seed');
+    let total=0; const keep=[];
+    for(const d of mine){
+      const t=(d.text||'').slice(0,LIB_MAX_DOC);
+      if(total+t.length>LIB_MAX_TOTAL)break;
+      total+=t.length;
+      keep.push({...d,text:t,image:null});
+    }
+    localStorage.setItem(LIB_KEY,JSON.stringify(keep));
+  }catch(e){ /* quota — the library still works this session */ }
+}
+function libLoad(){
+  try{
+    const a=JSON.parse(localStorage.getItem(LIB_KEY)||'[]');
+    const have=new Set(LIBRARY.map(d=>d.id));
+    a.forEach(d=>{if(!have.has(d.id))LIBRARY.push(d)});
+  }catch(e){}
+  libRecent();
+}
+
+// ---- text extraction ----
+async function _readText(f){return await f.text()}
+async function _readPDF(f){
+  if(!window.pdfjsLib){
+    await new Promise((res,rej)=>{const sc=document.createElement('script');
+      sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';sc.onload=res;
+      sc.onerror=()=>rej(new Error('could not load the PDF reader — check the internet connection'));
+      document.head.appendChild(sc)});
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const doc=await window.pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+  let out='';
+  const pages=Math.min(doc.numPages,120);
+  for(let i=1;i<=pages;i++){
+    const pg=await doc.getPage(i);
+    const c=await pg.getTextContent();
+    out+=c.items.map(x=>x.str).join(' ')+'\n';
+    if(out.length>LIB_MAX_DOC)break;
+  }
+  return out;
+}
+async function _readDOCX(f){
+  if(!window.JSZip){
+    await new Promise((res,rej)=>{const sc=document.createElement('script');
+      sc.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';sc.onload=res;
+      sc.onerror=()=>rej(new Error('could not load the Word reader — check the internet connection'));
+      document.head.appendChild(sc)});
+  }
+  const zip=await window.JSZip.loadAsync(await f.arrayBuffer());
+  const file=zip.file('word/document.xml'); if(!file)return '';
+  const xml=await file.async('string');
+  return xml.replace(/<\/w:p>/g,'\n').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/[ \t]+/g,' ').trim();
+}
+async function extractDocText(f){
+  const n=(f.name||'').toLowerCase();
+  if(n.endsWith('.pdf'))return await _readPDF(f);
+  if(n.endsWith('.docx'))return await _readDOCX(f);
+  if(/\.(txt|md|csv|json|log|htm|html)$/.test(n)||/^text\//.test(f.type||''))return await _readText(f);
+  if(n.endsWith('.doc'))throw new Error('old .doc format not supported — save it as .docx or PDF');
+  throw new Error('unsupported file type');
+}
+
+const LIB_KIND_LABEL={research:'Research',legal:'Legal ruling',case:'Case study',
+  codebook:'Codebook',finding:'Finding',policy:'Policy',source:'Source'};
+
+async function ingestLibraryFiles(){
+  const inp=document.getElementById('libFile');
+  const files=[...(inp&&inp.files||[])];
+  const st=document.getElementById('libStat');
+  if(!files.length){toast('Choose a file first');return}
+  const kind=(document.getElementById('libKind')||{}).value||'source';
+  let ok=0;
+  for(let i=0;i<files.length;i++){
+    const f=files[i];
+    st.textContent=`Reading ${i+1} of ${files.length} — ${f.name}…`;
+    setBusy(true,`Reading ${f.name}…`);
+    try{
+      let text=(await extractDocText(f)||'').replace(/\s+/g,' ').trim();
+      if(text.length<20)throw new Error('no readable text found (a scanned PDF needs OCR first)');
+      text=text.slice(0,LIB_MAX_DOC);
+      const terms=(typeof candidateTerms==='function')?candidateTerms(text).slice(0,12):[];
+      LIBRARY.unshift({id:'lib-'+Date.now()+'-'+i,name:f.name,kind,
+        note:LIB_KIND_LABEL[kind]||kind,url:'',size:text.length,text,
+        chunks:Math.ceil(text.length/600),terms,imported:0,image:null,
+        ts:new Date().toLocaleString()});
+      ok++;
+    }catch(e){
+      const msg=(e&&e.message)?e.message:(e&&e.type?'could not read the file (network or format problem)':String(e));
+      st.textContent=`⚠ ${f.name}: ${String(msg).slice(0,140)}`;
+    }
+  }
+  setBusy(false);
+  libSave(); libRecent();
+  if(typeof renderLibrary==='function'){try{renderLibrary()}catch(e){}}
+  if(typeof renderAIKB==='function'){try{renderAIKB()}catch(e){}}
+  if(ok){st.textContent=`✅ Added ${ok} document(s). The system will use them when it answers, and cite them.`;toast(`${ok} document(s) added to the Library`);}
+  inp.value='';
+}
+
+function libRecent(){
+  const el=document.getElementById('libRecent'); if(!el)return;
+  const mine=LIBRARY.filter(d=>d.ts!=='seed').slice(0,8);
+  if(!mine.length){el.innerHTML='<div class="note" style="margin:0">Nothing uploaded yet. Seed sources are still searched.</div>';return}
+  const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
+  el.innerHTML=mine.map(d=>`<div class="librow">
+    <span class="libtag">${e(LIB_KIND_LABEL[d.kind]||d.kind)}</span>
+    <div style="flex:1;min-width:0"><b>${e(d.name)}</b>
+      <div class="note" style="margin:1px 0 0">${(d.size||0).toLocaleString()} characters · ${d.chunks||0} passages${d.terms&&d.terms.length?' · '+e(d.terms.slice(0,4).join(', ')):''}</div></div>
+    <button class="btn mute" style="padding:3px 9px;font-size:11.5px" onclick="libRemove('${e(d.id)}')">Remove</button>
+  </div>`).join('');
+}
+function libRemove(id){
+  const i=LIBRARY.findIndex(d=>d.id===id); if(i<0)return;
+  const n=LIBRARY[i].name; LIBRARY.splice(i,1);
+  libSave(); libRecent();
+  if(typeof renderLibrary==='function'){try{renderLibrary()}catch(e){}}
+  toast('Removed '+n);
+}
+
+// ---- learn from his own reports ----
+// A confirmed or escalated incident is a verified finding. It goes into the
+// Library so the next question is answered with his own precedent, not just theory.
+function libLearnFromReport(it,status){
+  if(!it)return;
+  const v=it.visionRaw||{}, a=(it.audio&&!it.audio.__error)?it.audio:{};
+  const sig=[...new Set([...(it.indicators||[]),...(v.indicators||[]),...(a.indicators||[])])].filter(Boolean);
+  const text=[
+    `CONFIRMED FINDING (${status}) — ${new Date().toLocaleDateString()}`,
+    `Platform: ${it.platform||'unknown'} · Account: ${it.poster||'unknown'} · ${it.url||''}`,
+    `Category: ${(it.category||'').replace(/_/g,' ')} · Analyst-confirmed risk ${it.score}/10 (${it.tier}) · grade ${it.grade||'—'}`,
+    it.visionDesc||v.description?`What it showed: ${it.visionDesc||v.description}`:'',
+    v.translation||a.translation?`Translation: ${v.translation||a.translation}`:'',
+    a.description?`Audio: ${a.description}`:'',
+    v.threat?`Why it mattered: ${v.threat}`:'',
+    v.policy?`Policy engaged: ${v.policy}`:'',
+    sig.length?`Signals: ${sig.join(', ')}`:'',
+    (it.ocr||'').trim()?`Text on it: ${String(it.ocr).slice(0,600)}`:''
+  ].filter(Boolean).join('\n');
+  const id='rep-'+it.id;
+  const existing=LIBRARY.findIndex(d=>d.id===id);
+  const rec={id,name:`Confirmed: ${(it.category||'finding').replace(/_/g,' ')} — ${it.poster||it.name||'item '+it.id}`,
+    kind:'finding',note:`Analyst-confirmed ${status.toLowerCase()} finding`,url:it.url||'',
+    size:text.length,text,chunks:Math.ceil(text.length/600),terms:sig.slice(0,12),
+    imported:0,image:null,ts:new Date().toLocaleString()};
+  if(existing>=0)LIBRARY[existing]=rec; else LIBRARY.unshift(rec);
+  libSave(); libRecent();
+  if(typeof renderLibrary==='function'){try{renderLibrary()}catch(e){}}
+}
+
+function initLibraryUpload(){
+  libLoad();
+  const box=document.getElementById('libUpload'); if(!box)return;
+  ['dragenter','dragover'].forEach(ev=>box.addEventListener(ev,e=>{e.preventDefault();box.classList.add('drag')}));
+  ['dragleave','drop'].forEach(ev=>box.addEventListener(ev,e=>{e.preventDefault();box.classList.remove('drag')}));
+  box.addEventListener('drop',e=>{
+    const f=e.dataTransfer&&e.dataTransfer.files;
+    if(f&&f.length){document.getElementById('libFile').files=f;ingestLibraryFiles()}
+  });
+}
+
 function assistantIngest(){
   const inp=document.getElementById('aiInput');const typed=(inp.value||'').trim();
   const src=typed||window.__aiLastQ||'';
@@ -3244,7 +3463,7 @@ function assistantIngest(){
   if(typed){aiPush('user',typed.replace(/</g,'&lt;'),typed);inp.value='';}
   const terms=(typeof candidateTerms==='function')?candidateTerms(src):[];
   const rec={id:'note-'+Date.now(),name:'Analyst note — '+new Date().toLocaleDateString(),kind:'analyst_note',note:'early-warning context added by analyst',url:'',size:src.length,text:src,chunks:Math.ceil(src.length/600),terms,imported:0,image:null,ts:new Date().toLocaleString()};
-  LIBRARY.unshift(rec);
+  LIBRARY.unshift(rec);try{libSave();libRecent()}catch(e){}
   let proposed=0;terms.slice(0,6).forEach(t=>{
     if(CODEBOOK.some(e=>e.term.toLowerCase()===t.toLowerCase())||PROPOSALS.some(p=>p.term.toLowerCase()===t.toLowerCase()))return;
     PROPOSALS.push({id:'prop-'+Date.now()+Math.random().toString(36).slice(2,5),term:t,meaning:'(analyst-supplied — from an early-warning note; edit the meaning under Codebook & teach before approving)',kind:'term',variants:[],category:'propaganda',severity:3,context_required:true,status:'proposed',proposed_by:'analyst_ai'});proposed++;});
@@ -3755,6 +3974,7 @@ Be concrete. Do not just restate the description.`;
 function act(status){const it=items.find(i=>i.id===selId);if(!it)return;
   if(status==='Escalated'&&it.tier==='CRITICAL'&&it.reviewers.length<1){it.reviewers.push('Strategic');log(it,'first confirmation recorded','CRITICAL requires a second analyst before escalation');render();return}
   it.status=status;log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}${API_BASE?' · feedback → library':' · feedback recorded (demo)'}`);sendFeedback(it,status);
+  if(status==='Confirmed'||status==='Escalated'){try{libLearnFromReport(it,status)}catch(e){}}
   if((status==='Confirmed'||status==='Escalated')&&typeof huntSeedFrom==='function'){const n=huntSeedFrom({poster:it.poster,text:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,hits:it.indicators||[],image_hash:it.dhash||'',category:it.category});if(n)toast(`Confirmed threat added ${n} live target(s) to the hunt`)}
   render();
   if(status==='Confirmed'||status==='Escalated'){
@@ -3861,7 +4081,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();initSimple();initHero();initPush();loadPolicies();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();initSimple();initHero();initPush();loadPolicies();initLibraryUpload();
 if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
 // crawl is OFF by default — the user starts it with the Start crawl toggle (saves data)
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
