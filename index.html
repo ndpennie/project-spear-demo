@@ -297,6 +297,32 @@ body.simple .kpis{display:none}
 .vpill{border-radius:20px;padding:5px 13px;font-size:12.8px;font-weight:800;color:#fff;background:#5a6675}
 .vpill.sc{background:#B42318}.vpill.ok{background:#2F855A}.vpill.md{background:#B7791F}
 .vsig{background:#f3f6fa;border-radius:14px;padding:3px 11px;font-size:12.3px;color:#152A4E;font-weight:600}
+/* ---- Follow-up questions about THIS image (keeps him inside the card) ---- */
+.vask{margin-top:12px;padding:11px 12px 12px;border-top:2px solid #F5C518;background:#FFFDF3;border-radius:0 0 8px 8px}
+.vask .askhd{font-size:12.5px;font-weight:800;letter-spacing:.4px;color:#6b5200;text-transform:uppercase;margin-bottom:7px}
+.vaskrow{display:flex;gap:7px;align-items:stretch}
+.vaskrow input{flex:1;min-width:0;padding:11px 13px;font-size:15px;border:2px solid #E4C64B;border-radius:7px;background:#fff}
+.vaskrow input:focus{outline:none;border-color:#B7791F;box-shadow:0 0 0 3px rgba(245,197,24,.25)}
+.vaskrow button{padding:11px 18px;font-size:14.5px;font-weight:800;border:2px solid #F5C518;background:#F5C518;color:#3d2f00;border-radius:7px;cursor:pointer;white-space:nowrap}
+.vaskrow button:hover{background:#e6b800}
+.vaskrow button[disabled]{opacity:.55;cursor:default}
+.vchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.vchip{background:#fff;border:1.5px solid #E4C64B;border-radius:16px;padding:5px 12px;font-size:12.8px;font-weight:600;color:#5a4400;cursor:pointer}
+.vchip:hover{background:#FFF6D6}
+.vchat{margin-top:10px;display:flex;flex-direction:column;gap:9px}
+.vfollow{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 15px;font-size:13.5px;font-weight:800;
+  border:2px solid #F5C518;background:#F5C518;color:#3d2f00;border-radius:20px;cursor:pointer;align-self:flex-start}
+.vfollow:hover{background:#e6b800}
+.vask.shut .vaskrow,.vask.shut .vchips{display:none}
+.vask:not(.shut)>.vfollow{display:none}  /* the opener retires once the box is open */
+.vask.shut .askhd{margin-bottom:0}
+.vask.shut .vchat:empty{margin-top:0}
+.vturn{border-radius:8px;padding:9px 12px;font-size:14.5px;line-height:1.62}
+.vturn.q{background:#152A4E;color:#fff;font-weight:600;align-self:flex-end;max-width:88%}
+.vturn.a{background:#fff;border:1px solid #e6e9ef;border-left:4px solid #F5C518;color:#1b2430;white-space:pre-wrap}
+.vturn.a b{color:#152A4E}
+.vturn.pending{color:#8a6d00;font-style:italic;background:#FFF6D6;border-left-color:#B7791F}
+.vturn.err{background:#FEF3F2;border-left-color:#B42318;color:#8f1d14}
 
 .verdict{display:flex;align-items:center;gap:12px;border-radius:10px;padding:12px 16px;margin:0 0 12px;font-weight:800}
 .verdict .vico{font-size:27px;line-height:1}
@@ -1551,6 +1577,108 @@ function exportLogCSV(){
   toast(`Exported ${rows.length} record(s)`);
 }
 
+// ================= ASK FOLLOW-UP QUESTIONS ABOUT ONE IMAGE =================
+// Eric's habit is to keep pushing on a picture until he is sure. This lets him do
+// that on the card itself — no new upload, no tab switch. The ORIGINAL image is
+// sent again with every question, so the model looks at the picture afresh rather
+// than reasoning off its own earlier sentence, and the whole exchange is carried
+// forward so answers get sharper instead of resetting.
+const VASK_CHIPS={
+  image:['What is the symbol exactly?','Explain everything else on this screen','Zoom in on the top left',
+         'Translate every word you can see','Are you sure? What would prove you wrong?','What group uses this?',
+         'Whose account is this, and what else is on it?','Which policy exactly, and which clause?',
+         'What am I missing in the background?','How confident are you, and why?'],
+  audio:['Write out exactly what is said','What language and dialect is this?','Who is the speaker talking to?',
+         'Are you sure? What would prove you wrong?','Is anything coded or slang?','Which policy exactly, and which clause?']
+};
+
+// The box stays out of the way until he wants it. Every answer carries its own
+// "Follow up" button, so refining is one click from wherever he is reading.
+function openAsk(id){
+  const box=document.getElementById('vask-'+id); if(!box)return;
+  box.classList.remove('shut');
+  const inp=document.getElementById('vq-'+id);
+  if(inp){inp.focus();inp.scrollIntoView({behavior:'smooth',block:'center'})}
+}
+
+function _askEsc(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+
+// Build the running context so the model keeps its own earlier answers straight.
+function _askContext(it,q){
+  const v=it.visionRaw||{}, tf=it.textFallback||{}, a=(it.audio&&!it.audio.__error)?it.audio:{};
+  const first=(it.visionDesc||v.description||tf.description||a.description||'').slice(0,900);
+  const hist=(it.chat||[]).filter(t=>!t.err).slice(-4)
+      .map(t=>`ANALYST ASKED: ${t.q}\nYOU ANSWERED: ${String(t.a).slice(0,500)}`).join('\n');
+  return [
+    'You are the Vision AI for GIPEC AI², working for an experienced extremism analyst.',
+    'You already looked at this exact ' + (it.type==='audio'?'recording':'image') + ' and said:',
+    '"' + first + '"',
+    (v.threat?'You also said it matters because: '+String(v.threat).slice(0,300):''),
+    (it.score!=null?`You scored it ${it.score}/10 (${it.category||''}).`:''),
+    (hist?'\nEARLIER FOLLOW-UPS IN THIS CONVERSATION:\n'+hist:''),
+    '',
+    'The analyst is now asking a FOLLOW-UP question. LOOK AT THE ' + (it.type==='audio'?'AUDIO':'IMAGE') + ' AGAIN before answering — do not just repeat what you said before.',
+    'Rules: answer the question that was actually asked, in plain English, in at most 150 words.',
+    'If you cannot tell from the ' + (it.type==='audio'?'audio':'picture') + ', say so plainly instead of guessing.',
+    'If the analyst is challenging you and he is right, say you were wrong and correct it.',
+    'If he is wrong, hold your position and explain why.',
+    'If he asks about something else visible in the picture — another post, an advert, a caption, a\n'+
+    'username, a comment, the interface around the post — answer about THAT, even if it had nothing to do\n'+
+    'with why the image was flagged. A screenshot usually holds more than the one thing that triggered the score.',
+    'Do not restate the whole description. No preamble, no bullet headings — just the answer.',
+    '',
+    'ANALYST\'S QUESTION: ' + q
+  ].filter(Boolean).join('\n');
+}
+
+async function askImage(id,preset){
+  const it=items.find(x=>x.id===id); if(!it){toast('That image is no longer open');return}
+  const inp=document.getElementById('vq-'+id);
+  const q=String(preset||(inp&&inp.value)||'').trim();
+  if(!q){toast('Type what you want to know about the image');if(inp)inp.focus();return}
+  if(inp)inp.value='';
+  const wrap=document.getElementById('vchat-'+id); if(!wrap)return;
+  const btn=wrap.closest('.vask').querySelector('.vaskrow button'); if(btn)btn.disabled=true;
+
+  wrap.insertAdjacentHTML('beforeend','<div class="vturn q">'+_askEsc(q)+'</div>'+
+    '<div class="vturn pending" id="vpend-'+id+'">Looking at the '+(it.type==='audio'?'recording':'picture')+' again…</div>');
+  const pend=document.getElementById('vpend-'+id);
+  if(pend)pend.scrollIntoView({behavior:'smooth',block:'nearest'});
+
+  let ans='',err=false;
+  try{
+    const media=it.thumb||(it.frames&&it.frames[0]&&it.frames[0].thumb)||'';
+    const ctx=_askContext(it,q);
+    let r=null;
+    if(media&&/^data:(image|audio)\//.test(media)){
+      // Re-send the actual media so it genuinely re-examines it.
+      r=await visionAnalyze(media,ctx+'\n\nPut your answer in the "description" field.');
+    }
+    if(!r||r.__error){
+      // No media on hand (or vision refused) — fall back to reasoning over what we recorded.
+      const t=await geminiAnalyzeText(ctx);
+      if(t&&!t.__error)r=t; else if(!r)r={__error:'Vision AI is not reachable right now'};
+    }
+    if(r&&r.__error){err=true;ans='Could not answer: '+r.__error;}
+    else{
+      ans=String(r.answer||r.description||r.threat||'').trim();
+      if(!ans){err=true;ans='The AI came back empty. Try asking it a different way, or press Re-analyze first.'}
+      // A follow-up can legitimately change the reading — keep the record honest.
+      if(!err&&typeof r.risk_score==='number'&&Math.abs(r.risk_score-(it.score||0))>=3){
+        ans+='\n\n(Note: on this second look it scored the image '+r.risk_score+'/10 rather than '+(it.score||0)+'/10. Press Re-analyze if you want the card rescored.)';
+      }
+    }
+  }catch(e){err=true;ans='Could not answer: '+(e&&e.message?e.message:String(e));}
+
+  it.chat=it.chat||[]; it.chat.push({q,a:ans,err,t:Date.now()});
+  if(pend){pend.className='vturn '+(err?'err':'a');pend.textContent=ans;pend.removeAttribute('id');
+    pend.insertAdjacentHTML('afterend','<button class="vfollow" onclick="openAsk('+id+')">💬 Follow up on this answer</button>');
+    pend.scrollIntoView({behavior:'smooth',block:'nearest'});}
+  if(btn)btn.disabled=false;
+  // The exchange is part of the evidence trail — keep it with the incident.
+  try{if(typeof log==='function')log(it,'follow-up question',q.slice(0,120))}catch(e){}
+}
+
 function renderVisionCard(it){
   const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
   const v=it.visionRaw||{};
@@ -1611,6 +1739,21 @@ function renderVisionCard(it){
         ? `<div class="vsec"><details><summary class="lbl" style="cursor:pointer">Raw text the scanner pulled off the image <span style="font-weight:400;text-transform:none;letter-spacing:0">(rough — Vision AI's reading above is the accurate one)</span></summary><div class="val" style="font-size:12.6px;color:#5a6675;margin-top:5px">${e(ocr.slice(0,400))}</div></details></div>`
         : `<div class="vsec"><div class="lbl">Text read in the image</div><div class="val" style="font-size:13.2px;color:#39424e">${e(ocr.slice(0,400))}</div></div>`):''}
     ${sigs.length?`<div class="vsec"><div class="lbl">Signals</div><div class="vpills">${sigs.map(x=>`<span class="vsig">${e(x)}</span>`).join('')}</div></div>`:''}
+    ${(!off)?`<div class="vask${(it.chat&&it.chat.length)?'':' shut'}" id="vask-${it.id}">
+      <div class="askhd">💬 Not sure? Ask it about this ${it.type==='audio'?'recording':'image'}</div>
+      ${(it.chat&&it.chat.length)?'':`<button class="vfollow" onclick="openAsk(${it.id})">💬 Follow up on this answer</button>`}
+      <div class="vaskrow">
+        <input id="vq-${it.id}" placeholder="e.g. What is the symbol in the top left? Is it really antisemitic?"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();askImage(${it.id})}">
+        <button onclick="askImage(${it.id})">Ask</button>
+      </div>
+      <div class="vchips">
+        ${VASK_CHIPS[it.type==='audio'?'audio':'image'].map(c=>`<span class="vchip" onclick="askImage(${it.id},this.textContent)">${c}</span>`).join('')}
+      </div>
+      <div class="vchat" id="vchat-${it.id}">${(it.chat||[]).map(t=>
+        `<div class="vturn q">${e(t.q)}</div><div class="vturn ${t.err?'err':'a'}">${e(t.a)}</div>
+         <button class="vfollow" onclick="openAsk(${it.id})">💬 Follow up on this answer</button>`).join('')}</div>
+    </div>`:''}
     <div class="vsec"><div class="row" style="gap:8px;flex-wrap:wrap">
       ${it.type!=='audio'?`<button class="btn btn-retry" onclick="retryVision(${it.id},this)" title="Run Vision AI on this image again — no need to upload it a second time">🔁 Re-analyze</button>`:''}
       <button class="btn btn-ask" onclick="discussIncident(${it.id},'why')">💬 Ask the AI</button>
