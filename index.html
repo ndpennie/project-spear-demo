@@ -384,6 +384,17 @@ body.simple .card > .photo.vidbox{border-top:none}
   padding:10px 20px;font-size:14.5px;box-shadow:0 2px 0 #8A1C12}
 .btn.btn-decide:hover{background:#a51f15}
 .btn.btn-decide:active{transform:translateY(2px);box-shadow:0 0 0 #8A1C12}
+
+.refbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin:16px 0 10px;box-shadow:0 1px 3px rgba(21,42,78,.06)}
+.refhead{font-size:14.5px;font-weight:800;color:var(--navy);margin-bottom:10px}
+.refcols{display:flex;gap:26px;flex-wrap:wrap}
+.refcol{flex:1;min-width:270px}
+.reftitle{font-size:12.4px;font-weight:800;letter-spacing:.3px;margin-bottom:6px}
+.reftitle.ok{color:#1B5E33}.reftitle.no{color:#8A5A00}
+.refitem{font-size:13.2px;line-height:1.55;margin:5px 0;padding-left:11px;border-left:2px solid #eef1f5}
+.refitem b{color:#1f2933}
+.refnote{color:#5a6675;font-size:12.5px}
+.reffoot{margin-top:11px;padding-top:10px;border-top:1px solid #eef1f5;font-size:12.9px;color:#39424e;line-height:1.6}
 </style>
 </head>
 <body>
@@ -834,6 +845,29 @@ body.simple .card > .photo.vidbox{border-top:none}
     <div class="empty">Select an item in the queue.</div>
   </div>
 </div>
+<div class="refbox">
+  <div class="refhead">📎 Why some things don't come back in a search</div>
+  <div class="refcols">
+    <div class="refcol">
+      <div class="reftitle ok">✅ The system searches these itself</div>
+      <div class="refitem"><b>Telegram</b> — public channels, real messages</div>
+      <div class="refitem"><b>Bluesky</b> — posts and handles</div>
+      <div class="refitem"><b>Mastodon / fediverse</b> — public hashtag feeds</div>
+      <div class="refitem"><b>8kun</b> — thread text only <span class="refnote">(images are never downloaded — those boards carry illegal material)</span></div>
+      <div class="refitem"><b>Odysee</b> — video titles and channels</div>
+      <div class="refitem"><b>Open web</b> — finds accounts, storefronts, mirrors and reporting</div>
+    </div>
+    <div class="refcol">
+      <div class="reftitle no">⛔ These cannot be searched — here's why</div>
+      <div class="refitem"><b>Facebook &amp; Instagram</b> — Meta blocks every crawler. <span class="refnote">Nobody can search these, at any price, without Meta Content Library access. Capture them yourself: paste the link in the box at the top.</span></div>
+      <div class="refitem"><b>X / Twitter</b> — X charges for search (about $100–200 a month). <span class="refnote">Accounts still turn up; their individual posts don't.</span></div>
+      <div class="refitem"><b>Snapchat</b> — <span class="refnote">no public search exists at all. Not blocked, not paid — it simply isn't offered.</span></div>
+      <div class="refitem"><b>Gab · Rumble</b> — <span class="refnote">both refuse automated access.</span></div>
+    </div>
+  </div>
+  <div class="reffoot">If a search comes back empty, it usually means the platform is on the right-hand list — <b>not</b> that there is nothing out there. For anything on the right, capture it by hand: copy the link and paste it into the box at the top, or upload a screenshot.</div>
+</div>
+
 <footer>Project Spear · Proprietary & confidential · Photo pipeline: OCR in-browser (Tesseract) · vision model via backend · Codebook v0.4 (106 entries: extremism, domestic terrorism, narcotics, counterfeit meds, public safety, child-safety routing, self-harm/suicide-promotion) is a living library: analysts propose, owner approves, decisions export as training data. Threat domains — violent extremism (propaganda · recruitment · glorification · incitement · financing · operational planning · benign. Evidence grades: Observed · Corroborated · Inferred · Predicted · Disputed · Unverified. Every action is written to the immutable audit log; CRITICAL escalations require two-analyst confirmation.</footer>
 
 <script>
