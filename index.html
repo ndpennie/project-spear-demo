@@ -395,6 +395,24 @@ body.simple .card > .photo.vidbox{border-top:none}
 .refitem b{color:#1f2933}
 .refnote{color:#5a6675;font-size:12.5px}
 .reffoot{margin-top:11px;padding-top:10px;border-top:1px solid #eef1f5;font-size:12.9px;color:#39424e;line-height:1.6}
+
+.btn.btn-ask{background:#F5C518;border-color:#F5C518;color:#3d2f00;font-weight:800}
+.btn.btn-ask:hover{background:#dcb00c}
+.btn.btn-fix{background:#0F766E;border-color:#0F766E;color:#fff;font-weight:800}
+.btn.btn-fix:hover{background:#0c5f59}
+.acceptbox{background:#EAF8F0;border:2px solid #2F855A;border-radius:12px;padding:14px 17px;margin:0 0 12px;
+  animation:riseIn .34s cubic-bezier(.22,.9,.3,1) both}
+.aaRow{display:flex;gap:12px;align-items:flex-start}
+.aaIco{font-size:24px;line-height:1}
+.aaBody{flex:1;min-width:0}
+.aaTitle{font-size:15.5px;font-weight:800;color:#1B5E33}
+.aaSub{font-size:13.2px;color:#39424e;margin-top:2px}
+.aaBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+
+.btn.btn-policy{background:#6B46C1;border-color:#6B46C1;color:#fff;font-weight:800}
+.btn.btn-policy:hover{background:#5a39a6}
+.btn.btn-missed{background:#152A4E;border-color:#152A4E;color:#fff;font-weight:800}
+.btn.btn-missed:hover{background:#0e1f3a}
 </style>
 </head>
 <body>
@@ -481,6 +499,23 @@ body.simple .card > .photo.vidbox{border-top:none}
       <input id="heroPoster" placeholder="Who posted it? (optional — helps the report)" style="margin-top:9px;width:100%;max-width:390px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;font-family:inherit">
       <div class="herostat" id="heroStat"></div>
     </div>
+  </div>
+</div>
+<div id="afterAccept" style="display:none" class="acceptbox">
+  <div class="aaRow">
+    <span class="aaIco">✅</span>
+    <div class="aaBody">
+      <div class="aaTitle">Incident accepted</div>
+      <div class="aaSub">You've accepted this one. Ask the AI what is driving it and what to do next.</div>
+    </div>
+    <button class="btn mute" style="padding:5px 11px;font-size:12px" onclick="this.closest('.acceptbox').style.display='none'">Close</button>
+  </div>
+  <div class="aaBtns">
+    <button class="btn btn-ask" onclick="discussIncident(+this.closest('.acceptbox').dataset.id,'why')">💬 Why is this happening?</button>
+    <button class="btn btn-policy" onclick="discussIncident(+this.closest('.acceptbox').dataset.id,'policy')">📕 Why does it break their rules?</button>
+    <button class="btn btn-missed" onclick="discussIncident(+this.closest('.acceptbox').dataset.id,'missed')">🕳 Why did their AI miss it?</button>
+    <button class="btn btn-fix" onclick="discussIncident(+this.closest('.acceptbox').dataset.id,'fix')">🛠 What do I do about it?</button>
+    <button class="btn findmore" onclick="corroborate(+this.closest('.acceptbox').dataset.id)">🔎 Find more like this</button>
   </div>
 </div>
 <div id="demoBanner" style="display:none;background:#FFF4E5;border:2px solid #E8720C;border-radius:12px;padding:12px 16px;margin:0 0 12px;font-size:14px;color:#8A5A00;font-weight:700">
@@ -1405,8 +1440,18 @@ function renderVisionCard(it){
   const policy=(v.policy||'').trim();
   const tf=it.textFallback||{};
   const translation=((v.translation||tf.translation)||'').trim();
-  // OCR text only makes sense for pictures, and never when it just repeats the description
-  const ocr=(it.type==='audio')?'':(it.ocr||'').trim();
+  // OCR text only makes sense for pictures, and never when it just repeats the description.
+  // OCR mangles stylised type (blackletter, logos) and mixed scripts, so once Vision AI
+  // has read the image properly the raw string is diagnostics, not evidence — it gets
+  // folded away rather than sitting in the report looking like gibberish.
+  let ocr=(it.type==='audio')?'':(it.ocr||'').trim();
+  if(ocr){
+    const clean=ocr.replace(/[^\p{L}\p{N}\s.,:;!?'"#@/\\-]/gu,' ').replace(/\s+/g,' ').trim();
+    const junkRatio=1-(clean.length/Math.max(1,ocr.length));
+    if(junkRatio>0.35||clean.length<6)ocr='';       // mostly unreadable — don't show it
+    else ocr=clean;
+  }
+  const ocrIsNoise=!!(desc&&ocr);
   const off=!desc&&!(it.textFallback&&it.textFallback.description);
   const band = score>=7 ? {c:'red',  i:'⛔', t:'REPORT THIS',              s:'Clear violation — send it to the platform.'}
              : score>=4 ? {c:'amber',i:'⚠',  t:'WORTH A CLOSER LOOK',      s:'Something here needs your eye before deciding.'}
@@ -1432,13 +1477,21 @@ function renderVisionCard(it){
       </div>
     </div>
     ${threat?`<div class="vsec"><div class="lbl">Why it matters</div><div class="val">${e(threat)}</div></div>`:''}
-    ${policy&&!/^none$/i.test(policy)?`<div class="vsec"><div class="lbl">Policy it would violate</div><div class="val">${e(policy)}</div></div>`:''}
+    ${(()=>{const m=policyMatch(it);
+      if(m&&m.hits.length)return `<div class="vsec"><div class="lbl">Policy it would violate — ${e(m.plat.display)}</div>
+        <div class="val">${m.hits.map(pp=>`<div style="margin:3px 0"><a href="${e(pp.url)}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline;font-weight:700">${e(pp.name)}</a> <span class="note" style="margin:0">— ${e(pp.prohibits).slice(0,150)}</span></div>`).join('')}
+        ${m.plat.verified?'':'<div class="note" style="margin:5px 0 0;color:#8A5A00">⚠ These policy names are not auto-verified for this platform — check the link before sending a formal referral.</div>'}</div></div>`;
+      return policy&&!/^none$/i.test(policy)?`<div class="vsec"><div class="lbl">Policy it would violate</div><div class="val">${e(policy)}</div></div>`:'';})()}
     ${(v.language||'').trim()?`<div class="vsec"><div class="lbl">Language spoken</div><div class="val">${e(v.language)}</div></div>`:''}
     ${translation?`<div class="vsec"><div class="lbl">English translation</div><div class="val">${e(translation)}</div></div>`:''}
-    ${(ocr&&ocr.slice(0,80)!==(desc||'').slice(0,80))?`<div class="vsec"><div class="lbl">Text read in the image</div><div class="val" style="font-size:13.2px;color:#39424e">${e(ocr.slice(0,400))}</div></div>`:''}
+    ${(ocr&&ocr.slice(0,80)!==(desc||'').slice(0,80))?(ocrIsNoise
+        ? `<div class="vsec"><details><summary class="lbl" style="cursor:pointer">Raw text the scanner pulled off the image <span style="font-weight:400;text-transform:none;letter-spacing:0">(rough — Vision AI's reading above is the accurate one)</span></summary><div class="val" style="font-size:12.6px;color:#5a6675;margin-top:5px">${e(ocr.slice(0,400))}</div></details></div>`
+        : `<div class="vsec"><div class="lbl">Text read in the image</div><div class="val" style="font-size:13.2px;color:#39424e">${e(ocr.slice(0,400))}</div></div>`):''}
     ${sigs.length?`<div class="vsec"><div class="lbl">Signals</div><div class="vpills">${sigs.map(x=>`<span class="vsig">${e(x)}</span>`).join('')}</div></div>`:''}
     <div class="vsec"><div class="row" style="gap:8px;flex-wrap:wrap">
       ${it.type!=='audio'?`<button class="btn btn-retry" onclick="retryVision(${it.id},this)" title="Run Vision AI on this image again — no need to upload it a second time">🔁 Re-analyze</button>`:''}
+      <button class="btn btn-ask" onclick="discussIncident(${it.id},'why')">💬 Ask the AI</button>
+      <button class="btn btn-missed" onclick="discussIncident(${it.id},'missed')">🕳 Why did their AI miss it?</button>
       <button class="btn findmore" onclick="corroborate(${it.id})">🔎 Find more like this</button>
       <button class="btn btn-decide" onclick="select(${it.id});showTab('queue');document.getElementById('queuePane').scrollIntoView({behavior:'smooth',block:'center'})">📄 Open full report</button>
       <button class="btn sec" onclick="this.closest('.vcard').remove()">Dismiss</button>
@@ -3518,11 +3571,123 @@ function render(){
 }
 function select(id){selId=id;render()}
 function setField(k,v){const it=items.find(i=>i.id===selId);if(!it)return;const old=it[k];it[k]=v;log(it,`${k} changed`,`${old} → ${v}`);render()}
+
+// ============ ASK THE AI ABOUT AN ACCEPTED INCIDENT ============
+// Once Eric accepts an incident, the next questions are always the same two:
+// why is this happening, and what do I actually do about it. This hands the AI
+// everything the system already knows about that item and asks exactly that.
+
+// ================= PLATFORM POLICY INDEX =================
+// policies.json holds each platform's real policy NAMES and canonical URLs, plus a
+// map from our threat categories to their policies. It deliberately does not hold
+// their full policy text: that wording is theirs, several platforms disallow
+// automated fetching, and a report only needs the right name and a checkable link.
+let POLICIES=null;
+async function loadPolicies(){
+  try{
+    const r=await fetch('./policies.json?t='+Date.now(),{cache:'no-store'});
+    if(r.ok)POLICIES=await r.json();
+  }catch(e){}
+  return POLICIES;
+}
+function _platKey(it){
+  const hay=((it.platform||'')+' '+(it.url||'')).toLowerCase();
+  if(/instagram|instagr\.am/.test(hay))return 'instagram';
+  if(/facebook|fb\.com|fb\.watch/.test(hay))return 'facebook';
+  if(/threads\.net/.test(hay))return 'threads';
+  if(/tiktok/.test(hay))return 'tiktok';
+  if(/youtube|youtu\.be/.test(hay))return 'youtube';
+  if(/twitter|x\.com/.test(hay))return 'x';
+  if(/snapchat|snap\.com/.test(hay))return 'snapchat';
+  if(/t\.me|telegram/.test(hay))return 'telegram';
+  if(/reddit/.test(hay))return 'reddit';
+  return '';
+}
+// Which of that platform's policies this finding actually engages.
+function policyMatch(it){
+  if(!POLICIES||!POLICIES.platforms)return null;
+  const key=_platKey(it); if(!key)return null;
+  const plat=POLICIES.platforms[key]; if(!plat)return null;
+  const cat=it.category||'';
+  let hits=(plat.policies||[]).filter(pol=>(pol.maps_to||[]).includes(cat));
+  if(!hits.length)hits=(plat.policies||[]).slice(0,2);
+  return {key,plat,hits:hits.slice(0,4)};
+}
+function policyBriefText(it){
+  const m=policyMatch(it); if(!m)return '';
+  const lines=m.hits.map(p=>`- "${p.name}" (${p.url}) — ${p.prohibits}`);
+  return `\nTHE PLATFORM'S OWN POLICIES THAT APPLY (${m.plat.display}, from our policy index`
+    + (m.plat.verified?`, list verified ${m.plat.last_verified}`:`, NOT auto-verified — flag any uncertainty`)
+    + `):\n${lines.join('\n')}\nUse these exact policy names. Do not invent a policy name that is not in this list.`;
+}
+
+function discussIncident(id,angle){
+  const it=(id!=null&&items.find(x=>x.id===id))||items.find(x=>x.id===selId);
+  if(!it){toast('Open an incident first');return}
+  const v=it.visionRaw||{}, a=(it.audio&&!it.audio.__error)?it.audio:{}, tf=it.textFallback||{};
+  const sig=[...new Set([...(it.indicators||[]),...(v.indicators||[]),...(a.indicators||[])])].filter(Boolean).slice(0,10);
+  const codes=(it.cbHits||[]).map(h=>`${h.term} — ${h.meaning||h.category||''}`).slice(0,6);
+  const brief=[
+    `INCIDENT #${it.id} — accepted by the analyst${it.status?` (status: ${it.status})`:''}.`,
+    `Platform: ${it.platform||'unknown'} · Account: ${it.poster||'unknown'}`,
+    `Link: ${it.url||'(uploaded file)'}`,
+    `System verdict: ${(it.category||'').replace(/_/g,' ')} — ${it.score}/10 (${it.tier}), evidence grade ${it.grade||'—'}`,
+    (it.visionDesc||v.description||tf.description)?`What it shows: ${(it.visionDesc||v.description||tf.description).slice(0,700)}`:'',
+    (v.translation||a.translation||tf.translation)?`Translation: ${(v.translation||a.translation||tf.translation).slice(0,400)}`:'',
+    a.description?`Audio: ${String(a.description).slice(0,400)}`:'',
+    (it.ocr||'').trim()?`Text read on it: ${String(it.ocr).replace(/\s+/g,' ').slice(0,400)}`:'',
+    sig.length?`Signals detected: ${sig.join(', ')}`:'',
+    codes.length?`Codebook matches: ${codes.join(' | ')}`:'',
+    v.policy?`Policy implicated (model's read): ${v.policy}`:'',
+    policyBriefText(it)
+  ].filter(Boolean).join('\n');
+
+  const plat=(it.platform||'the platform').replace(/^upload$/,'the platform it was posted on');
+  const asks = angle==='policy'
+    ? `Given the incident below, answer as if you were writing the escalation to ${plat}'s trust & safety team:
+1. WHICH POLICY DOES THIS BREAK — name the specific policy by its actual title (e.g. Dangerous Organizations and Individuals, Hate Speech), and the tier or clause if there is one.
+2. WHY IT MEETS THAT POLICY — point at the specific elements in this content that satisfy the policy's own wording. Be precise about which element does what.
+3. THE PARAGRAPH I CAN PASTE — write me one tight paragraph, in the platform's own policy language, that I can put straight into the report.
+4. THE COUNTER-ARGUMENT — how might they try to say this is allowed (satire, historical, educational), and what is the answer to that.
+Do not restate the description back to me.`
+  : angle==='missed'
+    ? `The platform's own automated moderation did NOT catch this. That is the point of my work. Given the incident below:
+1. WHY THE AUTOMATED SYSTEM MISSED IT — the specific evasion mechanics. Consider: perceptual-hash evasion (gradients, recolouring, negative space), symbols formed from cutouts rather than overlays, stylised or blackletter typography defeating OCR, foreign-script text, watermarks placed in corners or mid-video, benign cover captions, and high confidence thresholds set to avoid false positives at billions-of-uploads scale.
+2. WHICH TRICK IS DOING THE WORK HERE — name the single technique most responsible for it slipping through.
+3. WHY A HUMAN CATCHES IT AND THE MACHINE DOESN'T — what an experienced analyst sees that a classifier does not.
+4. HOW I SAY THAT TO THE PLATFORM — one paragraph I can use to show them the gap, without being accusatory.
+Do not restate the description back to me.`
+  : angle==='fix'
+    ? `Given the incident below, tell me in plain language:
+1. WHAT DO I DO RIGHT NOW — the exact reporting path, which platform form or team, and what evidence to attach.
+2. WHO ELSE SHOULD KNOW — platform trust & safety, law enforcement, NCMEC, or nobody yet, and why.
+3. WHAT TO WATCH NEXT — the accounts, tags or behaviours that usually follow this, so I can get ahead of it.
+4. WHAT WOULD MAKE THE REPORT STRONGER — what corroboration to gather before I send it.
+Be concrete and practical. Do not repeat the description back to me.`
+    : `Given the incident below, tell me in plain language:
+1. WHY IS THIS HAPPENING — what this account or network is actually trying to achieve, and where this sits in their playbook.
+2. WHAT THE TACTIC IS — the concealment or evasion technique being used, and why it works on moderation.
+3. WHY IT MATTERS — the real-world harm this leads to if it runs unchecked.
+4. WHAT I DO ABOUT IT — the reporting path and what to watch next.
+Be concrete. Do not just restate the description.`;
+
+  const el=document.getElementById('aiInput');
+  if(!el){toast('AI chat not available');return}
+  el.value=asks+'\n\n'+brief;
+  showTab('ai'); askAssistant();
+  setTimeout(()=>{const p=document.getElementById('aiPane'); if(p)p.scrollIntoView({behavior:'smooth',block:'start'})},150);
+}
+
 function act(status){const it=items.find(i=>i.id===selId);if(!it)return;
   if(status==='Escalated'&&it.tier==='CRITICAL'&&it.reviewers.length<1){it.reviewers.push('Strategic');log(it,'first confirmation recorded','CRITICAL requires a second analyst before escalation');render();return}
   it.status=status;log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}${API_BASE?' · feedback → library':' · feedback recorded (demo)'}`);sendFeedback(it,status);
   if((status==='Confirmed'||status==='Escalated')&&typeof huntSeedFrom==='function'){const n=huntSeedFrom({poster:it.poster,text:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,hits:it.indicators||[],image_hash:it.dhash||'',category:it.category});if(n)toast(`Confirmed threat added ${n} live target(s) to the hunt`)}
-  render()}
+  render();
+  if(status==='Confirmed'||status==='Escalated'){
+    const box=document.getElementById('afterAccept');
+    if(box){box.style.display='';box.dataset.id=it.id;
+      box.querySelector('.aaTitle').textContent=`Incident #${it.id} ${status.toLowerCase()} — ${(it.category||'').replace(/_/g,' ')} ${it.score}/10`;}
+  }}
 // ---------- child-safety: detect-and-route ONLY (never store / hash / describe media) ----------
 // Suspected child-sexual-exploitation content is NOT handled in the normal analyst queue.
 // The system routes a provenance-only referral to the NCMEC CyberTipline and suppresses the
@@ -3605,6 +3770,7 @@ function renderDetail(){
      <button class="btn ok" onclick="act('Confirmed')">Confirm</button>
      <button class="btn btn-decide" onclick="act('Escalated')">🚩 Report to platform</button>
      <button class="btn mute" onclick="act('Dismissed')">Dismiss (FP)</button>
+      <button class="btn btn-ask" onclick="discussIncident(${it.id},'why')" title="Ask the analyst AI why this is happening and what to do about it">💬 Ask the AI about this</button>
    </div>
    ${it.tier==='CRITICAL'?`<div class="twoman">CRITICAL tier: escalation requires two-analyst confirmation (${it.reviewers.length}/2 recorded).</div>`:''}
    <div class="row" style="margin-top:8px"><span class="pill">report.md</span><span class="pill">metadata.json</span><span class="pill">screenshot.png</span><span class="pill">media/</span><button class="btn findmore" style="margin-left:auto" onclick="corroborate(${it.id})" title="Search the connected sources for other posts carrying these same signals — build the pattern, not just the one example">🔎 Find more like this</button><button class="btn adv" style="background:#6B46C1;border-color:#6B46C1" onclick="findAffiliates(${it.id})" title="Pivot from this account to affiliated accounts that share its brands, codes and collaborators">🔗 Find affiliated accounts</button><button class="btn sec" onclick="openReport()">Generate report</button></div>
@@ -3621,7 +3787,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();initSimple();initHero();initPush();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();initSimple();initHero();initPush();loadPolicies();
 if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
 // crawl is OFF by default — the user starts it with the Start crawl toggle (saves data)
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
