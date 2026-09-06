@@ -296,33 +296,49 @@ body.simple .kpis{display:none}
 .vpills{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:9px}
 .vpill{border-radius:20px;padding:5px 13px;font-size:12.8px;font-weight:800;color:#fff;background:#5a6675}
 .vpill.sc{background:#B42318}.vpill.ok{background:#2F855A}.vpill.md{background:#B7791F}
+.aians{font-size:15.5px;line-height:1.68;margin:10px 0;white-space:pre-wrap}
+.sysdet>summary{cursor:pointer;list-style:none}
+.sysdet>summary::-webkit-details-marker{display:none}
+.sysdet>summary:after{content:" ▾";opacity:.6}
+.qlink{font-size:13.5px;font-weight:600;color:#5a6675;text-decoration:underline;cursor:pointer}
+.qlink:hover{color:#152A4E}
 .vsig{background:#f3f6fa;border-radius:14px;padding:3px 11px;font-size:12.3px;color:#152A4E;font-weight:600}
-/* ---- Follow-up questions about THIS image (keeps him inside the card) ---- */
-.vask{margin-top:12px;padding:11px 12px 12px;border-top:2px solid #F5C518;background:#FFFDF3;border-radius:0 0 8px 8px}
-.vask .askhd{font-size:12.5px;font-weight:800;letter-spacing:.4px;color:#6b5200;text-transform:uppercase;margin-bottom:7px}
+/* ---- One card, closed headers. He opens only what he wants to read. ---- */
+.vdrop{margin-top:8px;border:1.5px solid #e3e7ee;border-radius:9px;background:#fff;overflow:hidden}
+.vdrop>summary{display:flex;align-items:center;gap:11px;padding:14px 16px;cursor:pointer;list-style:none;
+  font-size:15.5px;font-weight:700;color:#152A4E;background:#f7f9fc;user-select:none}
+.vdrop>summary::-webkit-details-marker{display:none}
+.vdrop>summary:hover{background:#eef2f8}
+.vdrop .di{font-size:18px;line-height:1;flex:none}
+.vdrop .dt{flex:1;min-width:0}
+.vdrop .dn{flex:none;background:#152A4E;color:#fff;border-radius:11px;padding:1px 9px;font-size:12.5px;font-weight:800}
+.vdrop .dc{flex:none;font-size:15px;color:#7a8698;transition:transform .15s}
+.vdrop[open]>summary .dc{transform:rotate(180deg)}
+.vdrop[open]>summary{background:#eef2f8;border-bottom:1.5px solid #e3e7ee}
+.vdrop .dbody{padding:14px 16px 16px}
+.vdrop .dbody .val{font-size:15px;line-height:1.65}
+/* the follow-up header is the one he should always notice */
+.vdrop.ask{border:2px solid #F5C518;margin-top:12px}
+.vdrop.ask>summary{background:#FFF8DC;color:#5a4400;font-size:16px;font-weight:800}
+.vdrop.ask>summary:hover{background:#FFF1B8}
+.vdrop.ask[open]>summary{background:#FFF1B8;border-bottom-color:#F5C518}
+.vdrop.ask .dbody{background:#FFFDF3}
 .vaskrow{display:flex;gap:7px;align-items:stretch}
-.vaskrow input{flex:1;min-width:0;padding:11px 13px;font-size:15px;border:2px solid #E4C64B;border-radius:7px;background:#fff}
+.vaskrow input{flex:1;min-width:0;padding:12px 14px;font-size:15.5px;border:2px solid #E4C64B;border-radius:7px;background:#fff}
 .vaskrow input:focus{outline:none;border-color:#B7791F;box-shadow:0 0 0 3px rgba(245,197,24,.25)}
-.vaskrow button{padding:11px 18px;font-size:14.5px;font-weight:800;border:2px solid #F5C518;background:#F5C518;color:#3d2f00;border-radius:7px;cursor:pointer;white-space:nowrap}
+.vaskrow button{padding:12px 22px;font-size:15px;font-weight:800;border:2px solid #F5C518;background:#F5C518;color:#3d2f00;border-radius:7px;cursor:pointer;white-space:nowrap}
 .vaskrow button:hover{background:#e6b800}
 .vaskrow button[disabled]{opacity:.55;cursor:default}
-.vchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.vchip{background:#fff;border:1.5px solid #E4C64B;border-radius:16px;padding:5px 12px;font-size:12.8px;font-weight:600;color:#5a4400;cursor:pointer}
+.vchips{display:flex;flex-wrap:wrap;gap:6px}
+.vchip{background:#fff;border:1.5px solid #E4C64B;border-radius:16px;padding:7px 13px;font-size:13.5px;font-weight:600;color:#5a4400;cursor:pointer}
 .vchip:hover{background:#FFF6D6}
-.vchat{margin-top:10px;display:flex;flex-direction:column;gap:9px}
-.vfollow{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 15px;font-size:13.5px;font-weight:800;
-  border:2px solid #F5C518;background:#F5C518;color:#3d2f00;border-radius:20px;cursor:pointer;align-self:flex-start}
-.vfollow:hover{background:#e6b800}
-.vask.shut .vaskrow,.vask.shut .vchips{display:none}
-.vask:not(.shut)>.vfollow{display:none}  /* the opener retires once the box is open */
-.vask.shut .askhd{margin-bottom:0}
-.vask.shut .vchat:empty{margin-top:0}
-.vturn{border-radius:8px;padding:9px 12px;font-size:14.5px;line-height:1.62}
+.vchat{display:flex;flex-direction:column;gap:9px}
+.vchat:not(:empty){margin-bottom:12px}
+.vturn{border-radius:8px;padding:10px 13px;font-size:15px;line-height:1.62}
 .vturn.q{background:#152A4E;color:#fff;font-weight:600;align-self:flex-end;max-width:88%}
 .vturn.a{background:#fff;border:1px solid #e6e9ef;border-left:4px solid #F5C518;color:#1b2430;white-space:pre-wrap}
-.vturn.a b{color:#152A4E}
-.vturn.pending{color:#8a6d00;font-style:italic;background:#FFF6D6;border-left-color:#B7791F}
-.vturn.err{background:#FEF3F2;border-left-color:#B42318;color:#8f1d14}
+.vturn.pending{color:#8a6d00;font-style:italic;background:#FFF6D6;border-left:4px solid #B7791F}
+.vturn.err{background:#FEF3F2;border-left:4px solid #B42318;color:#8f1d14;white-space:pre-wrap}
 
 .verdict{display:flex;align-items:center;gap:12px;border-radius:10px;padding:12px 16px;margin:0 0 12px;font-weight:800}
 .verdict .vico{font-size:27px;line-height:1}
@@ -604,7 +620,6 @@ summary{padding:3px 0}
     <input id="cmdQ" placeholder="Paste a link · type a #hashtag · type an @handle · or ask a question" onkeydown="if(event.key==='Enter')runCommand()">
     <button class="btn cmdgo" onclick="runCommand()">Go</button>
   </div>
-  <div class="cmdhint"><code>https://…</code> a link &nbsp;·&nbsp; <code>#hashtag</code> &nbsp;·&nbsp; <code>@handle</code> &nbsp;·&nbsp; or just ask a question</div>
   <div class="cmdacts">
     <button class="btn" onclick="exportMetaXLSX()" style="background:#1877F2;border-color:#1877F2">📄 Get report</button>
     <button class="btn pushbtn" id="pushBtn" onclick="togglePush()">🔔 Watch: OFF</button>
@@ -622,7 +637,6 @@ summary{padding:3px 0}
     <input type="file" id="heroFile" accept="image/*" multiple style="display:none" onchange="heroPick(this.files)">
     <div class="herotext">
       <b>Drop an image here, click the button, or press Ctrl+V to paste a screenshot.</b>
-      <div class="n">Vision AI looks at the picture and tells you what it actually shows — hidden corner watermarks, flags, disguised logos, foreign text with translation, and whether it breaks platform policy. Several images at once is fine.</div>
       <input id="heroPoster" placeholder="Who posted it? (optional — helps the report)" style="margin-top:9px;width:100%;max-width:390px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;font-family:inherit">
       <div class="herostat" id="heroStat"></div>
     </div>
@@ -780,7 +794,7 @@ summary{padding:3px 0}
       </div>
       <div class="photo vidbox" style="margin-top:10px">
         <b style="font-size:15px;color:var(--navy)">🎬 Scan a video</b>
-        <div class="note" style="margin:3px 0 0">Checks the whole clip for hidden watermarks and flags — not just the thumbnail.</div>
+        <div class="note" style="margin:3px 0 0">Checks the whole clip, not just the thumbnail.</div>
         <div style="margin-top:6px"><input type="file" id="videoFile" accept="video/*"></div>
         <input id="videoPoster" placeholder="Poster handle / source (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;margin-top:6px">
         <div class="row" style="margin-top:8px"><button class="btn btn-video" onclick="ingestVideo()">🎬 Scan video</button><span class="note" id="vidStatus" style="margin:0"></span></div>
@@ -788,7 +802,7 @@ summary{padding:3px 0}
       </div>
       <div class="photo audbox" style="margin-top:10px">
         <b style="font-size:15px;color:var(--navy)">🎧 Interpret audio</b>
-        <div class="note" style="margin:3px 0 0">Upload a voice note, a recording or an audio file. The system <b>listens, writes out what is said, and translates it into English</b> so you can read it — whatever language it's in.</div>
+        <div class="note" style="margin:3px 0 0">Writes out what is said and translates it into English.</div>
         <div style="margin-top:7px"><input type="file" id="audioFile" accept="audio/*,video/*"></div>
         <input id="audioPoster" placeholder="Who posted it / where from (optional)" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:6px;margin-top:6px;font-size:13px">
         <div class="row" style="margin-top:8px"><button class="btn btn-audio" onclick="ingestAudio()">🎧 Interpret audio</button><span class="note" id="audStatus" style="margin:0"></span></div>
@@ -830,24 +844,27 @@ summary{padding:3px 0}
     </div>
     <div id="aiPane" style="display:none">
       <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-        <h3 style="margin:0"><span class="hstep">ASK</span>Analyst AI — ask about a threat, or teach the system one</h3>
-        <span class="note" id="aiKB" style="margin:0"></span>
+        <h3 style="margin:0"><span class="hstep">ASK</span>Analyst AI</h3>
       </div>
-      <div class="note" style="margin:2px 0 8px">Ask a question — <i>"what is 764?"</i>, <i>"is 'tribe and train' extremist?"</i>, <i>"who have we captured using #will2rise?"</i> — and the system searches the codebook, your Library and everything you've captured, then answers with the policy mapping and recommended action. Spotted something new that isn't public yet? Describe it and press <b>📚 Teach the system</b> so it becomes context for early warning. <b>You decide</b> what reaches law enforcement — the AI assembles the picture, you confirm it.</div>
-      <div id="aiThread" style="max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbfcfe"><div class="aiempty">Ask a question about a threat, or describe one you've identified. The assistant grounds every answer in the codebook, your Library and your captured evidence — and cites what it used.</div></div>
-      <div style="margin-top:10px"><span class="ailabel">💬 AI CHAT — type your question here ⬇</span></div>
-      <textarea id="aiInput" placeholder="Type here… e.g. “What is 764?”, “Is ‘tribe and train’ extremist?”, or describe a new threat you've spotted. Then press Ask the system." style="width:100%;min-height:80px;border:2px solid #B42318;border-radius:8px;padding:11px 13px;font-size:14.5px;font-family:inherit;box-sizing:border-box" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))askAssistant()"></textarea>
-      <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn" onclick="askAssistant()">🔎 Ask the system</button>
-        <button class="btn sec" onclick="assistantIngest()" title="Add what you just described to the system's knowledge so it develops context and can flag it going forward">📚 Teach the system this</button>
-        <button class="btn btn-lib" onclick="document.getElementById('libUpload').scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('libFile').click()" title="Upload research, a legal ruling, a case study or a codebook so the system can reason from it">📎 Upload a document</button>
-        <button class="btn sec" onclick="assistantBrief()" title="Draft a law-enforcement early-warning brief from this conversation and the system's findings">🚨 Draft LE early-warning brief</button>
-        <button class="btn mute" onclick="aiClear()">Clear</button>
+      <details class="vdrop" style="margin:6px 0 10px"><summary><span class="di">❓</span><span class="dt">How this works</span><span class="dc">▾</span></summary>
+        <div class="dbody"><div class="val">Ask it anything — <i>"what is 764?"</i>, <i>"is 'tribe and train' extremist?"</i>, <i>"who have we captured using #will2rise?"</i> It searches the codebook, your Library and everything you've captured, then answers with the policy mapping and what to do next.<br><br>Spotted something new that isn't public yet? Describe it and press <b>Teach the system this</b> — it becomes context for early warning.<br><br><b>You decide</b> what reaches law enforcement. The AI assembles the picture; you confirm it.<div class="note" id="aiKB" style="margin:10px 0 0"></div></div></div>
+      </details>
+      <div id="aiThread" style="max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbfcfe"><div class="aiempty">Type a question below and press Ask.</div></div>
+      <textarea id="aiInput" placeholder="Type your question here…" style="width:100%;min-height:80px;border:2px solid #B42318;border-radius:8px;padding:11px 13px;font-size:14.5px;font-family:inherit;box-sizing:border-box" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))askAssistant()"></textarea>
+      <div class="row" style="gap:8px;margin-top:9px;flex-wrap:wrap;align-items:center">
+        <button class="btn" onclick="askAssistant()">🔎 Ask</button>
+        <button class="btn sec" onclick="assistantIngest()" title="Add what you just described to the system's knowledge">📚 Teach the system this</button>
+        <button class="btn btn-lib" onclick="var d=document.getElementById('libUpload');d.open=true;d.scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('libFile').click()" title="Upload research, a legal ruling, a case study or a codebook">📎 Upload a document</button>
         <span class="note" id="aiStat" style="margin:0"></span>
       </div>
-      <div id="libUpload" class="libbox">
-        <div class="libhead">📚 Teach the system — upload what you know</div>
-        <div class="note" style="margin:2px 0 9px">Research papers, legal rulings, court opinions, case studies, threat reports, codebooks, your own findings. The system reads the text, keeps it, and reasons from it when answering — citing what it used. <b>PDF · Word · text · Markdown · CSV.</b></div>
+      <div class="row" style="gap:14px;margin-top:7px">
+        <a href="javascript:void(0)" onclick="assistantBrief()" class="qlink">🚨 Draft a law-enforcement brief</a>
+        <a href="javascript:void(0)" onclick="aiClear()" class="qlink">Clear this conversation</a>
+      </div>
+      <details id="libUpload" class="vdrop" style="margin-top:12px">
+       <summary><span class="di">📚</span><span class="dt">Teach the system — upload what you know</span><span class="dc">▾</span></summary>
+       <div class="dbody">
+        <div class="note" style="margin:0 0 10px">Research, legal rulings, case studies, threat reports, codebooks, your own findings. <b>PDF · Word · text · Markdown · CSV.</b></div>
         <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
           <select id="libKind" style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13.5px;font-family:inherit">
             <option value="research">Research / academic paper</option>
@@ -863,9 +880,8 @@ summary{padding:3px 0}
         </div>
         <div class="note" id="libStat" style="margin:8px 0 0"></div>
         <div id="libRecent" style="margin-top:9px"></div>
-      </div>
-      <div class="row" style="display:none">
-      </div>
+       </div>
+      </details>
     </div>
     <div id="libPane" style="display:none">
       <h3>Library — upload context to help the AI learn</h3>
@@ -988,10 +1004,11 @@ summary{padding:3px 0}
     </div>
     <div id="queuePane">
     <h3><span class="hstep">STEP 2</span>Review &amp; flag — the scored queue</h3>
-    <div class="row" style="margin-bottom:8px;gap:8px;align-items:center;background:#EAF3F8;border:1px solid #CDE4EE;border-radius:8px;padding:8px 10px">
-      <b style="font-size:13px">Batch export</b>
+    <details class="vdrop" style="margin-bottom:10px">
+      <summary><span class="di">⬇</span><span class="dt">Batch export</span><span class="dc">▾</span></summary>
+      <div class="dbody row" style="gap:8px;align-items:center;flex-wrap:wrap">
       <span class="note" id="expCount" style="margin:0"></span>
-      <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+      <span style="display:flex;gap:6px;flex-wrap:wrap">
         <select id="expScope" style="border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px">
           <option value="all">All items</option>
           <option value="filtered">Current filter</option>
@@ -1004,7 +1021,8 @@ summary{padding:3px 0}
         <button class="btn sec" style="padding:6px 10px" onclick="exportMetaCSV()">⬇ Meta (.csv)</button>
         <button class="btn sec" style="padding:6px 10px" onclick="exportReportsBundle()">⬇ Reports (.md)</button>
       </span>
-    </div>
+      </div>
+    </details>
     <div class="row filters" style="margin-bottom:10px">
       <input id="q" placeholder="Search URL / poster…" oninput="render()" style="flex:1;min-width:160px">
       <select id="fTier" onchange="render()"><option value="">All tiers</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option><option>MINIMAL</option></select>
@@ -1029,8 +1047,9 @@ summary{padding:3px 0}
     <div class="empty">Select an item in the queue.</div>
   </div>
 </div>
-<div class="refbox">
-  <div class="refhead">📎 Important notes about search access</div>
+<details class="vdrop refbox" style="margin-top:14px">
+  <summary><span class="di">📎</span><span class="dt">Important notes about search access</span><span class="dc">▾</span></summary>
+  <div class="dbody">
   <div class="refcols">
     <div class="refcol">
       <div class="reftitle ok">✅ The system searches these itself</div>
@@ -1050,9 +1069,11 @@ summary{padding:3px 0}
     </div>
   </div>
   <div class="reffoot">If a search comes back empty, it usually means the platform is on the right-hand list — <b>not</b> that there is nothing out there. For anything on the right, capture it by hand: copy the link and paste it into the box at the top, or upload a screenshot.</div>
-</div>
+  </div>
+</details>
 
-<footer>Project Spear · Proprietary & confidential · Photo pipeline: OCR in-browser (Tesseract) · vision model via backend · Codebook v0.4 (106 entries: extremism, domestic terrorism, narcotics, counterfeit meds, public safety, child-safety routing, self-harm/suicide-promotion) is a living library: analysts propose, owner approves, decisions export as training data. Threat domains — violent extremism (propaganda · recruitment · glorification · incitement · financing · operational planning · benign. Evidence grades: Observed · Corroborated · Inferred · Predicted · Disputed · Unverified. Every action is written to the immutable audit log; CRITICAL escalations require two-analyst confirmation.</footer>
+<footer><details class="sysdet"><summary>Project Spear · Proprietary &amp; confidential</summary>
+<div style="margin-top:7px">Photo pipeline: OCR in-browser (Tesseract) · vision model via backend · Codebook v0.4 (106 entries: extremism, domestic terrorism, narcotics, counterfeit meds, public safety, child-safety routing, self-harm/suicide-promotion) is a living library: analysts propose, owner approves, decisions export as training data. Threat domains — violent extremism (propaganda · recruitment · glorification · incitement · financing · operational planning) · benign. Evidence grades: Observed · Corroborated · Inferred · Predicted · Disputed · Unverified. Every action is written to the immutable audit log; CRITICAL escalations require two-analyst confirmation.</div></details></footer>
 
 <script>
 // ---------- taxonomy ----------
@@ -1596,7 +1617,7 @@ const VASK_CHIPS={
 // "Follow up" button, so refining is one click from wherever he is reading.
 function openAsk(id){
   const box=document.getElementById('vask-'+id); if(!box)return;
-  box.classList.remove('shut');
+  box.open=true;
   const inp=document.getElementById('vq-'+id);
   if(inp){inp.focus();inp.scrollIntoView({behavior:'smooth',block:'center'})}
 }
@@ -1638,7 +1659,7 @@ async function askImage(id,preset){
   if(!q){toast('Type what you want to know about the image');if(inp)inp.focus();return}
   if(inp)inp.value='';
   const wrap=document.getElementById('vchat-'+id); if(!wrap)return;
-  const btn=wrap.closest('.vask').querySelector('.vaskrow button'); if(btn)btn.disabled=true;
+  const btn=document.querySelector('#vask-'+id+' .vaskrow button'); if(btn)btn.disabled=true;
 
   wrap.insertAdjacentHTML('beforeend','<div class="vturn q">'+_askEsc(q)+'</div>'+
     '<div class="vturn pending" id="vpend-'+id+'">Looking at the '+(it.type==='audio'?'recording':'picture')+' again…</div>');
@@ -1672,9 +1693,13 @@ async function askImage(id,preset){
 
   it.chat=it.chat||[]; it.chat.push({q,a:ans,err,t:Date.now()});
   if(pend){pend.className='vturn '+(err?'err':'a');pend.textContent=ans;pend.removeAttribute('id');
-    pend.insertAdjacentHTML('afterend','<button class="vfollow" onclick="openAsk('+id+')">💬 Follow up on this answer</button>');
     pend.scrollIntoView({behavior:'smooth',block:'nearest'});}
   if(btn)btn.disabled=false;
+  const sum=document.querySelector('#vask-'+id+' > summary');
+  if(sum){const dt=sum.querySelector('.dt'); if(dt)dt.textContent='Ask a follow-up question';
+    let n=sum.querySelector('.dn');
+    if(!n){n=document.createElement('span');n.className='dn';sum.insertBefore(n,sum.querySelector('.dc'))}
+    n.textContent=it.chat.length;}
   // The exchange is part of the evidence trail — keep it with the incident.
   try{if(typeof log==='function')log(it,'follow-up question',q.slice(0,120))}catch(e){}
 }
@@ -1727,33 +1752,42 @@ function renderVisionCard(it){
         ${it.dupes&&it.dupes.length?`<div class="vpills"><span class="vsig">⚠ You have already captured ${it.dupes.length} copy(s) of this image</span></div>`:''}
       </div>
     </div>
-    ${threat?`<div class="vsec"><div class="lbl">Why it matters</div><div class="val">${e(threat)}</div></div>`:''}
-    ${(()=>{const m=policyMatch(it);
-      if(m&&m.hits.length)return `<div class="vsec"><div class="lbl">Policy it would violate — ${e(m.plat.display)}</div>
-        <div class="val">${m.hits.map(pp=>`<div style="margin:3px 0"><a href="${e(pp.url)}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline;font-weight:700">${e(pp.name)}</a> <span class="note" style="margin:0">— ${e(pp.prohibits).slice(0,150)}</span></div>`).join('')}
-        ${m.plat.verified?'':'<div class="note" style="margin:5px 0 0;color:#8A5A00">⚠ These policy names are not auto-verified for this platform — check the link before sending a formal referral.</div>'}</div></div>`;
-      return policy&&!/^none$/i.test(policy)?`<div class="vsec"><div class="lbl">Policy it would violate</div><div class="val">${e(policy)}</div></div>`:'';})()}
-    ${(v.language||'').trim()?`<div class="vsec"><div class="lbl">Language spoken</div><div class="val">${e(v.language)}</div></div>`:''}
-    ${translation?`<div class="vsec"><div class="lbl">English translation</div><div class="val">${e(translation)}</div></div>`:''}
-    ${(ocr&&ocr.slice(0,80)!==(desc||'').slice(0,80))?(ocrIsNoise
-        ? `<div class="vsec"><details><summary class="lbl" style="cursor:pointer">Raw text the scanner pulled off the image <span style="font-weight:400;text-transform:none;letter-spacing:0">(rough — Vision AI's reading above is the accurate one)</span></summary><div class="val" style="font-size:12.6px;color:#5a6675;margin-top:5px">${e(ocr.slice(0,400))}</div></details></div>`
-        : `<div class="vsec"><div class="lbl">Text read in the image</div><div class="val" style="font-size:13.2px;color:#39424e">${e(ocr.slice(0,400))}</div></div>`):''}
-    ${sigs.length?`<div class="vsec"><div class="lbl">Signals</div><div class="vpills">${sigs.map(x=>`<span class="vsig">${e(x)}</span>`).join('')}</div></div>`:''}
-    ${(!off)?`<div class="vask${(it.chat&&it.chat.length)?'':' shut'}" id="vask-${it.id}">
-      <div class="askhd">💬 Not sure? Ask it about this ${it.type==='audio'?'recording':'image'}</div>
-      ${(it.chat&&it.chat.length)?'':`<button class="vfollow" onclick="openAsk(${it.id})">💬 Follow up on this answer</button>`}
-      <div class="vaskrow">
-        <input id="vq-${it.id}" placeholder="e.g. What is the symbol in the top left? Is it really antisemitic?"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();askImage(${it.id})}">
-        <button onclick="askImage(${it.id})">Ask</button>
+    ${(()=>{
+      // ---- Everything below the description is a CLOSED, clickable header. ----
+      // The full reading used to sit open all at once and read as a wall of text.
+      // He opens only the part he wants; the rest stays out of his way.
+      const rows=[];
+      if(threat)rows.push({k:'why',ic:'⚠',t:'Why it matters',h:`<div class="val">${e(threat)}</div>`});
+      const m=policyMatch(it);
+      if(m&&m.hits.length)rows.push({k:'pol',ic:'📕',t:`Policy it breaks — ${e(m.plat.display)}`,n:m.hits.length,
+        h:`<div class="val">${m.hits.map(pp=>`<div style="margin:5px 0"><a href="${e(pp.url)}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline;font-weight:700">${e(pp.name)}</a> <span class="note" style="margin:0">— ${e(pp.prohibits).slice(0,150)}</span></div>`).join('')}
+          ${m.plat.verified?'':'<div class="note" style="margin:6px 0 0;color:#8A5A00">⚠ These policy names are not auto-verified for this platform — check the link before sending a formal referral.</div>'}</div>`});
+      else if(policy&&!/^none$/i.test(policy))rows.push({k:'pol',ic:'📕',t:'Policy it breaks',h:`<div class="val">${e(policy)}</div>`});
+      if((v.language||'').trim())rows.push({k:'lang',ic:'🗣',t:`Language — ${e(v.language)}`,h:`<div class="val">${e(v.language)}</div>`});
+      if(translation)rows.push({k:'tr',ic:'🌐',t:'English translation',h:`<div class="val">${e(translation)}</div>`});
+      if(sigs.length)rows.push({k:'sig',ic:'🔎',t:'Signals it spotted',n:sigs.length,
+        h:`<div class="vpills">${sigs.map(x=>`<span class="vsig">${e(x)}</span>`).join('')}</div>`});
+      if(ocr&&ocr.slice(0,80)!==(desc||'').slice(0,80))rows.push({k:'ocr',ic:'🔤',
+        t:'Raw text off the image'+(ocrIsNoise?' (rough)':''),
+        h:`<div class="val" style="font-size:13.4px;color:#5a6675">${e(ocr.slice(0,400))}</div>`});
+      return rows.map(r=>`<details class="vdrop"><summary><span class="di">${r.ic}</span><span class="dt">${r.t}</span>${r.n?`<span class="dn">${r.n}</span>`:''}<span class="dc">▾</span></summary><div class="dbody">${r.h}</div></details>`).join('');
+    })()}
+    ${(!off)?`<details class="vdrop ask" id="vask-${it.id}"${(it.chat&&it.chat.length)?' open':''}>
+      <summary><span class="di">💬</span><span class="dt">Ask a follow-up question${(it.chat&&it.chat.length)?'':' — click here'}</span>${(it.chat&&it.chat.length)?`<span class="dn">${it.chat.length}</span>`:''}<span class="dc">▾</span></summary>
+      <div class="dbody">
+        <div class="vchat" id="vchat-${it.id}">${(it.chat||[]).map(t=>
+          `<div class="vturn q">${e(t.q)}</div><div class="vturn ${t.err?'err':'a'}">${e(t.a)}</div>`).join('')}</div>
+        <div class="vaskrow">
+          <input id="vq-${it.id}" placeholder="Type what you want to know about this ${it.type==='audio'?'recording':'picture'}…"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();askImage(${it.id})}">
+          <button onclick="askImage(${it.id})">Ask</button>
+        </div>
+        <div class="note" style="margin:8px 0 5px">Or tap one:</div>
+        <div class="vchips">
+          ${VASK_CHIPS[it.type==='audio'?'audio':'image'].map(c=>`<span class="vchip" onclick="askImage(${it.id},this.textContent)">${c}</span>`).join('')}
+        </div>
       </div>
-      <div class="vchips">
-        ${VASK_CHIPS[it.type==='audio'?'audio':'image'].map(c=>`<span class="vchip" onclick="askImage(${it.id},this.textContent)">${c}</span>`).join('')}
-      </div>
-      <div class="vchat" id="vchat-${it.id}">${(it.chat||[]).map(t=>
-        `<div class="vturn q">${e(t.q)}</div><div class="vturn ${t.err?'err':'a'}">${e(t.a)}</div>
-         <button class="vfollow" onclick="openAsk(${it.id})">💬 Follow up on this answer</button>`).join('')}</div>
-    </div>`:''}
+    </details>`:''}
     <div class="vsec"><div class="row" style="gap:8px;flex-wrap:wrap">
       ${it.type!=='audio'?`<button class="btn btn-retry" onclick="retryVision(${it.id},this)" title="Run Vision AI on this image again — no need to upload it a second time">🔁 Re-analyze</button>`:''}
       <button class="btn btn-ask" onclick="discussIncident(${it.id},'why')">💬 Ask the AI</button>
@@ -3218,7 +3252,7 @@ function renderAIKB(){const el=document.getElementById('aiKB');if(!el)return;
 function aiPush(role,html,text){AI_THREAD.push({role,html,text:text||''});
   const t=document.getElementById('aiThread');const who=role==='user'?'You':'GIPEC AI²';
   t.insertAdjacentHTML('beforeend',`<div class="aimsg ${role==='user'?'u':'a'}"><div class="who">${who}</div>${html}</div>`);t.scrollTop=t.scrollHeight;}
-function aiClear(){AI_THREAD=[];document.getElementById('aiThread').innerHTML='<div class="aiempty">Ask a question about a threat, or describe one you\'ve identified. The assistant grounds every answer in the codebook, your Library and your captured evidence — and cites what it used.</div>';document.getElementById('aiStat').textContent='';renderAIKB();}
+function aiClear(){AI_THREAD=[];document.getElementById('aiThread').innerHTML='<div class="aiempty">Type a question below and press Ask.</div>';document.getElementById('aiStat').textContent='';renderAIKB();}
 function aiRetrieve(q){
   const ql=q.toLowerCase();
   const hits=cbMatch(q,[]);
@@ -3242,25 +3276,42 @@ async function aiBackendAnalyze(q){
 function aiSynthesize(q,R,backend){
   const {hits,cbAll,lib,caps,watch}=R;
   const found=cbAll.length||lib.length||caps.length||watch.length||backend;
+  const esc=x=>String(x==null?'':x).replace(/</g,'&lt;');
   let h='';
+
+  // 1. THE VERDICT — colour first, so he knows in one glance.
   const basis=hits.length?hits:cbAll;
-  if(basis.length){const pr=cbPrior(basis);const cat=pr.category;const score=Math.min(10,pr.score);const tier=tierOf(score);const pm=POLICY_MAP[cat]||POLICY_MAP.benign;
+  if(basis.length){const pr=cbPrior(basis);const cat=pr.category;const score=Math.min(10,pr.score);const tier=tierOf(score);
     h+=`<div class="aiassess"><b style="color:${CATCOLOR[cat]||'#333'}">● ${cat.replace(/_/g,' ').toUpperCase()}</b> · <b>${score}/10</b> <span class="badge tier-${tier}">${tier}</span>
-      <div style="margin-top:5px">${HARM[cat]||''}</div>
-      <div style="margin-top:6px;font-size:12.5px"><b>Platform policy:</b> ${pm.clause}. <b>Report reason:</b> "${pm.reason}".</div>
-      <div style="margin-top:4px;font-size:12.5px"><b>Analyst next step:</b> ${NEXT[cat]||''}</div></div>`;}
-  if(cbAll.length){h+=`<h4>Codebook — ${cbAll.length} matching indicator(s)</h4>`+
-    cbAll.map(e=>`<div class="aicite"><b>${(e.term||'').replace(/</g,'&lt;')}</b>${e.kind?` <i>(${e.kind})</i>`:''} — ${(e.meaning||'').replace(/</g,'&lt;')} <span style="color:#889">[${(e.category||'').replace(/_/g,' ')}, severity ${e.severity}]</span></div>`).join('');}
-  if(lib.length){h+=`<h4>From your Library (${lib.length})</h4>`+
-    lib.map(c=>`<div class="aicite"><b>${(c.doc||'source').replace(/</g,'&lt;')}</b> <i>(${(c.kind||'doc').replace(/_/g,' ')})</i>: “…${(c.text||'').slice(0,400).replace(/</g,'&lt;')}…”</div>`).join('');}
-  if(caps.length){h+=`<h4>Captured evidence (${caps.length})</h4>`+
-    caps.map(it=>{const u=(it.url||'').split(' ')[0];return `<div class="aicite"><b>${(it.poster||'?').replace(/</g,'&lt;')}</b> · ${it.platform} · ${(it.category||'').replace(/_/g,' ')} ${it.score}/10 ${/^https?:/.test(u)?`· <a href="${u}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8">open ↗</a>`:''}</div>`}).join('');}
-  if(watch.length){h+=`<h4>Emerging-codes watchlist</h4>`+
-    watch.map(w=>`<div class="aicite">Watching <b>${w.term.replace(/</g,'&lt;')}</b> — seen in <b>${(typeof watchCount==='function'?watchCount(w.term):0)}</b> captured item(s).</div>`).join('');}
-  if(backend){h+=`<h4>Live AI backend</h4><div class="aicite"><b>${(backend.classification||'').replace(/_/g,' ')}</b> ${backend.risk_score!=null?backend.risk_score+'/10':''} — ${(backend.reasoning||'').replace(/</g,'&lt;')}</div>`;}
-  if(!found){h+=`<div>I don't have this in the system's knowledge yet — no codebook term, Library source or captured item matches "<b>${q.replace(/</g,'&lt;')}</b>".</div>
-    <div style="margin-top:8px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px;padding:9px 11px;font-size:13px">🛰️ <b>This is exactly the early-warning case.</b> If you've spotted a nuanced threat that isn't public yet, describe it in the box — what it is, the signal/code/handle, why it's dangerous — and press <b>📚 Teach the system this</b>. It becomes searchable context and can be promoted into the codebook so the system flags it going forward.</div>`;}
-  else{h+=`<div class="note" style="margin-top:8px">Grounded in the system's current knowledge. <b>You decide</b> what's newsworthy vs. reportable — use <b>🚨 Draft LE early-warning brief</b> to hand it to law enforcement, or <b>📚 Teach the system</b> to add new context.</div>`;}
+      <div style="margin-top:5px">${HARM[cat]||''}</div></div>`;}
+
+  // 2. THE ANSWER — plain prose, nothing wrapped around it.
+  if(backend&&(backend.reasoning||backend.classification)){
+    h+=`<div class="aians">${esc(backend.reasoning||'')}</div>`;}
+
+  // 3. EVERYTHING ELSE IS FOLDED AWAY. The sources, the policy wording and the
+  //    next step used to sit open under every answer and buried the answer itself.
+  //    He opens what he wants; the rest is background.
+  const drop=(ic,title,n,body)=>`<details class="vdrop"><summary><span class="di">${ic}</span><span class="dt">${title}</span>${n?`<span class="dn">${n}</span>`:''}<span class="dc">▾</span></summary><div class="dbody">${body}</div></details>`;
+
+  if(basis.length){const pr=cbPrior(basis);const cat=pr.category;const pm=POLICY_MAP[cat]||POLICY_MAP.benign;
+    h+=drop('📕','Policy &amp; what to do next',0,
+      `<div class="val"><b>Platform policy:</b> ${pm.clause}<br><b>Report it as:</b> “${pm.reason}”<br><br><b>Your next step:</b> ${NEXT[cat]||''}</div>`);}
+
+  let src='',n=0;
+  if(cbAll.length){n+=cbAll.length;src+=`<div class="lbl" style="margin-top:4px">Codebook</div>`+
+    cbAll.map(e=>`<div class="aicite"><b>${esc(e.term)}</b>${e.kind?` <i>(${esc(e.kind)})</i>`:''} — ${esc(e.meaning)} <span style="color:#889">[${(e.category||'').replace(/_/g,' ')}, severity ${e.severity}]</span></div>`).join('');}
+  if(lib.length){n+=lib.length;src+=`<div class="lbl" style="margin-top:10px">Your Library</div>`+
+    lib.map(c=>`<div class="aicite"><b>${esc(c.doc||'source')}</b> <i>(${(c.kind||'doc').replace(/_/g,' ')})</i>: “…${esc((c.text||'').slice(0,300))}…”</div>`).join('');}
+  if(caps.length){n+=caps.length;src+=`<div class="lbl" style="margin-top:10px">Evidence you captured</div>`+
+    caps.map(it=>{const u=(it.url||'').split(' ')[0];return `<div class="aicite"><b>${esc(it.poster||'?')}</b> · ${esc(it.platform)} · ${(it.category||'').replace(/_/g,' ')} ${it.score}/10 ${/^https?:/.test(u)?`· <a href="${u}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8">open ↗</a>`:''}</div>`}).join('');}
+  if(watch.length){n+=watch.length;src+=`<div class="lbl" style="margin-top:10px">Emerging-codes watchlist</div>`+
+    watch.map(w=>`<div class="aicite">Watching <b>${esc(w.term)}</b> — seen in <b>${(typeof watchCount==='function'?watchCount(w.term):0)}</b> captured item(s).</div>`).join('');}
+  if(src)h+=drop('🔎','What it checked',n,src);
+
+  if(!found){h+=`<div class="aians">I don't have this in the system's knowledge yet — nothing in the codebook, your Library or your captured evidence matches “<b>${esc(q)}</b>”.</div>`+
+    drop('🛰','Is this something new? Teach it',0,
+      `<div class="val">If you've spotted a threat that isn't public yet, describe it in the box below — what it is, the signal, code or handle, and why it's dangerous — then press <b>📚 Teach the system this</b>. It becomes searchable context and can be promoted into the codebook so the system flags it from then on.</div>`);}
   return h;
 }
 
@@ -3420,13 +3471,21 @@ async function askAssistant(){
   const inp=document.getElementById('aiInput');const q=(inp.value||'').trim();
   if(!q){toast('Type a question or describe a threat');return}
   const empty=document.querySelector('#aiThread .aiempty');if(empty)empty.remove();
-  window.__aiLastQ=q;aiPush('user',q.replace(/</g,'&lt;'),q);inp.value='';
+  window.__aiLastQ=q;
+  // A canned deep-dive sends a 400-word instruction to the model. Showing that back to
+  // the analyst reads as a wall of machine text and makes it look like it is not his
+  // turn. He sees the plain-English label; the model still gets the full prompt.
+  const label=window.__aiAsLabel||q; window.__aiAsLabel=null;
+  aiPush('user',String(label).replace(/</g,'&lt;'),q); inp.value='';
   const stat=document.getElementById('aiStat');stat.innerHTML='<span style="color:#B42318">●</span> Searching the codebook, Library and captured evidence…';
   const R=aiRetrieve(q);let backend=null;
   if(API_BASE){stat.innerHTML='<span style="color:#B42318">●</span> Querying the live AI backend…';backend=await aiBackendAnalyze(q);}
   else{await new Promise(r=>setTimeout(r,220));}
   aiPush('assistant',aiSynthesize(q,R,backend),'');
   window.__aiLastFindings={q,R,backend};stat.textContent='';renderAIKB();
+  // Put him straight back in the driver's seat — type the next question, no hunting.
+  const nx=document.getElementById('aiInput');
+  if(nx){nx.placeholder='Ask a follow-up — or anything else…';try{nx.focus()}catch(e){}}
 }
 
 // ================= LIBRARY: UPLOAD + PERSIST + LEARN FROM REPORTS =================
@@ -4107,6 +4166,12 @@ Be concrete and practical. Do not repeat the description back to me.`
 4. WHAT I DO ABOUT IT — the reporting path and what to watch next.
 Be concrete. Do not just restate the description.`;
 
+  const LBL={why:'Why is this happening, and what do I do about it?',
+             policy:'Which policy does this break, exactly?',
+             missed:'Why did their own AI miss this?',
+             fix:'What do I do right now?'};
+  window.__aiAsLabel=(LBL[angle]||LBL.why)+'  —  Incident #'+it.id+
+    ((it.category&&it.category!=='benign')?' ('+String(it.category).replace(/_/g,' ')+' '+it.score+'/10)':'');
   const el=document.getElementById('aiInput');
   if(!el){toast('AI chat not available');return}
   el.value=asks+'\n\n'+brief;
