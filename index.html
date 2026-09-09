@@ -371,6 +371,33 @@ body.simple .kpis{display:none}
 .hb.fb{border-color:#1877F2;color:#1877F2}
 .hb.here{border-color:#2F855A;color:#1B5E33}
 .vsig.hunted{background:#EAF8F0;color:#1B5E33;border:1px solid #A9DCC0}
+.vdrop.mark{border:2px solid #0F766E}
+.vdrop.mark>summary{background:#E6F6F4;color:#0B4F49;font-size:16px;font-weight:800}
+.vdrop.mark>summary:hover,.vdrop.mark[open]>summary{background:#CFEDE9;border-bottom-color:#0F766E}
+.vdrop.mark .dn{background:#0F766E}
+.mkrow{padding:9px 0;border-bottom:1px solid #e3ecea}
+.mkrow:last-of-type{border-bottom:0}
+.mkhd{font-size:15.5px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.mkpos{display:inline-block;width:26px;height:26px;border-radius:6px;background:#0F766E;color:#fff;text-align:center;line-height:26px;font-size:15px;font-weight:800}
+.mkkind{font-size:11.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#0B4F49;background:#E6F6F4;border-radius:10px;padding:1px 8px}
+.mkreads{font-family:var(--mono,monospace);font-size:13.5px;color:#39424e;margin-top:3px}
+.mkmeta{font-family:var(--mono,monospace);font-size:12.5px;color:#5a6675;margin-top:6px;line-height:1.6;word-break:break-all}
+.vsig.block{background:#FDECEA;color:#8A1C12;border:1px solid #E4A9A2;font-family:var(--mono,monospace);font-size:13px}
+.btn.btn-prev{background:#7C2D12;border-color:#7C2D12;color:#fff;font-weight:700}
+.vdrop.prev{border:2px solid #7C2D12}
+.vdrop.prev>summary{background:#FDF1EC;color:#5a2008;font-size:16px;font-weight:800}
+.vdrop.prev>summary:hover,.vdrop.prev[open]>summary{background:#F9DFD4;border-bottom-color:#7C2D12}
+.vdrop.prev .dn{background:#7C2D12}
+.pvsec{margin-top:11px}
+.pvsec .lbl{font-size:11.5px;font-weight:800;letter-spacing:.5px;color:#5a6675;text-transform:uppercase;margin-bottom:4px}
+.pvsec .val{font-size:15px;line-height:1.62}
+.pvrule{background:#fff;border:1px solid #e6e9ef;border-left:4px solid #7C2D12;border-radius:6px;padding:8px 11px;margin:6px 0}
+.pvpat{font-family:var(--mono,monospace);font-size:13.5px;font-weight:700;color:#5a2008}
+.pvtext{background:#fff;border:1px solid #e6e9ef;border-radius:6px;padding:10px 12px;white-space:pre-wrap}
+.rulehit{background:#FDF1EC;border:1.5px solid #E7B8A5;border-radius:8px;padding:10px 13px;font-size:14.5px;line-height:1.55;margin:0 0 10px}
+.rulehit.top{margin:10px 0 0}
+.rulerow{border:1px solid #e3e7ee;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff}
+.rulehd{font-size:14.5px}
 .vdrop.pull{border:2px solid #1D4ED8}
 .vdrop.pull>summary{background:#EFF5FF;color:#12356B;font-size:16px;font-weight:800}
 .vdrop.pull>summary:hover,.vdrop.pull[open]>summary{background:#DCE8FF;border-bottom-color:#1D4ED8}
@@ -690,6 +717,7 @@ summary{padding:3px 0}
     <button class="btn btn-ask" onclick="discussIncident(+this.closest('.acceptbox').dataset.id,'why')">💬 Why is this happening?</button>
     <button class="btn btn-policy" onclick="discussIncident(+this.closest('.acceptbox').dataset.id,'policy')">📕 Why does it break their rules?</button>
     <button class="btn btn-missed" onclick="discussIncident(+this.closest('.acceptbox').dataset.id,'missed')">🕳 Why did their AI miss it?</button>
+    <button class="btn btn-prev" onclick="recommendPrevention(+this.closest('.acceptbox').dataset.id,this)">🛡 How to stop this</button>
     <button class="btn btn-fix" onclick="discussIncident(+this.closest('.acceptbox').dataset.id,'fix')">🛠 What do I do about it?</button>
     <button class="btn findmore" onclick="corroborate(+this.closest('.acceptbox').dataset.id)">🔎 Find more like this</button>
   </div>
@@ -896,6 +924,17 @@ summary{padding:3px 0}
         <a href="javascript:void(0)" onclick="assistantBrief()" class="qlink">🚨 Draft a law-enforcement brief</a>
         <a href="javascript:void(0)" onclick="aiClear()" class="qlink">Clear this conversation</a>
       </div>
+      <details id="rulesPanel" class="vdrop prev" style="margin-top:12px">
+       <summary><span class="di">🛡</span><span class="dt">Prevention rules — what you've told the platforms to block</span><span class="dn" id="rulesCount">0</span><span class="dc">▾</span></summary>
+       <div class="dbody">
+        <div class="note" style="margin:0 0 10px">Every rule you approve lives here. When the same evasion shows up again the system flags it as known, and counts how many times it came back after you recommended the block — that is the recidivism evidence for the next report.</div>
+        <div id="rulesList"></div>
+        <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-prev" onclick="exportPreventionBrief()">📄 Export the prevention brief</button>
+          <span class="note" style="margin:0">One document: every approved rule, the evasion, the pattern, the policy clause and the incidents behind it.</span>
+        </div>
+       </div>
+      </details>
       <details id="libUpload" class="vdrop" style="margin-top:12px">
        <summary><span class="di">📚</span><span class="dt">Teach the system — upload what you know</span><span class="dc">▾</span></summary>
        <div class="dbody">
@@ -1617,6 +1656,8 @@ async function _runVisionOn(it){
 function _refreshCard(it,btn){
   const card=(btn&&btn.closest('.vcard'))||document.querySelector('#vcard-'+it.id);
   if(card)card.outerHTML=renderVisionCard(it);
+  if(it.prevention)_renderPrevention(it);
+  if(it.marks)_renderMarks(it); else if(it.type!=='audio'&&!it.visionFailed&&(it.media||it.thumb))setTimeout(()=>watermarkPass(it.id),300);
   if(it.pulled&&it.pulled.length)_renderPull(it);
   else if(it.visionRaw&&Array.isArray(it.visionRaw.hunt)&&it.visionRaw.hunt.length&&!it.visionFailed)setTimeout(()=>autoPull(it.id),600);
   render();
@@ -2041,6 +2082,302 @@ async function captureAllPulled(id){
   showTab('queue');
 }
 
+// ================= PREVENTION: WHAT THE PLATFORM SHOULD BLOCK =================
+// Eric's last step is not the report — it is telling Meta what to stop. The system now
+// drafts that: the exact strings, emoji pairings, number codes and handle patterns to
+// block, the evasion that got it past the filter, the rule that would catch it, and the
+// false positives to avoid. Every rule he approves is remembered, so the next time the
+// same evasion shows up the system says "you already told them — on this date."
+let PREVENT_RULES=[]; try{PREVENT_RULES=JSON.parse(localStorage.getItem('spear_rules')||'[]')}catch(e){}
+function rulesSave(){try{localStorage.setItem('spear_rules',JSON.stringify(PREVENT_RULES.slice(0,400)))}catch(e){}}
+
+const PREVENT_CTX=`\n\nALSO INCLUDE a JSON field "prevention" — a recommendation to the platform's trust & safety team on how to STOP this class of content, not just this post. Shape: {"block_terms":["<exact strings, emoji, emoji pairings, number codes, hashtags or handle fragments to block or auto-review — be literal>"],"patterns":[{"pattern":"<a rule a filter could implement, e.g. '🧃 within 5 words of chosen/run/control/own' or '271k near holocaust/camps/6 million' or 'handle contains noticer+maxx'>","catches":"<what it catches>","false_positives":"<what innocent content it might hit>","mitigation":"<how to avoid those — a context requirement, an exclusion, a review-not-remove setting>"}],"evasion":"<the specific trick that got this past the platform's filter — phonetic substitution, emoji stand-in, number code, styled font defeating OCR, benign caption, meme container, cropped watermark>","why_missed":"<why an automated classifier does not see it>","enforcement":"remove|demote|label|review","policy":"<the platform policy clause this maps to>","rule_text":"<one paragraph, in the platform's own policy language, that the analyst can paste into a recommendation>"}. Be specific and operational. Prefer rules that need CONTEXT (a pairing, a proximity, an account marker) over single-word bans that would hit innocent speech.`;
+
+async function recommendPrevention(id,btn){
+  const it=items.find(x=>x.id===id); if(!it){toast('Open an incident first');return}
+  if(it.prevention&&!btn){_renderPrevention(it);return}
+  if(btn){btn.disabled=true;btn.textContent='⏳ Drafting…'}
+  const st=document.getElementById('heroStat'); if(st)st.textContent='🛡 Drafting what the platform should block…';
+  const media=it.media||it.thumb||'';
+  const v=it.visionRaw||{};
+  const ctx=[
+    'You already analysed this content and said: "'+String(it.visionDesc||v.description||'').slice(0,600)+'"',
+    v.threat?'Why it matters: '+String(v.threat).slice(0,300):'',
+    (it.indicators||[]).length?'Signals: '+it.indicators.slice(0,10).join(', '):'',
+    (it.cbHits||[]).length?'Codebook matches: '+it.cbHits.slice(0,8).map(h=>h.term+' — '+(h.meaning||'').slice(0,80)).join(' | '):'',
+    'Category: '+(it.category||'')+' · Platform: '+(it.platform||'unknown'),
+    policyBriefText(it)||''
+  ].filter(Boolean).join('\n')+PREVENT_CTX+'\nPut the prevention JSON in the "prevention" field and leave "description" as a one-line restatement.';
+  let r=null;
+  try{
+    if(media&&/^data:image\//.test(media))r=await visionAnalyze(media,ctx);
+    if(!r||r.__error||!r.prevention)r=await visionAnalyze(_BLANK_PX,'IGNORE THE IMAGE — it is a blank placeholder. Work from the text below.\n'+ctx);
+  }catch(e){}
+  if(btn){btn.disabled=false;btn.textContent='🛡 How to stop this'}
+  if(st)st.textContent='';
+  if(!r||r.__error||!r.prevention){toast('Could not draft a recommendation right now — try again in a minute');return}
+  const pv=(typeof r.prevention==='string')?(()=>{try{return JSON.parse(r.prevention)}catch(e){return {rule_text:r.prevention}}})():r.prevention;
+  it.prevention=pv; it.preventionAt=new Date().toISOString().slice(0,10);
+  try{log(it,'prevention drafted',(pv.block_terms||[]).slice(0,5).join(', '))}catch(e){}
+  _renderPrevention(it);
+  toast('🛡 Recommendation drafted — review it, then Approve to remember it');
+}
+
+function _renderPrevention(it){
+  const pv=it.prevention||{}; const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
+  const known=matchRules(it);
+  const html=`
+    ${known.length?`<div class="rulehit">🛡 <b>You have already told the platform about this evasion.</b> ${known.map(r=>`Rule <b>${e(r.code)}</b> (approved ${e(r.date)}${r.sent?', sent to '+e(r.sent):''}) — “${e(r.summary).slice(0,110)}”`).join('<br>')}<br><span class="note" style="margin:4px 0 0">It is still showing up, which is the point to make in the next report: the recommendation was made on ${e(known[0].date)} and the content persists.</span></div>`:''}
+    ${pv.evasion?`<div class="pvsec"><div class="lbl">The trick that got it past the filter</div><div class="val">${e(pv.evasion)}${pv.why_missed?' <span class="note" style="margin:0">— '+e(pv.why_missed)+'</span>':''}</div></div>`:''}
+    ${(pv.block_terms||[]).length?`<div class="pvsec"><div class="lbl">Block or auto-review these</div><div class="vpills">${pv.block_terms.map(t=>`<span class="vsig block">${e(t)}</span>`).join('')}</div></div>`:''}
+    ${(pv.patterns||[]).length?`<div class="pvsec"><div class="lbl">Rules the platform could deploy</div>${pv.patterns.map(p=>`<div class="pvrule"><div class="pvpat">${e(p.pattern)}</div><div class="note" style="margin:3px 0 0"><b>Catches:</b> ${e(p.catches)}${p.false_positives?` &nbsp;·&nbsp; <b>Could also hit:</b> ${e(p.false_positives)}`:''}${p.mitigation?` &nbsp;·&nbsp; <b>So:</b> ${e(p.mitigation)}`:''}</div></div>`).join('')}</div>`:''}
+    ${pv.rule_text?`<div class="pvsec"><div class="lbl">Paste into the recommendation</div><div class="val pvtext">${e(pv.rule_text)}</div></div>`:''}
+    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+      <span class="badge" style="background:#152A4E;color:#fff">${e((pv.enforcement||'review').toUpperCase())}</span>
+      ${pv.policy?`<span class="note" style="margin:0">${e(pv.policy)}</span>`:''}
+    </div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn btn-lib" onclick="approveRule(${it.id})">✅ Approve — remember this rule</button>
+      <button class="btn sec" onclick="copyPrevention(${it.id})">📋 Copy the recommendation</button>
+      <button class="btn sec" onclick="recommendPrevention(${it.id},this)">🔁 Redraft</button>
+    </div>`;
+  document.querySelectorAll('#vprev-'+it.id+' .dbody, #prevPane[data-id="'+it.id+'"] .pvbody').forEach(el=>el.innerHTML=html);
+  const d=document.getElementById('vprev-'+it.id); if(d){d.hidden=false;d.open=true;const n=d.querySelector('.dn');if(n)n.textContent=(pv.block_terms||[]).length||'';}
+  const pane=document.getElementById('prevPane'); if(pane&&String(pane.dataset.id)===String(it.id)){pane.style.display='';}
+}
+
+function _ruleCode(){return 'R-'+String(PREVENT_RULES.length+1).padStart(3,'0')}
+function approveRule(id){
+  const it=items.find(x=>x.id===id); const pv=it&&it.prevention; if(!pv){toast('Draft the recommendation first');return}
+  const terms=(pv.block_terms||[]).map(t=>String(t).trim()).filter(Boolean);
+  const pats=(pv.patterns||[]).map(p=>String(p.pattern||'').trim()).filter(Boolean);
+  if(!terms.length&&!pats.length){toast('Nothing to remember in this draft');return}
+  const rule={code:_ruleCode(),date:new Date().toISOString().slice(0,10),from:it.id,category:it.category,platform:it.platform,
+    terms,patterns:pats,evasion:String(pv.evasion||'').slice(0,300),enforcement:pv.enforcement||'review',policy:String(pv.policy||'').slice(0,160),
+    text:String(pv.rule_text||'').slice(0,1200),summary:(pv.evasion||terms.slice(0,3).join(', ')||pats[0]||'').slice(0,160),
+    example:String(it.visionDesc||'').slice(0,200),sent:'',seen:[it.id]};
+  PREVENT_RULES.unshift(rule); rulesSave();
+  // the block terms are also codebook proposals, so they match on the next capture
+  try{
+    const have=new Set([...CODEBOOK,...PROPOSALS].flatMap(x=>[x.term,...(x.variants||[])]).filter(Boolean).map(x=>String(x).toLowerCase()));
+    let n=0; terms.forEach(t=>{if(have.has(t.toLowerCase()))return;have.add(t.toLowerCase());
+      PROPOSALS.push({id:'prop-'+Date.now()+'-'+(n++),kind:/^\p{Extended_Pictographic}/u.test(t)?'emoji':/^#/.test(t)?'hashtag':/^\d/.test(t)?'numeric_code':'term',term:t,variants:[],meaning:'Prevention rule '+rule.code+': '+rule.summary,category:it.category||'propaganda',severity:4,context_required:true,visual_cues:[],example:'Incident #'+it.id,status:'proposed',proposed_by:'prevention'})});
+    if(typeof renderCodebook==='function')renderCodebook();
+  }catch(e){}
+  try{log(it,'prevention rule approved',rule.code+' — '+rule.summary)}catch(e){}
+  try{libLearnFromRule&&libLearnFromRule(rule)}catch(e){}
+  toast('✅ '+rule.code+' remembered. The system will flag this evasion when it comes back.');
+  _renderPrevention(it); renderRulesPanel();
+}
+function copyPrevention(id){
+  const it=items.find(x=>x.id===id); const pv=it&&it.prevention; if(!pv)return;
+  const t=[`PREVENTION RECOMMENDATION — Incident #${it.id} (${(it.category||'').replace(/_/g,' ')} ${it.score}/10, ${it.platform||''})`,
+    pv.policy?`Policy: ${pv.policy}`:'', pv.evasion?`Evasion: ${pv.evasion}`:'', pv.why_missed?`Why automated review misses it: ${pv.why_missed}`:'',
+    (pv.block_terms||[]).length?`Block / auto-review: ${pv.block_terms.join(' · ')}`:'',
+    ...(pv.patterns||[]).map(p=>`Rule: ${p.pattern}\n  Catches: ${p.catches||''}\n  Could hit: ${p.false_positives||''}\n  Mitigation: ${p.mitigation||''}`),
+    `Recommended enforcement: ${(pv.enforcement||'review').toUpperCase()}`, '', pv.rule_text||''].filter(x=>x!==undefined&&x!==null).join('\n');
+  try{navigator.clipboard.writeText(t);toast('Recommendation copied')}catch(e){}
+}
+
+// Does this new item match an evasion we have already told the platform about?
+function matchRules(it){
+  if(!PREVENT_RULES.length)return [];
+  const hay=[(it.ocr||''),(it.caption||''),(it.url||''),(it.poster||''),(it.visionDesc||''),...(it.indicators||[]),...((it.visionRaw||{}).indicators||[])].join(' ').toLowerCase();
+  return PREVENT_RULES.filter(r=>r.terms.some(t=>t.length>1&&hay.includes(t.toLowerCase()))
+                         ||(r.category&&r.category===it.category&&r.terms.length===0&&r.patterns.length>0&&false));
+}
+function noteRuleHit(it){
+  const hits=matchRules(it); if(!hits.length)return;
+  hits.forEach(r=>{if(!r.seen.includes(it.id))r.seen.push(it.id)}); rulesSave();
+  it.ruleHits=hits.map(r=>r.code);
+}
+function markRuleSent(code){
+  const r=PREVENT_RULES.find(x=>x.code===code); if(!r)return;
+  const to=prompt('Sent to which platform / team? (e.g. Meta T&S, 09/2026)',r.platform||''); if(to===null)return;
+  r.sent=to; rulesSave(); renderRulesPanel(); toast(code+' marked as sent');
+}
+function deleteRule(code){PREVENT_RULES=PREVENT_RULES.filter(r=>r.code!==code);rulesSave();renderRulesPanel();}
+
+function renderRulesPanel(){
+  const el=document.getElementById('rulesList'); if(!el)return;
+  const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
+  const cnt=document.getElementById('rulesCount'); if(cnt)cnt.textContent=PREVENT_RULES.length;
+  if(!PREVENT_RULES.length){el.innerHTML='<div class="note" style="margin:0">No rules yet. Confirm a finding, draft “How to stop this”, and press Approve.</div>';return}
+  el.innerHTML=PREVENT_RULES.map(r=>`<div class="rulerow">
+    <div class="rulehd"><b>${e(r.code)}</b> <span class="badge" style="background:#152A4E;color:#fff">${e(r.enforcement).toUpperCase()}</span> <span class="note" style="margin:0">${e(r.date)} · ${e((r.category||'').replace(/_/g,' '))} · from #${r.from}${r.sent?' · <b>sent: '+e(r.sent)+'</b>':' · <i>not yet sent</i>'} · seen again in <b>${Math.max(0,r.seen.length-1)}</b> later capture(s)</span></div>
+    <div class="note" style="margin:3px 0 0">${e(r.summary)}</div>
+    ${r.terms.length?`<div class="vpills" style="margin-top:5px">${r.terms.map(t=>`<span class="vsig block">${e(t)}</span>`).join('')}</div>`:''}
+    ${r.patterns.length?`<div class="note" style="margin:4px 0 0">${r.patterns.map(p=>'• '+e(p)).join('<br>')}</div>`:''}
+    <div class="row" style="gap:6px;margin-top:7px;flex-wrap:wrap">
+      ${r.sent?'':`<button class="btn sec" style="padding:4px 10px;font-size:12.5px" onclick="markRuleSent('${e(r.code)}')">📨 Mark as sent</button>`}
+      <button class="btn mute" style="padding:4px 10px;font-size:12.5px" onclick="deleteRule('${e(r.code)}')">Remove</button>
+    </div></div>`).join('');
+}
+
+// One document for the platform: every approved rule, with the incidents behind it.
+function exportPreventionBrief(){
+  if(!PREVENT_RULES.length){toast('No approved rules to export yet');return}
+  const d=new Date().toISOString().slice(0,10);
+  const lines=[`# Prevention Recommendations — Project Spear / GIPEC AI²`,`Prepared ${d} · ${PREVENT_RULES.length} rule(s)`,``,
+    `Each rule below was derived from confirmed content that passed automated review. For each: the evasion used, what to block or auto-review, a deployable pattern with its false-positive mitigation, the policy clause, and the incidents behind it.`,``];
+  PREVENT_RULES.forEach(r=>{
+    const ex=items.filter(i=>r.seen.includes(i.id));
+    lines.push(`## ${r.code} — ${r.summary}`,
+      `- **Category:** ${(r.category||'').replace(/_/g,' ')}  ·  **Platform:** ${r.platform||''}  ·  **Approved:** ${r.date}${r.sent?`  ·  **Sent:** ${r.sent}`:''}`,
+      r.policy?`- **Policy clause:** ${r.policy}`:'', r.evasion?`- **Evasion:** ${r.evasion}`:'',
+      r.terms.length?`- **Block / auto-review:** ${r.terms.join(' · ')}`:'',
+      ...r.patterns.map(p=>`- **Rule:** ${p}`),
+      `- **Recommended enforcement:** ${(r.enforcement||'review').toUpperCase()}`,
+      `- **Observed in ${r.seen.length} capture(s):** ${ex.slice(0,8).map(i=>`#${i.id} ${i.platform||''} ${i.score}/10${/^https?:/.test(i.url||'')?' '+i.url.split(' ')[0]:''}`).join('; ')}`,
+      r.text?``:'', r.text?r.text:'', ``);
+  });
+  const blob=new Blob([lines.filter(x=>x!==undefined).join('\n')],{type:'text/markdown'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`prevention_brief_${d}.md`;a.click();
+  toast('Prevention brief downloaded');
+}
+function libLearnFromRule(rule){
+  if(typeof LIBRARY==='undefined')return;
+  LIBRARY.push({id:'rule-'+rule.code,name:'Prevention rule '+rule.code,kind:'finding',ts:Date.now(),
+    text:`PREVENTION RULE ${rule.code} (${rule.date}) — ${rule.summary}\nEvasion: ${rule.evasion}\nBlock/auto-review: ${rule.terms.join(', ')}\nPatterns: ${rule.patterns.join(' | ')}\nPolicy: ${rule.policy}\nEnforcement: ${rule.enforcement}\n${rule.text}`});
+  try{libSave()}catch(e){}
+}
+
+// ================= WATERMARKS & HIDDEN CODES =================
+// Eric's best skill is the logo tucked in a corner — small, faded, cut off, or hidden
+// in a number. A single pass over the whole image at feed resolution misses it. So
+// every image now gets a SECOND look built for exactly that: the four corners and
+// both edges are cropped and enlarged into one sheet, the file's metadata is read for
+// text a human never sees, and the model is told what marks to look for by name.
+// Anything it finds can be saved as a fingerprint so the next copy matches with no
+// text at all.
+const KNOWN_MARKS=['Amaq (news agency badge, often a small rectangle)','Al-Furqan Media','Al-Hayat Media Center','Al-Thabat','Ajnad (audio)','Nashir News','Al-Naba','Black Standard / tawhid banner','ISIS wilayah province stamps','Hamas / Qassam Brigades emblem','Hezbollah emblem','Houthi sarkha slogan','Active Club / Will2Rise','NSAWP / Patriot Front','Atomwaffen / Siege mask','Totenkopf / SS runes / sonnenrad','Celtic cross','Groyper','Happy Merchant','1488 / 88 / 14 / 18 / 109-110 / 271k / 6MWE hidden in prices, jersey numbers, timestamps, usernames or dates','(((echo))) marks','red inverted triangle','Telegram / t.me channel names burned into the frame','watermarks of aggregator accounts (e.g. @-handles in a corner)'];
+
+function _cornerSheet(dataUrl){
+  return new Promise(res=>{
+    const im=new Image(); im.onload=()=>{
+      const W=im.naturalWidth,H=im.naturalHeight; if(!W||!H)return res(null);
+      const cw=Math.round(W*0.30),ch=Math.round(H*0.30), ew=W, eh=Math.round(H*0.12);
+      const scale=Math.min(3,Math.max(1.5,900/Math.max(cw,ch)));
+      const tw=Math.round(cw*scale),th=Math.round(ch*scale), ew2=Math.round(Math.min(W,1200)*scale*0.5), eh2=Math.round(eh*scale);
+      const gap=14, lab=26;
+      const c=document.createElement('canvas'); c.width=tw*2+gap*3; c.height=(th+lab)*2+(eh2+lab)*2+gap*5;
+      const x=c.getContext('2d'); x.fillStyle='#ffffff'; x.fillRect(0,0,c.width,c.height);
+      x.imageSmoothingEnabled=true; x.imageSmoothingQuality='high';
+      const put=(sx,sy,sw,sh,dx,dy,dw,dh,label)=>{x.fillStyle='#152A4E';x.font='bold 18px sans-serif';x.fillText(label,dx,dy+18);x.drawImage(im,sx,sy,sw,sh,dx,dy+lab,dw,dh);x.strokeStyle='#c9cfd8';x.strokeRect(dx,dy+lab,dw,dh)};
+      put(0,0,cw,ch, gap,gap, tw,th,'TOP-LEFT corner, enlarged');
+      put(W-cw,0,cw,ch, gap*2+tw,gap, tw,th,'TOP-RIGHT corner, enlarged');
+      put(0,H-ch,cw,ch, gap,gap*2+th+lab, tw,th,'BOTTOM-LEFT corner, enlarged');
+      put(W-cw,H-ch,cw,ch, gap*2+tw,gap*2+th+lab, tw,th,'BOTTOM-RIGHT corner, enlarged');
+      const y3=gap*3+(th+lab)*2;
+      put(0,0,W,eh, gap,y3, c.width-gap*2,eh2,'TOP EDGE strip');
+      put(0,H-eh,W,eh, gap,y3+eh2+lab+gap, c.width-gap*2,eh2,'BOTTOM EDGE strip');
+      res(c.toDataURL('image/jpeg',0.88));
+    }; im.onerror=()=>res(null); im.src=dataUrl;
+  });
+}
+
+// Text hidden in the file itself: EXIF/XMP/comment segments, PNG tEXt chunks, and any
+// readable string after the image data — where stego tools and channel stamps live.
+async function _scanMetadata(dataUrl){
+  try{
+    const b64=(dataUrl.split(',')[1]||''); const bin=atob(b64); const n=bin.length; if(!n)return [];
+    const out=new Set(); let cur='';
+    const head=Math.min(n,65536), tailStart=Math.max(head,n-32768);
+    const scan=(a,b)=>{for(let i=a;i<b;i++){const ch=bin.charCodeAt(i);
+      if(ch>=32&&ch<127){cur+=bin[i]}else{if(cur.length>=6&&/[A-Za-z]{3}/.test(cur)&&!/^[\/\+=A-Za-z0-9]{40,}$/.test(cur))out.add(cur.trim());cur=''}}};
+    scan(0,head); if(tailStart>head)scan(tailStart,n);
+    const junk=/^(JFIF|Exif|ICC_PROFILE|Adobe|Photoshop|http:\/\/ns\.adobe|xmpmeta|xpacket|IHDR|IDAT|IEND|sRGB|gAMA|pHYs|Ducky|XICC|Lavc|ftyp|mp4|isom|moov|mdat)/i;
+    return [...out].filter(t=>!junk.test(t)&&!/^[\d\s.,:\-]+$/.test(t)).slice(0,20);
+  }catch(e){return []}
+}
+
+async function watermarkPass(id){
+  const it=items.find(x=>x.id===id); if(!it||!(it.media||it.thumb))return;
+  const src=it.media||it.thumb; if(!/^data:image\//.test(src))return;
+  const box=document.getElementById('vmark-'+id);
+  if(box){box.hidden=false;box.querySelector('.dbody').innerHTML='<div class="note" style="margin:0"><span class="spin"></span> Second look — enlarging the corners and edges, reading the file’s hidden text, checking for known marks…</div>'}
+  const [sheet,meta]=await Promise.all([_cornerSheet(src),_scanMetadata(src)]);
+  it.metaStrings=meta;
+  const ctx=[
+    'SECOND LOOK — WATERMARKS AND HIDDEN CODES ONLY. Attached is a contact sheet: the four CORNERS of a social-media image enlarged, plus its TOP and BOTTOM edge strips. The full image was already described as: "'+String(it.visionDesc||(it.visionRaw||{}).description||'').slice(0,300)+'".',
+    'Look ONLY for things a first pass misses: small or faded watermarks and logos; badges tucked in a corner; media-outlet marks; @handles or channel names burned into the frame; numbers hidden in prices, jersey numbers, dates, timestamps or usernames that are actually codes; symbols formed from negative space or repeated shapes; tiny, mirrored, rotated or partly cut-off text; a second image or frame bleeding in at an edge.',
+    'Known marks to recognise by name: '+KNOWN_MARKS.join('; ')+'.',
+    meta.length?'TEXT FOUND INSIDE THE FILE ITSELF (metadata / comment segments — a person never sees this on screen): '+meta.slice(0,12).join(' | '):'No readable metadata strings.',
+    'Return the usual fields AND "marks": a list of objects {"what":"<the mark, named if known>","where":"top-left|top-right|bottom-left|bottom-right|top-edge|bottom-edge|metadata|throughout","kind":"watermark|logo|code|hidden_text|symbol|handle|metadata","reads":"<any text/number it contains, transcribed>","signals":"<what it tells an analyst — outlet, network, ideology>","confidence":<0-1>}. If you find nothing, return "marks":[] — do NOT invent a mark. In "description" say in one sentence what the second look found.'
+  ].join('\n');
+  let r=null; try{ if(sheet) r=await visionAnalyze(sheet,ctx); }catch(e){}
+  let marks=(r&&!r.__error&&Array.isArray(r.marks))?r.marks.filter(m=>m&&m.what&&(+m.confidence||0)>=0.35):[];
+  // The model sometimes reports what it found in "indicators"/"threat" instead of the
+  // "marks" list. A real finding must never be lost to a formatting choice.
+  if(!marks.length&&r&&!r.__error){
+    const pos=t=>{t=String(t).toLowerCase();return /top[- ]?left/.test(t)?'top-left':/top[- ]?right/.test(t)?'top-right':/bottom[- ]?left/.test(t)?'bottom-left':/bottom[- ]?right/.test(t)?'bottom-right':/top edge|top strip|along the top/.test(t)?'top-edge':/bottom edge|bottom strip|along the bottom/.test(t)?'bottom-edge':/metadata|exif/.test(t)?'metadata':'throughout'};
+    const kind=t=>{t=String(t).toLowerCase();return /watermark/.test(t)?'watermark':/logo|badge|emblem|banner|insignia/.test(t)?'logo':/\d{2,}|code|numeric/.test(t)?'code':/@|handle|channel/.test(t)?'handle':/text/.test(t)?'hidden_text':'symbol'};
+    const blob=[r.description||'',r.threat||''].join(' ');
+    (r.indicators||[]).forEach(ind=>{const t=String(ind); if(!/watermark|logo|badge|corner|code|hidden|disguised|tucked|handle|channel|stamp|emblem|insignia|\$?\d{2,}/i.test(t))return;
+      // find the sentence in the description/threat that mentions it, to place it
+      const sent=(blob.match(/[^.]*\b(top|bottom)[- ]?(left|right)[^.]*\./gi)||[]).find(x=>t.split(/\W+/).filter(w=>w.length>3).some(w=>new RegExp(w,'i').test(x)))||'';
+      const reads=(t.match(/\$?\d[\d.,]*\d|AMAQ|[A-Z]{3,}/)||[''])[0];
+      const where=pos(sent||t);
+      if(!reads&&!/watermark|logo|badge|emblem|stamp|insignia|handle|channel|@/i.test(t))return;   // a tactic, not a mark
+      if(where==='throughout'&&!reads)return;
+      marks.push({what:t.replace(/\s+in (the )?(top|bottom)[- ]?(left|right)( corner)?/i,'').trim(),where,kind:kind(t),reads,signals:'',confidence:Math.min(0.9,Number(r.confidence)||0.6),inferred:true});
+    });
+    if(marks.length&&r.threat&&!r.description)r.description=String(r.threat);
+  }
+  it.marks=marks; it.markNote=(r&&!r.__error&&r.description)?String(r.description):'';
+  // a named outlet mark is the strongest evidence there is — it raises the finding
+  const strong=marks.filter(m=>(m.kind==='logo'||m.kind==='watermark')&&(+m.confidence||0)>=0.6&&/amaq|furqan|hayat|thabat|ajnad|nashir|naba|black standard|tawhid|wilayah|qassam|hezbollah|active club|will2rise|nsawp|patriot front|atomwaffen|totenkopf|sonnenrad|ss rune/i.test(m.what+' '+(m.signals||'')));
+  if(strong.length){
+    const before=it.score;
+    it.score=Math.max(it.score,8); it.tier=tierOf(it.score); it.recommendation=recOf(it.score);
+    if(/amaq|furqan|hayat|thabat|ajnad|nashir|naba|black standard|tawhid|wilayah/i.test(strong[0].what+' '+strong[0].signals))it.category='isis_terrorism';
+    else if(it.category==='benign')it.category='propaganda';
+    if(it.grade==='Unchecked'||it.grade==='Predicted')it.grade='Corroborated';
+    strong.forEach(m=>{const tag='mark: '+m.what; if(!(it.indicators||[]).includes(tag))(it.indicators=it.indicators||[]).push(tag)});
+    if(before!==it.score){toast('🔍 Watermark found — '+strong[0].what+' — raised to '+it.score+'/10');try{log(it,'watermark raised score',before+' → '+it.score+' ('+strong[0].what+')')}catch(e){}}
+    _refreshCard(it,null); return;   // card re-renders and calls _renderMarks
+  }
+  try{log(it,'second look',marks.length?marks.map(m=>m.what).join(', '):'no hidden marks')}catch(e){}
+  _renderMarks(it); render();
+}
+
+function _renderMarks(it){
+  const box=document.getElementById('vmark-'+it.id); if(!box)return;
+  const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
+  const marks=it.marks||[], meta=it.metaStrings||[];
+  const badge=box.querySelector('.dn'); if(badge)badge.textContent=marks.length||'';
+  box.hidden=false;
+  if(!marks.length&&!meta.length){box.querySelector('.dbody').innerHTML='<div class="note" style="margin:0">Second look done: no hidden watermark, logo, code or metadata text found.'+(it.markNote?' '+e(it.markNote):'')+'</div>';box.open=false;return}
+  box.open=marks.length>0;
+  const POS={'top-left':'↖','top-right':'↗','bottom-left':'↙','bottom-right':'↘','top-edge':'↑','bottom-edge':'↓','metadata':'🗎','throughout':'▣'};
+  box.querySelector('.dbody').innerHTML=
+    (it.markNote?`<div class="note" style="margin:0 0 8px">${e(it.markNote)}</div>`:'')+
+    marks.map((m,i)=>`<div class="mkrow">
+      <div class="mkhd"><span class="mkpos" title="${e(m.where)}">${POS[m.where]||'•'}</span> <b>${e(m.what)}</b> <span class="mkkind">${e(m.kind)}</span>${m.confidence?`<span class="note" style="margin:0"> · ${Math.round((+m.confidence||0)*100)}% sure</span>`:''}</div>
+      ${m.reads?`<div class="mkreads">reads: “${e(m.reads)}”</div>`:''}
+      ${m.signals?`<div class="note" style="margin:3px 0 0">${e(m.signals)}</div>`:''}
+      ${/^(top|bottom)-(left|right)$/.test(m.where||'')?`<button class="btn sec" style="padding:5px 11px;font-size:12.5px;margin-top:6px" onclick="saveMarkAsReference(${it.id},${i})">💾 Save this mark as a fingerprint</button>`:''}
+    </div>`).join('')+
+    (meta.length?`<details style="margin-top:10px"><summary class="note" style="cursor:pointer;margin:0">Text hidden inside the file (${meta.length})</summary><div class="mkmeta">${meta.map(e).join('<br>')}</div></details>`:'');
+}
+
+// Crop the corner the model pointed at, fingerprint it, and keep it: from now on any
+// image or video frame carrying that mark matches by shape, with no text needed.
+async function saveMarkAsReference(id,i){
+  const it=items.find(x=>x.id===id); const m=it&&(it.marks||[])[i]; if(!m)return;
+  const src=it.media||it.thumb; if(!src)return;
+  const im=await loadImg(src); const W=im.naturalWidth,H=im.naturalHeight; const cw=Math.round(W*0.30),ch=Math.round(H*0.30);
+  const sx=/right/.test(m.where)?W-cw:0, sy=/bottom/.test(m.where)?H-ch:0;
+  const c=document.createElement('canvas'); c.width=cw; c.height=ch; c.getContext('2d').drawImage(im,sx,sy,cw,ch,0,0,cw,ch);
+  const du=c.toDataURL('image/png'); const crop=await loadImg(du); const dh=dHash(crop);
+  const label=prompt('Label for this fingerprint (what the mark is):',m.what)||m.what;
+  LIBRARY.push({id:'ref-'+Date.now(),name:label,kind:'reference_image',note:label,size:du.length,text:'REFERENCE MARK: '+label+(m.signals?' — '+m.signals:''),chunks:0,terms:[],imported:0,image:{dhash:dh,thumb:du},ts:new Date().toLocaleString()});
+  try{libSave()}catch(e){}
+  try{if(typeof renderLibrary==='function')renderLibrary()}catch(e){}
+  try{log(it,'fingerprint saved',label)}catch(e){}
+  toast('💾 Saved — the system will now recognise “'+label+'” by shape');
+}
+
 function renderVisionCard(it){
   const e=x=>String(x==null?'':x).replace(/</g,'&lt;');
   const v=it.visionRaw||{};
@@ -2104,7 +2441,10 @@ function renderVisionCard(it){
         ${it.spawned&&it.spawned.length?`<div class="vpills"><span class="vsig hunted">🎯 This image led to ${it.spawned.length} more capture(s)</span></div>`:''}
       </div>
     </div>
+    ${(matchRules(it).length)?`<div class="rulehit top">🛡 <b>Known evasion.</b> You already recommended a block for this: ${matchRules(it).map(r=>'<b>'+e(r.code)+'</b> ('+e(r.date)+(r.sent?', sent to '+e(r.sent):', not yet sent')+')').join(', ')} — and it is still getting through.</div>`:''}
+    ${(it.type!=='audio'&&!notChecked)?`<details class="vdrop mark" id="vmark-${it.id}"${(it.marks&&it.marks.length)?' open':(it.marks?'':' hidden')}><summary><span class="di">🔍</span><span class="dt">Watermarks &amp; hidden codes — second look</span><span class="dn">${(it.marks||[]).length||''}</span><span class="dc">▾</span></summary><div class="dbody"></div></details>`:''}
     ${(!off&&!notChecked)?renderHuntLedger(it):''}
+    ${(!off&&!notChecked)?`<details class="vdrop prev" id="vprev-${it.id}"${it.prevention?' open':' hidden'}><summary><span class="di">🛡</span><span class="dt">How to stop this — what the platform should block</span><span class="dn">${((it.prevention||{}).block_terms||[]).length||''}</span><span class="dc">▾</span></summary><div class="dbody"></div></details>`:''}
     ${(!off&&!notChecked)?`<details class="vdrop pull" id="vpull-${it.id}"${(it.pulled&&it.pulled.length)?' open':' hidden'}><summary><span class="di">🌐</span><span class="dt">Pulled from other platforms</span><span class="dn">${(it.pulled||[]).length}</span><span class="dc">▾</span></summary><div class="dbody"></div></details>`:''}
     ${(()=>{
       // ---- Everything below the description is a CLOSED, clickable header. ----
@@ -2146,6 +2486,7 @@ function renderVisionCard(it){
       ${it.type!=='audio'?`<button class="btn btn-retry" onclick="retryVision(${it.id},this)" title="Run Vision AI on this image again — no need to upload it a second time">🔁 Re-analyze</button>`:''}
       <button class="btn btn-ask" onclick="discussIncident(${it.id},'why')">💬 Ask the AI</button>
       <button class="btn btn-missed" onclick="discussIncident(${it.id},'missed')">🕳 Why did their AI miss it?</button>
+      ${(!off&&!notChecked)?`<button class="btn btn-prev" onclick="recommendPrevention(${it.id},this)">🛡 How to stop this</button>`:''}
       <button class="btn findmore" onclick="corroborate(${it.id})">🔎 Find more like this</button>
       ${(it.visionRaw&&((it.visionRaw.entities||[]).length||it.visionRaw.place))?`<button class="btn btn-ctx" onclick="getContext(${it.id})" title="Search current reporting on the people and places named here, and read the post against it">🌐 What's going on around this?</button>`:''}
       <button class="btn btn-decide" onclick="select(${it.id});showTab('queue');document.getElementById('queuePane').scrollIntoView({behavior:'smooth',block:'center'})">📄 Open full report</button>
@@ -2684,10 +3025,11 @@ async function addPhoto(dataUrl,o){
     it.huntedFrom=HUNT_SEED.id; it.huntedVia=HUNT_SEED.term;
     const seed=items.find(x=>x.id===HUNT_SEED.id); if(seed){seed.spawned=(seed.spawned||[]);seed.spawned.push(it.id)}
   }
-  it.shared=sharedOf(text);items.unshift(it);logAnalysis(it);
+  it.shared=sharedOf(text);items.unshift(it);logAnalysis(it);noteRuleHit(it);
   if(visionFailed)autoRetryVision(it.id);
   else if(visionRaw&&((visionRaw.entities||[]).length||visionRaw.place))setTimeout(()=>getContext(it.id,true),400);
   if(!visionFailed&&visionRaw&&Array.isArray(visionRaw.hunt)&&visionRaw.hunt.length)setTimeout(()=>autoPull(it.id),900);
+  if(!visionFailed)setTimeout(()=>watermarkPass(it.id),200);
   log(it,'photo ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade} · OCR ${visible?visible.length+' chars':'none'} · ${labels.length} labels · ${hits.length} codebook hits${API_BASE?' · backend':' · demo'}`);
   st.textContent='';render();return it}
 // ---------- teach / feedback ----------
@@ -4137,7 +4479,7 @@ function libLearnFromReport(it,status){
 }
 
 function initLibraryUpload(){
-  libLoad();
+  libLoad(); try{renderRulesPanel()}catch(e){}
   const box=document.getElementById('libUpload'); if(!box)return;
   ['dragenter','dragover'].forEach(ev=>box.addEventListener(ev,e=>{e.preventDefault();box.classList.add('drag')}));
   ['dragleave','drop'].forEach(ev=>box.addEventListener(ev,e=>{e.preventDefault();box.classList.remove('drag')}));
@@ -4488,7 +4830,7 @@ async function addItem(u){
     it.huntedFrom=HUNT_SEED.id; it.huntedVia=HUNT_SEED.term;
     const seed=items.find(x=>x.id===HUNT_SEED.id); if(seed){seed.spawned=(seed.spawned||[]);seed.spawned.push(it.id)}
   }
-  items.unshift(it);log(it,'ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade}${it.huntedFrom?' · hunted from #'+it.huntedFrom+' via '+it.huntedVia:''}${API_BASE?' · backend':' · demo'}`);render();
+  noteRuleHit(it);items.unshift(it);log(it,'ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade}${it.huntedFrom?' · hunted from #'+it.huntedFrom+' via '+it.huntedVia:''}${API_BASE?' · backend':' · demo'}`);render();
 }
 function loadSamples(){
   // These URLs are INVENTED. They exist to show the layout in a demo, and they are
@@ -4676,7 +5018,7 @@ Be concrete. Do not just restate the description.`;
 function act(status){const it=items.find(i=>i.id===selId);if(!it)return;
   if(status==='Escalated'&&it.tier==='CRITICAL'&&it.reviewers.length<1){it.reviewers.push('Strategic');log(it,'first confirmation recorded','CRITICAL requires a second analyst before escalation');render();return}
   it.status=status;log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}${API_BASE?' · feedback → library':' · feedback recorded (demo)'}`);sendFeedback(it,status);
-  if(status==='Confirmed'||status==='Escalated'){try{libLearnFromReport(it,status)}catch(e){}}
+  if(status==='Confirmed'||status==='Escalated'){try{libLearnFromReport(it,status)}catch(e){} if(!it.prevention)setTimeout(()=>recommendPrevention(it.id),300);}
   if((status==='Confirmed'||status==='Escalated')&&typeof huntSeedFrom==='function'){const n=huntSeedFrom({poster:it.poster,text:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,hits:it.indicators||[],image_hash:it.dhash||'',category:it.category});if(n)toast(`Confirmed threat added ${n} live target(s) to the hunt`)}
   render();
   if(status==='Confirmed'||status==='Escalated'){
