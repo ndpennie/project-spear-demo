@@ -674,6 +674,7 @@ summary{padding:3px 0}
   <div class="kpi h"><div class="n" id="k-high">0</div><div class="l">High (≤1 hr SLA)</div></div>
   <div class="kpi"><div class="n" id="k-rev">0</div><div class="l">Reviewed today</div></div>
   <div class="kpi"><div class="n" id="k-esc">0</div><div class="l">Reported to platform</div></div>
+  <div class="kpi"><div class="n" id="k-acc">—</div><div class="l" id="k-acc-l">Hit rate (red flags you agreed with)</div></div>
 </div>
 
 <div class="cmdwrap">
@@ -4896,6 +4897,10 @@ function render(){
   document.getElementById('k-high').textContent=items.filter(i=>i.tier==='HIGH'&&i.status==='Pending').length;
   document.getElementById('k-rev').textContent=items.filter(i=>i.status!=='Pending').length;
   document.getElementById('k-esc').textContent=items.filter(i=>i.status==='Escalated').length;
+  // Precision on the system's own red flags: of items it scored 7+ that Eric has ruled on, how many he confirmed or reported.
+  // Every Dismiss on a red flag is a false positive the system learns from; this number is what a buyer will ask for first.
+  try{const rf=items.filter(i=>(i.score||0)>=7&&i.status&&i.status!=='Pending');const ok=rf.filter(i=>i.status==='Confirmed'||i.status==='Escalated'||/NCMEC/.test(i.status)).length;
+    const el=document.getElementById('k-acc');if(el){el.textContent=rf.length>=3?Math.round(100*ok/rf.length)+'%':'—';el.title=rf.length?`${ok} of ${rf.length} red flags confirmed or reported`:'Shows after you rule on 3 red flags'}}catch(e){}
   drawCharts();renderDetail();updateTally();
   const ec=document.getElementById('expCount');if(ec){try{ec.textContent=exportScopeItems().length+' incident(s) in scope';}catch(e){}}
   if(document.getElementById('netPane').style.display!=='none')drawNet();
