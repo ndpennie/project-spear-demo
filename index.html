@@ -1443,10 +1443,11 @@ function explain(it){
   const nextTxt=it.ai&&it.ai.what_would_change_this?it.ai.what_would_change_this:NEXT[it.category];
   const bgb=(typeof bgBrandsFor==='function')?bgBrandsFor(it):[];
   const sugg=suggestTerms(it);
+  const missedBlock=it.missedBecause?`<div class="xs" style="background:#fff1f0;border-left:4px solid #B42318;padding:9px 12px;border-radius:6px;margin-bottom:6px"><b>🕳 Why automated review missed it</b><br>${String(it.missedBecause).replace(/</g,'&lt;')}<br><span class="note" style="margin:4px 0 0">Paste this into the report — it is the part a platform reviewer cannot wave off as opinion.</span></div>`:'';
   const visionBlock=it.visionDesc?`<div class="xs" style="background:#eef7fb;border-left:4px solid var(--cyan);padding:9px 12px;border-radius:6px;margin-bottom:6px"><b>👁 Vision AI — what this image is</b><br>${it.visionDesc.replace(/</g,'&lt;')}${it.reasoning&&/Vision AI:/.test(it.reasoning)?`<br><span class="note" style="margin:4px 0 0">Threat read: ${it.reasoning.replace(/^👁 Vision AI:\s*/,'').split(' · Codebook:')[0].replace(/</g,'&lt;')}</span>`:''}</div>`:(it.type==='image'&&it.reasoning&&/did not run|Vision AI is OFF/i.test(it.reasoning)?`<div class="xs" style="background:#fff4e5;border-left:4px solid #f5c77e;padding:9px 12px;border-radius:6px;margin-bottom:6px"><b>👁 Vision AI</b><br>${it.reasoning.replace(/</g,'&lt;').slice(0,220)} — this is a text/OCR-only result. Turn on Vision AI (paste your Gemini key) and re-analyze the image for a full visual report.</div>`:'');
   return `<div class="box explain">
     <div class="xhead">🛈 AI analyst explanation <span class="note" style="font-weight:400">— plain language · confidence ${(it.confidence*100).toFixed(0)}% · ${it.type==='image'?'photo pipeline: fingerprint → OCR → labels → codebook → reasoning':'click the URL to open the source in a new tab'}${isEmerging(it)?' · <b style=\"color:#B7791F\">⚡ EMERGING</b> — novel terms not in the codebook yet':''}</span></div>
-    ${visionBlock}
+    ${visionBlock}${missedBlock}
     <div class="xs"><b>1 · What you are looking at</b><br>${imgSeeing||seeing}<br><span class="note">Framework position: ${LAYER[it.category]}. Connection type detected: <i>${it.connection}</i>.</span></div>
     <div class="xs"><b>2 · Why it is considered threatening</b><br>${HARM[it.category]}${cbHtml}${bgb.length&&it.category!=='benign'?`<div class="bgalert">⚠ <b>BrandGuard:</b> monitored brand ${bgb.join(', ')} appears beside this ${it.category.replace(/_/g,' ')} content — advertiser brand-safety exposure.</div>`:''}${it.libctx&&it.libctx.length?`<div style="margin-top:6px"><b>Related library context</b> <span class="note" style="margin:0">(retrieved from documents you uploaded — the model reasons with this):</span>${it.libctx.map(c=>`<div class="cbhit ctx"><b>${c.doc}</b> · ${c.kind}<br><span class="note" style="margin:0">“${c.text.slice(0,260).replace(/</g,'&lt;')}${c.text.length>260?'…':''}”</span></div>`).join('')}</div>`:''}<br><span class="note">Signals the model weighted: ${it.indicators.join(' · ')||'—'}.</span></div>
     <div class="xs"><b>3 · Why it scored ${it.score}/10 → ${it.tier}</b>
@@ -1797,6 +1798,7 @@ async function _runVisionOn(it){
   const v=await visionAnalyze(media,ctx);
   if(!v||v.__error){it.visionFailed=(v&&v.__error)||'no answer';return false}
   it.visionRaw=v; it.visionDesc=v.description||it.visionDesc; it.visionFailed='';
+  it.missedBecause=v.missed_because||it.missedBecause||'';
   if(it.type==='audio')it.audio=v;
   const vs=Math.max(0,Math.min(10,Math.round(Number(v.risk_score)||0)));
   if(vs>it.score){it.score=vs;if(CATS.includes(v.category))it.category=v.category;}
@@ -2913,6 +2915,11 @@ function initVision(){const gk=document.getElementById('gKey');const gs=document
 }
 function visionSystemPrompt(){
   const cats=CATS.filter(c=>c!=='benign').join(', ');
+// The single most useful sentence an analyst can put in a platform report is not "this is bad"
+// — the platform knows its own policy. It is "here is the specific mechanism by which your
+// automated review failed on this item." That turns a report from an assertion into evidence,
+// and it is the part a human reviewer at the platform cannot dismiss as a difference of opinion.
+const MISSED_Q = "If automated moderation did NOT catch this, name the SPECIFIC mechanism that let it through, in one or two plain sentences. Choose from what you actually observe: the violating element is small, faded, cropped or in a corner; it appears only on a mid-clip frame while the thumbnail and first frame are benign; the cover art mimics a mainstream news or brand logo so a static scan reads it as legitimate; audio was relabeled as original to defeat hash matching; the caption is fragmented, transliterated or coded to defeat keyword matching; the text is non-English; the symbol is a rune, numeric code or in-group mark outside standard classifier sets; the account saturates a grid with near-identical posts so removing one leaves the rest; the image is a screenshot or re-encode that breaks perceptual hashes. If you believe automated review WOULD plausibly have caught this, say so plainly instead of inventing an evasion.";
   return `You are a trust & safety threat analyst for GIPEC AI². Analyze the attached image the way an expert human analyst would, looking hard for DISGUISED content. Watch for: ISIS/affiliate media logos or WATERMARKS tucked in a corner (Amaq, Al-Furqan, Al-Thabat, Ajnad, Nashir); the black tawhid / Islamic State banner ("Black Standard"); the slogan "remaining and expanding" (باقية وتتمدد); fake mainstream-news-logo camouflage such as a fake Al Jazeera teardrop calligraphy logo used as benign cover art on a repeated grid; neo-Nazi / antisemitic symbols (Happy Merchant, swastika, SS/runes, Jude star, "goyim", Holocaust denial, Great Replacement, Black Sun); narcotics sales; and inauthentic/scam accounts.
 
 MOBILIZATION / PROTECTIVE-AWARENESS RULE (this is a SEPARATE lane from violations, and you must not confuse the two):
@@ -2925,7 +2932,7 @@ When you see that pattern:
 Do NOT apply this to ordinary opinion, commentary, news or a post that merely criticises a public figure with no place, no date and no call to turn out.
 It becomes a real violation — score it 7+ under incitement, public_safety_threat or operational_planning — ONLY if it adds: the target's route, schedule, hotel, residence, vehicle or security detail; a weapon, tactic or instruction for violence; "by any means necessary" or equivalent; a named individual marked for harm rather than protest; or an attack on a protected group (an ethnicity, a religion, a nationality) rather than on the official and their conduct. Note that accusing a sitting head of state of genocide or war crimes is political speech, not hate speech, even when it is aggressive — and note that an ICC arrest warrant exists in some such cases, so a "wanted" framing is not automatically a fabrication or a threat.
 
-Special rule: if the image is a PROFILE GRID or cover art made of repeated identical stylized graphics — especially a fake mainstream-news logo such as an Al Jazeera-style teardrop calligraphy mark used as camouflage — treat that pattern itself as a masking/bait-and-switch indicator (category isis_terrorism if the mimic is a jihadist camouflage, risk 6-8) and say the violating payload is likely inside the videos, not the cover. SAFETY RULE: if the image appears to sexualize or exploit a minor, DO NOT describe it — set category "child_safety" and note "route to NCMEC; media withheld". Respond ONLY with a JSON object: {"description":"<plainly, what the image actually shows>","category":"<one of: ${cats}, or benign>","risk_score":<integer 0-10>,"threat":"<why it is/isn't a threat and any disguise or bait-and-switch tactic used>","policy":"<the platform policy it would violate, or none>","indicators":["<short signal>","..."],"entities":["<each named person, organisation or institution in the image>"],"place":"<the specific place named, or empty>","when":"<the specific date or date range named, or empty>","confidence":<0-1>}`;
+Special rule: if the image is a PROFILE GRID or cover art made of repeated identical stylized graphics — especially a fake mainstream-news logo such as an Al Jazeera-style teardrop calligraphy mark used as camouflage — treat that pattern itself as a masking/bait-and-switch indicator (category isis_terrorism if the mimic is a jihadist camouflage, risk 6-8) and say the violating payload is likely inside the videos, not the cover. SAFETY RULE: if the image appears to sexualize or exploit a minor, DO NOT describe it — set category "child_safety" and note "route to NCMEC; media withheld". Respond ONLY with a JSON object: {"description":"<plainly, what the image actually shows>","category":"<one of: ${cats}, or benign>","risk_score":<integer 0-10>,"threat":"<why it is/isn't a threat and any disguise or bait-and-switch tactic used>","policy":"<the platform policy it would violate, or none>","indicators":["<short signal>","..."],"entities":["<each named person, organisation or institution in the image>"],"place":"<the specific place named, or empty>","when":"<the specific date or date range named, or empty>","missed_because":"<${MISSED_Q}>","confidence":<0-1>}`;
 }
 // ===================== GEMINI CLIENT (built to be robust) =====================
 // 1) Ask Google for EVERY model this key can use (both API versions).
@@ -3564,9 +3571,9 @@ async function exportHashtagXLSX(preRows,tagArg){
  if(!rows.length){setSt('No captured content matches '+tag+' yet — paste/capture real links, or 🔌 Connect live AI. <span class="note" style="margin:0">(Or turn off “Real links only” to build a demo spreadsheet.)</span>');toast('Nothing real to export for '+tag+' yet');return}
  setSt('Identified '+rows.length+' accounts for '+tag+' — writing spreadsheet…');
  const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet((tag.replace(/[^A-Za-z0-9]/g,'')||'Hashtag').slice(0,28));
- ws.columns=[{header:'Image',width:22},{header:'Platform',width:12},{header:'Account / post',width:24},{header:'URL',width:40},{header:'Hashtag',width:14},{header:'Category',width:18},{header:'Risk',width:7},{header:'Tier',width:10},{header:'Signals matched',width:34},{header:'What it shows',width:38},{header:'What it means / why it is a danger',width:50},{header:'Source',width:11},{header:'Source type',width:14},{header:'Before you report',width:46}];
+ ws.columns=[{header:'Image',width:22},{header:'Platform',width:12},{header:'Account / post',width:24},{header:'URL',width:40},{header:'Hashtag',width:14},{header:'Category',width:18},{header:'Risk',width:7},{header:'Tier',width:10},{header:'Signals matched',width:34},{header:'What it shows',width:38},{header:'What it means / why it is a danger',width:50},{header:'Source',width:11},{header:'Source type',width:14},{header:'Before you report',width:46},{header:'Why automated review missed it',width:56}];
  const hr=ws.getRow(1);hr.font={bold:true,color:{argb:'FFFFFFFF'}};hr.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF152A4E'}};hr.alignment={vertical:'middle',wrapText:true};
- ws.autoFilter='A1:N1';ws.views=[{state:'frozen',ySplit:1}];
+ ws.autoFilter='A1:O1';ws.views=[{state:'frozen',ySplit:1}];
  const _kind=r=>r.sourceKind||(typeof sourceKind==='function'?sourceKind(r.url||r.text||''):'primary');
  const _held=r=>_kind(r)==='reference'||r.stance==='opposing'||r.tier==='COUNTER-SPEECH'||r.tier==='LOW SIGNAL';
  const reportable=rows.filter(r=>!_held(r));
@@ -3575,6 +3582,8 @@ async function exportHashtagXLSX(preRows,tagArg){
    const means=(HARM[r.category]||'').replace(/\s+/g,' ');
    const shows=`${metaPlatform(r.platform)} account "${r.poster}" using ${(r.hits&&r.hits.length)?r.hits.slice(0,3).join(', '):tag}`;
    const row=ws.addRow(['',metaPlatform(r.platform),r.poster,r.url||r.text||'',tag,(r.category||'').replace(/_/g,' '),r.score!=null?r.score+'/10':'',r.tier||'',(r.hits||[]).join(', '),shows,means,r.real?'captured (live link)':'representative (demo)']);
+   row.getCell(15).value=r.missedBecause||'';
+   row.getCell(15).alignment={wrapText:true,vertical:'top'};
    row.getCell(13).value='Primary';
    row.getCell(14).value='Stance NOT verified by the system — open the link and confirm the poster is promoting this, not documenting or opposing it, before you report it.';
    row.getCell(14).font={color:{argb:'FF8A5A00'}};
@@ -5168,7 +5177,11 @@ async function addItem(u){
   // Noise floor first: if the only thing matching is a bare code in a tag pile, nothing
   // below should be allowed to turn that into a HIGH-tier finding on an analyst's screen.
   try{
-    const _nz=noiseCheck([u,it.text,it.title,it.snippet,a&&a.visionDesc,a&&a.translation].filter(Boolean).join(' '), it.poster, it.url);
+    // An uploaded image is exempt. The noise floor exists to stop a bare code in a tag pile
+    // from scoring, and it reads text; for a photo the Vision AI read IS the analysis, and a
+    // heuristic on a caption must never pre-empt it.
+    const _isImg=(it.type==='image'||it.type==='audio'||it.type==='video');
+    const _nz=_isImg?null:noiseCheck([u,it.text,it.title,it.snippet,a&&a.translation].filter(Boolean).join(' '), it.poster, it.url);
     if(_nz){
       it.tier='LOW SIGNAL'; it.recommendation='no_action'; it.noiseWhy=_nz;
       it.breakdown=[{l:'🔇 Low signal: '+_nz+'. Score kept for the record; held out of the takedown export.',d:0},...(it.breakdown||[])];
