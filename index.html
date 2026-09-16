@@ -1170,6 +1170,39 @@ const GRADES=['Observed','Corroborated','Inferred','Predicted','Disputed','Unver
 const CONN=['linguistic resemblance','narrative similarity','audience overlap','commercial/social interaction','operational coordination'];
 const TIERS=['CRITICAL','HIGH','MEDIUM','LOW','MINIMAL'];
 const TIERCOLOR={CRITICAL:'#B42318',HIGH:'#D9480F',MEDIUM:'#B7791F',LOW:'#2F855A',MINIMAL:'#5A6472'};
+// ---------- Noise floor: a term match with no context is a coincidence ----------
+// Three things that scored 8/10 on the live crawler before this existed:
+//   "Funko Monsters, Inc. Pop! #1488 Sulley Vinyl Figure"   — 1488 is the item number
+//   "#1488 #cassowary #birdphotography #birding"            — 1488 is a photo ID
+//   "Zog - YouTube · all things Zog"                         — the children's cartoon dragon
+// Short codes carry no meaning on their own. The same code in a sentence about chapters,
+// training or heritage carries a great deal. So these ask what ELSE is in the text.
+const NOISE_CODES=[/\b1488\b/i,/\b14\b/i,/\b88\b/i,/\b109\b/i,/\b110\b/i,/\b311\b/i,
+                   /\brahowa\b/i,/\borion\b/i,/\bnoticing\b/i,/\bzog\b/i,/\bthe juice\b/i];
+const NOISE_CONTEXT=[/\bactive club\b/i,/\bwhite\b/i,/\bheritage\b/i,/\bnationalis/i,/\bnazi/i,
+                     /\bracial\b/i,/\bblood and soil\b/i,/\b14 ?words\b/i,/\bholy war\b/i,
+                     /\bwill ?2 ?rise\b/i,/\bfight night\b/i,/\bchapter\b/i,/\baryan\b/i,
+                     /\bskinhead\b/i,/\bjew(s|ish)?\b/i,/\bzionist/i,/\bglobalis/i,/\bgoyim\b/i,
+                     /\bholohoax\b/i,/\bmerchant\b/i];
+const NOISE_EXPLAINER=/\b(what (is|are|does|do)|what's|why do(es)? (people|they)|eli5|explain(ed|er)?|TIL|out of the loop|glossary|meaning of|definition of|a review of)\b/i;
+// A code in the ACCOUNT NAME is a choice the owner made. It outranks every text test below.
+const HANDLE_CODE=/(1488|rahowa|14words|wpww|aryan|kkk|whitepower)/i;
+
+function handleCarriesCode(poster,url){
+  return HANDLE_CODE.test(String(poster||'')+' '+String(url||''));
+}
+function noiseCheck(text,poster,url){
+  if(handleCarriesCode(poster,url)) return null;          // deliberate identity beats every heuristic
+  const t=String(text||'').trim();
+  if(!t) return null;                                      // no text is not evidence of noise
+  if(NOISE_EXPLAINER.test(t)) return 'explainer or question — someone asking what a term means, not using it';
+  const tags=t.match(/#\w+/g)||[];
+  const prose=t.replace(/#\w+/g,' ').split(/\s+/).filter(w=>w.length>2&&!w.startsWith('@'));
+  if(tags.length>=4&&prose.length<6) return `hashtag soup — ${tags.length} tags, ${prose.length} words of prose; nothing here can be read in context`;
+  if(NOISE_CODES.some(r=>r.test(t))&&!NOISE_CONTEXT.some(r=>r.test(t)))
+    return 'short code with no supporting movement language — the same digits appear in product numbers, photo IDs and a children’s cartoon';
+  return null;
+}
 // ---------- Stance: is this poster PROMOTING it, or DOCUMENTING / OPPOSING it? ----------
 // A hashtag is shared ground. Antifascist researchers, journalists and the movement itself
 // all use #ActiveClub. A scorer that reads terms without reading stance flags the people
@@ -3535,7 +3568,7 @@ async function exportHashtagXLSX(preRows,tagArg){
  const hr=ws.getRow(1);hr.font={bold:true,color:{argb:'FFFFFFFF'}};hr.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF152A4E'}};hr.alignment={vertical:'middle',wrapText:true};
  ws.autoFilter='A1:N1';ws.views=[{state:'frozen',ySplit:1}];
  const _kind=r=>r.sourceKind||(typeof sourceKind==='function'?sourceKind(r.url||r.text||''):'primary');
- const _held=r=>_kind(r)==='reference'||r.stance==='opposing'||r.tier==='COUNTER-SPEECH';
+ const _held=r=>_kind(r)==='reference'||r.stance==='opposing'||r.tier==='COUNTER-SPEECH'||r.tier==='LOW SIGNAL';
  const reportable=rows.filter(r=>!_held(r));
  const reference=rows.filter(_held);
  for(const r of reportable){
@@ -3561,7 +3594,9 @@ async function exportHashtagXLSX(preRows,tagArg){
    note.getCell(1).font={bold:true,italic:true,color:{argb:'FF0B5D3B'}};rs.mergeCells('A2:D2');note.alignment={wrapText:true};
    for(const r of reference){
      const u=r.url||r.text||'';
-     const _why=(r.stance==='opposing'||r.tier==='COUNTER-SPEECH')
+     const _why=(r.tier==='LOW SIGNAL')
+       ? ('LOW SIGNAL — '+(r.noiseWhy||'a term matched with no supporting context')+'. Not a finding.')
+       : (r.stance==='opposing'||r.tier==='COUNTER-SPEECH')
        ? 'Reads as documenting or OPPOSING this, not promoting it — likely an antifascist, researcher or journalist account. Do not submit this to a platform.'
        : 'Reporting ABOUT the movement, not content OF it. Do not submit this to a platform.';
      const rr=rs.addRow([r.poster||'',u,(r.hits||[]).join(', ')||tag,_why]);
@@ -5100,6 +5135,17 @@ async function addItem(u){
     it.huntedFrom=HUNT_SEED.id; it.huntedVia=HUNT_SEED.term;
     const seed=items.find(x=>x.id===HUNT_SEED.id); if(seed){seed.spawned=(seed.spawned||[]);seed.spawned.push(it.id)}
   }
+  // Noise floor first: if the only thing matching is a bare code in a tag pile, nothing
+  // below should be allowed to turn that into a HIGH-tier finding on an analyst's screen.
+  try{
+    const _nz=noiseCheck([u,it.text,it.title,it.snippet,a&&a.visionDesc,a&&a.translation].filter(Boolean).join(' '), it.poster, it.url);
+    if(_nz){
+      it.tier='LOW SIGNAL'; it.recommendation='no_action'; it.noiseWhy=_nz;
+      it.breakdown=[{l:'🔇 Low signal: '+_nz+'. Score kept for the record; held out of the takedown export.',d:0},...(it.breakdown||[])];
+    } else if(handleCarriesCode(it.poster,it.url)){
+      it.breakdown=[{l:'🔠 The account NAME carries the vocabulary — a handle is chosen, not a coincidence.',d:0},...(it.breakdown||[])];
+    }
+  }catch(e){}
   // Stance is read from the retrieved text, before the reference check, so an item can be
   // both primary and counter-speech (an antifascist account on Bluesky is not a news org).
   try{
