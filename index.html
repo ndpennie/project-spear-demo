@@ -778,6 +778,8 @@ summary{padding:3px 0}
     <button class="btn" id="tagCaptureAll" style="background:#2F855A;border-color:#2F855A;font-size:15px;padding:10px 18px;display:none" onclick="captureAllResults(true)">✅ Capture all &amp; build the Meta spreadsheet</button>
     <span class="note" id="tagLiveStat" style="margin:0"></span>
   </div>
+  <div id="metaLeads" style="display:none">
+  </div>
   <details style="margin-top:10px"><summary class="note" style="cursor:pointer">Manual fallback — paste links if a search ever won't load</summary>
     <textarea id="tagPosts" placeholder="Paste post links or a copied results page here…" style="width:100%;min-height:80px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;box-sizing:border-box;margin-top:6px" oninput="tagPasteCount()"></textarea>
     <div class="note" id="tagPasteN" style="margin:4px 0 0"></div>
@@ -4739,6 +4741,11 @@ async function _runSearch(titleHTML,termsUsed,queries,tag,terms){
   }
   all=all||[];
   const seen=new Set();all=all.filter(r=>{if(seen.has(r.href))return false;seen.add(r.href);return true});
+  // Platform-chrome filter. Meta blocks crawlers, so a site:instagram.com / site:facebook.com
+  // query that finds nothing falls back to the domain's own landing pages (instagram.com/,
+  // about.instagram.com/features, facebook.com/instagram/). Those are real URLs with zero
+  // relevance — exactly the kind of row that must never reach an analyst's spreadsheet.
+  all=all.filter(r=>!_isPlatformChrome(r.href));
   // NOTE: search results are deliberately NOT scored here. Running the codebook
   // over search-engine snippets produced false positives (a chocolate retailer
   // scored 5/10 "counterfeit stimulant sale"). Scoring happens on CAPTURE, when
@@ -4746,6 +4753,72 @@ async function _runSearch(titleHTML,termsUsed,queries,tag,terms){
   all.forEach(r=>{r.score=null;r.hits=[];});
   all.sort((a,b)=>(a.reference?1:0)-(b.reference?1:0)||((b.author?1:0)-(a.author?1:0)));
   window.__sysResults=all;renderSearchResults(all);
+}
+function _isPlatformChrome(href){
+  const u=String(href||'').trim(); if(!u) return true;
+  let h='',path='';
+  try{const x=new URL(u);h=x.hostname.replace(/^www\./,'').toLowerCase();path=x.pathname.replace(/\/+$/,'');}catch(e){return false}
+  // corporate / help / about subdomains of the big platforms are never findings
+  if(/^(about|help|business|developers|about-?ads|newsroom|engineering|investor|transparency|privacycenter)\./.test(h)) return true;
+  const PLAT=['instagram.com','facebook.com','fb.com','threads.net','threads.com','x.com','twitter.com','tiktok.com','t.me','telegram.org','bsky.app','youtube.com','reddit.com','mastodon.social'];
+  const isPlat=PLAT.some(p=>h===p||h.endsWith('.'+p));
+  if(!isPlat) return false;
+  if(path==='' ) return true;                                   // bare domain root
+  // the platform's own brand account / generic product pages
+  if(/^\/(instagram|facebook|meta|x|twitter|tiktok|telegram|youtube|reddit|bluesky|threads)$/i.test(path)) return true;
+  if(/^\/(features|about|help|legal|privacy|terms|policies|business|ads|download|accounts|login|signup|explore|directory|safety|support|press|careers|brand)(\/|$)/i.test(path)) return true;
+  return false;
+}
+function _metaLeads(list){
+  // Active Club chapters reuse one identity across platforms: the handle in a Telegram bio or
+  // storefront is very often the same handle on Instagram/Facebook. Meta is not crawlable, so
+  // the only open-source route to those profiles is the identity leaking into content that IS
+  // crawlable. This mines every retrieved result for handles, storefront domains and adjacent
+  // tags, then builds the Meta profile URLs an analyst can check by hand.
+  const STOP=/^(will2rise|activeclub|active_club|instagram|facebook|telegram|twitter|tiktok|youtube|gmail|outlook|protonmail|support|contact|info|admin|shop|store|news|media|official|the|and|for|com|www|http|https)$/i;
+  const handles=new Map(), domains=new Map(), tags=new Map();
+  for(const r of (list||[])){
+    const blob=[r.title,r.snippet,r.text,r.description,r.author,r.href].filter(Boolean).join(' ');
+    const src=r.href||'';
+    let m;
+    const hx=/(?<![A-Za-z0-9_\/])@([A-Za-z0-9_.]{4,30})/g;
+    while((m=hx.exec(blob))){const h=m[1].replace(/\.+$/,'');
+      if(h.length<4||STOP.test(h))continue;
+      if(!handles.has(h.toLowerCase()))handles.set(h.toLowerCase(),{handle:h,from:src});}
+    const dx=/\b((?!(?:www\.)?(?:instagram|facebook|twitter|x|tiktok|telegram|t|bsky|youtube|reddit|google|wikipedia|rollingstone)\.)[a-z0-9][a-z0-9-]{2,}\.(?:com|net|org|shop|store|co|us|io))\b/gi;
+    while((m=dx.exec(blob))){const d=m[1].toLowerCase();
+      if(!domains.has(d))domains.set(d,{domain:d,from:src});}
+    const tx=/#([A-Za-z0-9_]{3,30})/g;
+    while((m=tx.exec(blob))){const t=m[1];const k=t.toLowerCase();
+      if(STOP.test(t))continue;
+      tags.set(k,(tags.get(k)||{tag:t,n:0}));tags.get(k).n++;}
+  }
+  return {handles:[...handles.values()].slice(0,40),domains:[...domains.values()].slice(0,20),
+          tags:[...tags.values()].sort((a,b)=>b.n-a.n).slice(0,20)};
+}
+function renderMetaLeads(list){
+  const box=document.getElementById('metaLeads'); if(!box) return;
+  const L=_metaLeads(list);
+  if(!L.handles.length&&!L.domains.length&&!L.tags.length){box.style.display='none';box.innerHTML='';return;}
+  const esc=x=>String(x||'').replace(/</g,'&lt;');
+  const rows=L.handles.map(h=>`<tr>
+      <td><b>@${esc(h.handle)}</b><br><span class="note" style="margin:0">seen on ${esc((h.from||'').replace(/^https?:\/\//,'').slice(0,40))}</span></td>
+      <td><a href="https://www.instagram.com/${encodeURIComponent(h.handle)}/" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">Instagram ↗</a></td>
+      <td><a href="https://www.facebook.com/${encodeURIComponent(h.handle)}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">Facebook ↗</a></td>
+      <td><button class="btn" style="padding:3px 10px" onclick="captureLead('${h.handle.replace(/'/g,"")}')">Capture</button></td></tr>`).join('');
+  box.innerHTML = `<details class="vdrop" open style="margin-top:12px">
+    <summary><span class="di">🔗</span><span class="dt">Meta leads — identities found in open sources</span><span class="dn">${L.handles.length}</span><span class="dc">▾</span></summary>
+    <div class="dbody">
+      <div class="note" style="margin:0 0 8px">Meta posts are not crawlable, so these are the handles, storefronts and tags that leaked into content that <i>is</i>. Open one to check whether the same identity exists on Meta. <b>Unverified leads, not findings</b> — nothing here is scored until you capture a real link.</div>
+      ${L.handles.length?`<table><thead><tr><th>Handle</th><th>Check Instagram</th><th>Check Facebook</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:''}
+      ${L.domains.length?`<div style="margin-top:10px"><b>Storefronts / sites</b> <span class="note" style="margin:0">— these usually link their own social accounts</span><br>${L.domains.map(d=>`<a href="https://${esc(d.domain)}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline;margin-right:12px">${esc(d.domain)} ↗</a>`).join('')}</div>`:''}
+      ${L.tags.length?`<div style="margin-top:10px"><b>Adjacent tags</b> <span class="note" style="margin:0">— click to hunt one</span><br>${L.tags.map(t=>`<a href="#" onclick="document.getElementById('tagQ').value='#${esc(t.tag)}';runSystemSearch();return false" style="color:#1D4ED8;text-decoration:underline;margin-right:12px">#${esc(t.tag)}${t.n>1?' ('+t.n+')':''}</a>`).join('')}</div>`:''}
+    </div></details>`;
+  box.style.display='';
+}
+function captureLead(handle){
+  addItem('https://www.instagram.com/'+handle+'/ (lead from open-source cross-reference, '+(window.__liveTag||'')+')');
+  toast('Lead captured — verify the profile exists before reporting');
 }
 function renderSearchResults(list){
   const res=document.getElementById('tagResults');const stat=document.getElementById('tagLiveStat');
@@ -4764,6 +4837,7 @@ function renderSearchResults(list){
       <td><button class="btn" style="padding:3px 10px" onclick="captureResult(${i})">Capture</button></td></tr>`).join('')+
     `</tbody></table>`;
   document.getElementById('tagCaptureAll').style.display='';
+  try{renderMetaLeads(list)}catch(e){}
   stat.innerHTML=`<b>${list.length}</b> real social result(s) brought in — from Bluesky, Reddit, Telegram and discovered accounts. Nothing here is scored yet — <b>Capture</b> runs the codebook and Vision AI on the real content.`;
 }
 function captureResult(i){const r=window.__sysResults&&window.__sysResults[i];if(!r)return;addItem(r.href+' '+(r.snippet||'')+' ('+(window.__liveTag||'')+')');toast('Captured to review queue');showTab('queue');}
