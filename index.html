@@ -1613,6 +1613,122 @@ function cbMatch(text,labels){
     if((codes.length||letters.length)&&(h.includes('_')||/[a-z]{3,}(1488|88|14|18)$/.test(h))){const sev=(codes.length+letters.length>=2||codes.includes('1488'))?4:3;
       const base=CODEBOOK.find(e=>e.id==='pt-handle-code');const hit=add({...base,severity:sev,context_required:sev<4},'@'+h+' → '+[...codes,...letters].join('+'),false);hit.severity=Math.max(hit.severity,sev)}}
   return Object.values(found).sort((a,b)=>b.severity-a.severity)}
+// ---------- Evidence integrity ----------
+// A hash taken at capture time, over the exact content the analyst saw. If the post is later
+// edited or deleted, the record still proves WHAT was captured and WHEN.
+//
+// Said precisely, because this is the claim people overstate: this is TAMPER-EVIDENT, not
+// notarised. It proves the record has not changed since capture. It does NOT prove the
+// timestamp to a third party — that needs an external timestamping authority, and anyone
+// claiming chain of custody without one is overselling. Written here so nobody has to
+// reverse-engineer what the guarantee actually is.
+async function evidenceStamp(it){
+  try{
+    const canon=JSON.stringify({url:it.url||'',poster:it.poster||'',text:(it.text||'').slice(0,4000),
+                                category:it.category||'',score:it.score,captured:it.captured||''});
+    const buf=new TextEncoder().encode(canon);
+    const dig=await crypto.subtle.digest('SHA-256',buf);
+    const hex=[...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    return {algo:'SHA-256',hash:hex,at:new Date().toISOString(),
+            covers:'url, poster, captured text, category and score as recorded at capture',
+            guarantee:'Tamper-evident: proves this record is unchanged since capture. Not third-party notarised.'};
+  }catch(e){return null}
+}
+// ---------- Ban evasion: the same actor, a new handle ----------
+// From Eric's 8 months of submissions: "banned actors return under near-identical handles."
+// He catches these by eye because he remembers the old name. The system has his 79 recurring
+// accounts loaded, so it can do the same thing on every capture — and unlike him, it never
+// forgets a handle or gets tired at the end of a shift.
+//
+// The transforms below are what actors actually do when they re-up: bump a trailing number,
+// add or drop a separator, swap a letter for the digit that looks like it. Normalise those
+// away and a "new" account stops looking new.
+function _handleNorms(h){
+  // A trailing digit is genuinely ambiguous — "name1" may be the second account, or leetspeak
+  // for "namei". Both readings are produced and the closest match wins, rather than guessing
+  // an order and being wrong half the time.
+  const base=String(h||'').toLowerCase().trim().replace(/^@+/,'').replace(/[._\-\s]+/g,'');
+  const deleet=x=>x.replace(/0/g,'o').replace(/1/g,'i').replace(/3/g,'e')
+                   .replace(/4/g,'a').replace(/5/g,'s').replace(/7/g,'t');
+  return [...new Set([
+    deleet(base.replace(/\d+$/,'')),   // trailing digits were a counter
+    deleet(base),                      // trailing digits were leetspeak
+  ])].filter(x=>x.length>=3);
+}
+function _editDistance(a,b){
+  if(a===b) return 0;
+  const m=a.length,n=b.length; if(!m||!n) return Math.max(m,n);
+  let prev=Array.from({length:n+1},(_,j)=>j),cur=new Array(n+1);
+  for(let i=1;i<=m;i++){cur[0]=i;
+    for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    [prev,cur]=[cur,prev];}
+  return prev[n];
+}
+function banEvasionCheck(handle){
+  const raw=String(handle||'').replace(/^@+/,'').trim();
+  if(raw.length<4) return null;
+  const known=(typeof FOLLOW_SEED_ACCOUNTS!=='undefined'?FOLLOW_SEED_ACCOUNTS:[])
+    .concat(typeof HUNTSEEDS!=='undefined'?[...HUNTSEEDS.accounts]:[]);
+  const ns=_handleNorms(raw);
+  if(!ns.length) return null;
+  let best=null;
+  for(const k of known){
+    const kr=String(k).replace(/^@+/,'').trim();
+    if(!kr||kr.toLowerCase()===raw.toLowerCase()) continue;   // same handle is a known target, not an evasion
+    for(const kn of _handleNorms(kr)){
+      for(const n of ns){
+        let d,why;
+        if(kn===n){d=0;why='identical once separators, digit-substitutions and a trailing counter are normalised away'}
+        else{d=_editDistance(n,kn); if(d>2) continue;
+             why=`${d} character${d===1?'':'s'} different from a known handle after normalisation`}
+        if(!best||d<best.d) best={d,why,known:kr};
+      }
+    }
+    if(best&&best.d===0) break;
+  }
+  if(!best) return null;
+  return {...best,
+    label:'Possible ban-evasion re-up',
+    detail:`"${raw}" is ${best.why}: previously tracked as "${best.known}". Banned actors routinely return under a near-identical name, and the account — not the single post — is the unit of enforcement.`,
+    bump: best.d===0?3:2};
+}
+
+// ---------- Reference images: Eric's eye, running on every capture ----------
+// His single strongest skill is recognising an affiliate watermark — Amaq, Al-Furqan, Ajnad,
+// the tawhid banner — tucked small, faded or cropped into a corner. dHash + Hamming distance
+// already exist in this file; what was missing was anything to compare AGAINST.
+//
+// This is that library. Load his watermark screenshots once and every image the system sees
+// afterwards is checked against them, including cropped and re-encoded copies, which is where
+// perceptual hashing earns its keep over exact matching.
+//
+// It starts EMPTY and says so. An empty reference library that admits it is empty is honest;
+// one seeded with invented hashes would quietly produce confident matches against nothing.
+const REFIMG_KEY='spear_refimgs';
+let REFIMAGES=[];
+function refImgLoad(){try{REFIMAGES=JSON.parse(localStorage.getItem(REFIMG_KEY)||'[]')}catch(e){REFIMAGES=[]}}
+function refImgSave(){try{localStorage.setItem(REFIMG_KEY,JSON.stringify(REFIMAGES.slice(0,500)))}catch(e){}}
+function refImgAdd(hash,label,note){
+  if(!hash) return null;
+  if(REFIMAGES.some(r=>r.hash===hash)) return null;
+  REFIMAGES.unshift({hash,label:label||'known-bad image',note:note||'',added:new Date().toISOString().slice(0,16).replace('T',' ')});
+  refImgSave(); return REFIMAGES[0];
+}
+// Hamming distance on a 64-bit dHash. <=6 survives cropping, rescaling and re-encoding;
+// beyond ~12 the match stops meaning anything, so we do not report it.
+function refImgMatch(hash,tol){
+  if(!hash||!REFIMAGES.length) return null;
+  const t=(typeof tol==='number')?tol:6;
+  let best=null;
+  for(const r of REFIMAGES){
+    try{const d=ham(hash,r.hash); if(d<=t&&(!best||d<best.distance)) best={...r,distance:d}}catch(e){}
+  }
+  if(!best) return null;
+  return {...best,
+    label2:'Known-bad image re-post',
+    detail:`This image matches a reference image in the library — "${best.label}" — at a Hamming distance of ${best.distance}/64. A perceptual match at that distance survives cropping, rescaling and re-encoding, so a visually altered copy still matches.`,
+    bump: best.distance<=2?4:3};
+}
 // ---------- Ideological fusion: the combination is the signal ----------
 // A hammer and sickle is communist iconography. A Sonnenrad is a neo-Nazi one. Each alone is
 // ambiguous and a term-by-term scorer treats them as unrelated. TOGETHER, on the same red
@@ -5268,6 +5384,26 @@ async function addItem(u){
     it.huntedFrom=HUNT_SEED.id; it.huntedVia=HUNT_SEED.term;
     const seed=items.find(x=>x.id===HUNT_SEED.id); if(seed){seed.spawned=(seed.spawned||[]);seed.spawned.push(it.id)}
   }
+  // Ban-evasion: does this handle look like a known account wearing a new name?
+  try{
+    const be=banEvasionCheck(it.poster);
+    if(be){
+      it.banEvasion=be;
+      it.score=Math.min(10,(it.score||1)+be.bump); it.tier=tierOf(it.score); it.recommendation=recOf(it.score);
+      it.breakdown=[{l:'🔁 <b>'+be.label+'</b> — '+be.detail,d:be.bump},...(it.breakdown||[])];
+    }
+  }catch(e){}
+  // Known-bad image re-post, against the reference library
+  try{
+    if(it.hash){
+      const rm=refImgMatch(it.hash);
+      if(rm){
+        it.refMatch=rm;
+        it.score=Math.min(10,(it.score||1)+rm.bump); it.tier=tierOf(it.score); it.recommendation=recOf(it.score);
+        it.breakdown=[{l:'🖼 <b>'+rm.label2+'</b> — '+rm.detail,d:rm.bump},...(it.breakdown||[])];
+      }
+    }
+  }catch(e){}
   // Noise floor first: if the only thing matching is a bare code in a tag pile, nothing
   // below should be allowed to turn that into a HIGH-tier finding on an analyst's screen.
   try{
@@ -5302,6 +5438,7 @@ async function addItem(u){
   } else {
     it.stanceNote=sourceKindLabel('primary');
   }
+  try{it.evidence=await evidenceStamp(it)}catch(e){}
   noteRuleHit(it);items.unshift(it);log(it,'ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade}${it.huntedFrom?' · hunted from #'+it.huntedFrom+' via '+it.huntedVia:''}${API_BASE?' · backend':' · demo'}`);render();
 }
 function loadSamples(){
@@ -5495,6 +5632,18 @@ Be concrete. Do not just restate the description.`;
 function act(status){const it=items.find(i=>i.id===selId);if(!it)return;
   if(status==='Escalated'&&it.tier==='CRITICAL'&&it.reviewers.length<1){it.reviewers.push('Strategic');log(it,'first confirmation recorded','CRITICAL requires a second analyst before escalation');render();return}
   it.status=status;log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}${API_BASE?' · feedback → library':' · feedback recorded (demo)'}`);sendFeedback(it,status);
+  // The reference library builds ITSELF from the analyst's rulings. Every image Eric confirms
+  // becomes a fingerprint that every future capture is checked against — so the corpus grows
+  // as he works, with no separate curation step, and it encodes his judgement rather than a
+  // guess about what matters. This is the mechanism that turns his eye into system capability.
+  if((status==='Confirmed'||status==='Escalated')&&(it.hash||it.dhash)){
+    try{
+      const added=refImgAdd(it.hash||it.dhash,
+        (it.category||'known-bad').replace(/_/g,' ')+' — confirmed by analyst',
+        'from item #'+it.id+(it.poster?(' · '+it.poster):''));
+      if(added)toast('Image fingerprint added to the reference library — future re-posts of it will match automatically');
+    }catch(e){}
+  }
   if(status==='Confirmed'||status==='Escalated'){try{libLearnFromReport(it,status)}catch(e){} if(!it.prevention)setTimeout(()=>recommendPrevention(it.id),300);}
   if((status==='Confirmed'||status==='Escalated')&&typeof huntSeedFrom==='function'){const n=huntSeedFrom({poster:it.poster,text:(it.ocr||'')+' '+(it.caption||'')+' '+it.url,hits:it.indicators||[],image_hash:it.dhash||'',category:it.category});if(n)toast(`Confirmed threat added ${n} live target(s) to the hunt`)}
   render();
@@ -5602,7 +5751,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();try{itemsLoad()}catch(e){};initVision();initIntegrations();initSimple();initHero();initPush();loadPolicies();initLibraryUpload();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();try{refImgLoad()}catch(e){};try{itemsLoad()}catch(e){};initVision();initIntegrations();initSimple();initHero();initPush();loadPolicies();initLibraryUpload();
 if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
 // crawl is OFF by default — the user starts it with the Start crawl toggle (saves data)
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
