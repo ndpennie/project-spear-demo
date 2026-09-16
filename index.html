@@ -4072,6 +4072,36 @@ async function loadCaseSamples(){try{const r=await fetch('samples/samples.json')
   toast('Case example loaded from samples/')}catch(e){}}
 // ---------- state (in memory only) ----------
 let items=[],selId=null,sortKey='score',sortDir=-1,audit=[],idc=1;
+// ---------- The review queue survives a refresh ----------
+// items[] used to live only in memory, so closing the tab threw away every capture. An
+// analyst who captured thirty posts and reloaded lost thirty posts, and the only trace was
+// a Log entry saying it had once happened. Work that takes an evening should not depend on
+// a tab staying open.
+//
+// Thumbnails are stripped before saving: they are base64 images, they are the bulk of the
+// bytes, and browser storage is small. The link, score, category and reasoning all persist —
+// everything needed to rebuild the queue and rerun an export. On a quota error we shed the
+// oldest items rather than silently saving nothing.
+const ITEMS_KEY='spear_items', ITEMS_MAX=600;
+function itemsSave(){
+  try{
+    const slim=items.slice(0,ITEMS_MAX).map(i=>{const {thumb,...rest}=i;return rest});
+    localStorage.setItem(ITEMS_KEY,JSON.stringify(slim));
+  }catch(e){
+    try{localStorage.setItem(ITEMS_KEY,JSON.stringify(items.slice(0,120).map(i=>{const {thumb,...rest}=i;return rest})));}
+    catch(_){ try{localStorage.removeItem(ITEMS_KEY)}catch(__){} }
+  }
+}
+function itemsLoad(){
+  try{
+    const a=JSON.parse(localStorage.getItem(ITEMS_KEY)||'[]');
+    if(Array.isArray(a)&&a.length){
+      items=a;
+      // keep id allocation ahead of anything restored, or new captures collide with old ones
+      idc=Math.max(1,...a.map(x=>Number(x.id)||0))+1;
+    }
+  }catch(e){}
+}
 // DEMO-ONLY poster names. Used only by loadSamples() for the invented layout examples.
 // Real captures derive the poster from the real URL via posterFromUrl(). Never use this for a real item.
 const POSTERS=['DEMO — invented example 1','DEMO — invented example 2','DEMO — invented example 3','DEMO — invented example 4','DEMO — invented example 5','DEMO — invented example 6','DEMO — invented example 7','DEMO — invented example 8'];
@@ -5213,6 +5243,7 @@ function updateTally(){
   _tallyLast=found;
 }
 function render(){
+  try{itemsSave()}catch(e){}
   renderWatch();
   fill('fCat',CATS);fill('fPlat',[...new Set(items.map(i=>i.platform))].sort());
   const q=document.getElementById('q').value.toLowerCase(),ft=fTier.value,fc=fCat.value,fp=fPlat.value,fs=fStatus.value;
@@ -5464,7 +5495,7 @@ function drawCharts(){
   document.getElementById('tierChart').innerHTML=`<text x="0" y="16" font-size="11" fill="#6B7785">${items.length} items · share by tier</text>${bars}`;
   document.getElementById('tierLegend').innerHTML=TIERS.map(t=>`<span><i style="background:${TIERCOLOR[t]}"></i>${t}</span>`).join('');
 }
-document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();initVision();initIntegrations();initSimple();initHero();initPush();loadPolicies();initLibraryUpload();
+document.getElementById('modeTag').textContent=API_BASE?('backend: '+API_BASE):'demo analyzer';renderChips();loadCaseSamples();loadSeedLibrary();seedSources();loadHuntAllowlist();renderWatch();followLoad();try{itemsLoad()}catch(e){};initVision();initIntegrations();initSimple();initHero();initPush();loadPolicies();initLibraryUpload();
 if(API_BASE){const cb=document.getElementById('connBtn');if(cb)cb.textContent='🔌 Connected';}
 // crawl is OFF by default — the user starts it with the Start crawl toggle (saves data)
 // ---------- "Send to Spear": receive a post shared from Facebook (share-target / bookmarklet) and auto-analyze it ----------
