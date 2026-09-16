@@ -5133,6 +5133,10 @@ async function serverSearch(tag,terms){
     if(!j||!j.results)return null;
     window.__searchNotice=j.notice||'';
     window.__searchSources=j.sources||{};
+    // Meta coverage is reported separately and ALWAYS shown. A result list that looks
+    // full can still contain zero Facebook/Instagram coverage, and an analyst must never
+    // read that silence as 'nothing is there'.
+    window.__metaStatus=j.meta_discovery||'';
     const server=j.results.map(x=>({href:x.url,title:x.title||x.url,snippet:x.snippet||'',
       platform:x.platform||'link',reference:!!x.reference,author:x.author||'',
       source:x.source||'',where:x.where||''}));
@@ -5157,7 +5161,7 @@ async function _runSearch(titleHTML,termsUsed,queries,tag,terms){
   const res=document.getElementById('tagResults');
   res.innerHTML='<div class="note" style="padding:16px;text-align:center"><span class="spin"></span> The system is searching and bringing results in here… this can take 10–20 seconds.<br><span style="font-size:12px;opacity:.75">Searching on the server — the browser is not allowed to query search engines directly.</span></div>';
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
-  let all=null;window.__searchNotice='';
+  let all=null;window.__searchNotice='';window.__metaStatus='';
   // Server-side search first: no CORS limit, so this is the path that works.
   if(tag||(terms&&terms.length))all=await serverSearch(tag,terms);
   // Browser relay fallback (public proxies; unreliable, kept as a backstop).
@@ -5302,10 +5306,17 @@ function captureLead(handle){
 function renderSearchResults(list){
   const res=document.getElementById('tagResults');const stat=document.getElementById('tagLiveStat');
   const note=window.__searchNotice?'<div class="note" style="padding:11px 13px;margin-bottom:10px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px"><b>⚠ Low-signal tag.</b> '+window.__searchNotice+'</div>':'';
-  if(!list.length){res.innerHTML=note+'<div class="note" style="padding:14px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px">No indexed results for this term. Note: <b>Facebook and Instagram posts are not in any search index</b> — Meta blocks crawlers — so this search finds the surrounding network (Telegram, X, storefronts, mirrors, reporting), not in-feed Meta posts. For Meta posts, capture them with the paste box below or apply for <b>Meta Content Library</b> access. Press <b>↻ Search again</b> to retry, or use the manual fallback.</div>';document.getElementById('tagCaptureAll').style.display='none';return;}
+  const metaNote=(window.__metaStatus&&/NOT SEARCHED/.test(window.__metaStatus))
+    ?'<div class="note" style="padding:11px 13px;margin-bottom:10px;background:#fdecea;border:1px solid #e0a3a0;border-radius:8px">'
+     +'<b>⚠ Facebook and Instagram were NOT searched.</b> '
+     +'This result list contains no Meta coverage at all — not "no Meta results", but no Meta search. '
+     +'Treat the absence of Facebook items below as unknown, not as clean. '
+     +'Meta coverage comes from Meta Content Library access or from an analyst capturing a post directly.'
+     +'</div>':'';
+  if(!list.length){res.innerHTML=note+metaNote+'<div class="note" style="padding:14px;background:#fff7e6;border:1px solid #f5c77e;border-radius:8px">No indexed results for this term. Note: <b>Facebook and Instagram posts are not in any search index</b> — Meta blocks crawlers — so this search finds the surrounding network (Telegram, X, storefronts, mirrors, reporting), not in-feed Meta posts. For Meta posts, capture them with the paste box below or apply for <b>Meta Content Library</b> access. Press <b>↻ Search again</b> to retry, or use the manual fallback.</div>';document.getElementById('tagCaptureAll').style.display='none';return;}
   const plat=r=>{if(r.platform&&r.platform!=='web')return r.platform;const h=r.href||'';const m=h.match(/(instagram|facebook|tiktok|twitter|t\.me)/i);return m?({['t.me']:'telegram'}[m[1].toLowerCase()]||m[1].toLowerCase()):(/x\.com/.test(h)?'x':'link')};
   const esc=x=>String(x||'').replace(/</g,'&lt;');
-  res.innerHTML=note+`<table><thead><tr><th>Post / account (click only to read)</th><th>Platform</th><th>Who</th><th>Risk</th><th></th></tr></thead><tbody>`+
+  res.innerHTML=note+metaNote+`<table><thead><tr><th>Post / account (click only to read)</th><th>Platform</th><th>Who</th><th>Risk</th><th></th></tr></thead><tbody>`+
     list.map((r,i)=>`<tr>
       <td><a href="${r.href}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline">${esc(r.title||r.href).slice(0,80)} ↗</a>
         ${r.snippet?`<br><span class="note" style="margin:0;color:#334">${esc(r.snippet).slice(0,150)}</span>`:''}
