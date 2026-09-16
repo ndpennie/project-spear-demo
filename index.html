@@ -1170,6 +1170,63 @@ const GRADES=['Observed','Corroborated','Inferred','Predicted','Disputed','Unver
 const CONN=['linguistic resemblance','narrative similarity','audience overlap','commercial/social interaction','operational coordination'];
 const TIERS=['CRITICAL','HIGH','MEDIUM','LOW','MINIMAL'];
 const TIERCOLOR={CRITICAL:'#B42318',HIGH:'#D9480F',MEDIUM:'#B7791F',LOW:'#2F855A',MINIMAL:'#5A6472'};
+// ---------- Stance: is this poster PROMOTING it, or DOCUMENTING / OPPOSING it? ----------
+// A hashtag is shared ground. Antifascist researchers, journalists and the movement itself
+// all use #ActiveClub. A scorer that reads terms without reading stance flags the people
+// doing the monitoring — which is both wrong and, if it reaches a platform, actively harmful
+// to the accounts we should be protecting.
+//
+// This reads the framing around the terms. It is a signal, never a verdict: an item marked
+// as opposing is still shown, still reviewable, still capturable. It is held out of the
+// takedown export and never seeds the crawler, because those are the two places a wrong
+// call does damage.
+const STANCE_OPPOSING = [
+  // antifascist / counter-speech self-identification
+  /\bantifa(scist)?s?\b/i, /\banti[- ]?fascist/i, /\bno pasaran\b/i, /\bfash\b/i, /\bboneheads?\b/i,
+  /\bnazi punks?\b/i, /\bgood night white pride\b/i, /\bacab\b/i,
+  // exposure and warning framing
+  /\bexposed?\b/i, /\bidentif(y|ied|ying)\b/i, /\bdoxx?(ed|ing)?\b/i, /\bwatch out\b/i, /\bbeware\b/i,
+  /\bheads up\b/i, /\bPSA\b/, /\bwarning\b/i, /\bbe aware\b/i, /\bspotted\b/i, /\bcaught on\b/i,
+  // reporting / takedown framing
+  /\breport(ed|ing)? (it|them|this|to)\b/i, /\bplease report\b/i, /\bmass report\b/i,
+  /\bdeplatform/i, /\btakedown\b/i, /\bgot banned\b/i, /\bsuspended\b/i,
+  // condemnation — the movement rarely calls itself these things; its critics constantly do
+  /\bwhite supremacis/i, /\bneo[- ]?nazis?\b/i, /\bhate group\b/i, /\bracists?\b/i, /\bbigots?\b/i,
+  /\bextremists?\b/i, /\bfascists?\b/i, /\bscum\b/i, /\bghouls?\b/i, /\bgrifters?\b/i,
+  // research / journalism framing
+  /\baccording to\b/i, /\bresearchers?\b/i, /\bnew report\b/i, /\binvestigation\b/i, /\bper the (ADL|SPLC)\b/i
+];
+const STANCE_PROMOTING = [
+  // recruitment calls to action
+  /\bjoin (us|the|your)\b/i, /\bapply (to|now|today)\b/i, /\bDM (me|us|for)\b/i, /\blink in bio\b/i,
+  /\bour chapter\b/i, /\byour local chapter\b/i, /\btrain with us\b/i, /\bget involved\b/i,
+  /\breach out\b/i, /\bmembership\b/i, /\bsign up\b/i, /\brecruit(ing|ment)\b/i,
+  // merchandise and events
+  /\bmerch drop\b/i, /\bavailable now\b/i, /\border now\b/i, /\bshop now\b/i, /\buse code\b/i,
+  /\btickets?\b/i, /\bnext event\b/i,
+  // in-group slogans and self-identification
+  /\b14 ?words\b/i, /\bblood and soil\b/i, /\bblut und boden\b/i, /\bdefend your heritage\b/i,
+  /\beine haltung\b/i, /\bour people\b/i, /\bour folk\b/i, /\bsecure the existence\b/i,
+  /\btribe and train\b/i, /\bwill to rise\b/i
+];
+function stanceOf(text, cbHits){
+  const t = String(text||'');
+  if(!t.trim()) return {stance:'unclear', opposing:0, promoting:0, why:'no text retrieved'};
+  const opp = STANCE_OPPOSING.filter(r=>r.test(t));
+  const pro = STANCE_PROMOTING.filter(r=>r.test(t));
+  // A severity-5 codebook hit is a named affiliate brand or an explicit operational term.
+  // Those are too consequential to let a linguistic heuristic clear. Force a human read.
+  const hard = (cbHits||[]).some(h=>(h && (h.severity===5 || h.sev===5)));
+  if(hard) return {stance:'unclear', opposing:opp.length, promoting:pro.length,
+                   why:'high-severity codebook term present — stance not auto-judged'};
+  if(opp.length>=2 && opp.length>pro.length)
+    return {stance:'opposing', opposing:opp.length, promoting:pro.length,
+            why:'reads as documenting or opposing this, not promoting it'};
+  if(pro.length>=2 && pro.length>opp.length)
+    return {stance:'promoting', opposing:opp.length, promoting:pro.length,
+            why:'reads as promoting or recruiting'};
+  return {stance:'unclear', opposing:opp.length, promoting:pro.length, why:'stance not established'};
+}
 // ---------- Source type: content OF the movement vs content ABOUT it ----------
 // A hashtag match alone cannot tell the two apart. A researcher documenting a symbol
 // and the account selling that symbol both use the tag. Reporting the researcher to a
@@ -3478,8 +3535,9 @@ async function exportHashtagXLSX(preRows,tagArg){
  const hr=ws.getRow(1);hr.font={bold:true,color:{argb:'FFFFFFFF'}};hr.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF152A4E'}};hr.alignment={vertical:'middle',wrapText:true};
  ws.autoFilter='A1:N1';ws.views=[{state:'frozen',ySplit:1}];
  const _kind=r=>r.sourceKind||(typeof sourceKind==='function'?sourceKind(r.url||r.text||''):'primary');
- const reportable=rows.filter(r=>_kind(r)!=='reference');
- const reference=rows.filter(r=>_kind(r)==='reference');
+ const _held=r=>_kind(r)==='reference'||r.stance==='opposing'||r.tier==='COUNTER-SPEECH';
+ const reportable=rows.filter(r=>!_held(r));
+ const reference=rows.filter(_held);
  for(const r of reportable){
    const means=(HARM[r.category]||'').replace(/\s+/g,' ');
    const shows=`${metaPlatform(r.platform)} account "${r.poster}" using ${(r.hits&&r.hits.length)?r.hits.slice(0,3).join(', '):tag}`;
@@ -3495,15 +3553,18 @@ async function exportHashtagXLSX(preRows,tagArg){
  }
  // Reference material goes on its own sheet, clearly labelled, so it is never mistaken for a finding.
  if(reference.length){
-   const rs=wb.addWorksheet('REFERENCE - do not report');
-   rs.columns=[{header:'Source',width:30},{header:'URL',width:56},{header:'Why it matched',width:30},{header:'Status',width:52}];
+   const rs=wb.addWorksheet('HELD OUT - do not report');
+   rs.columns=[{header:'Source',width:30},{header:'URL',width:56},{header:'Why it matched',width:30},{header:'Held out because',width:60}];
    const rhr=rs.getRow(1);rhr.font={bold:true,color:{argb:'FFFFFFFF'}};rhr.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0B5D3B'}};rhr.alignment={vertical:'middle',wrapText:true};
    rs.views=[{state:'frozen',ySplit:1}];
    const note=rs.addRow(['These are research, news, government and academic sources that mention the hashtag. They are reporting ABOUT the movement, not content OF it. Do not submit them to a platform.','','','']);
    note.getCell(1).font={bold:true,italic:true,color:{argb:'FF0B5D3B'}};rs.mergeCells('A2:D2');note.alignment={wrapText:true};
    for(const r of reference){
      const u=r.url||r.text||'';
-     const rr=rs.addRow([r.poster||'',u,(r.hits||[]).join(', ')||tag,'Reporting ABOUT the movement, not content OF it. Do not submit this to a platform.']);
+     const _why=(r.stance==='opposing'||r.tier==='COUNTER-SPEECH')
+       ? 'Reads as documenting or OPPOSING this, not promoting it — likely an antifascist, researcher or journalist account. Do not submit this to a platform.'
+       : 'Reporting ABOUT the movement, not content OF it. Do not submit this to a platform.';
+     const rr=rs.addRow([r.poster||'',u,(r.hits||[]).join(', ')||tag,_why]);
      rr.alignment={wrapText:true,vertical:'top'};
      if(u&&/^https?:/.test(u)){rr.getCell(2).value={text:u,hyperlink:u};rr.getCell(2).font={color:{argb:'FF1D4ED8'},underline:true}}
    }
@@ -5039,6 +5100,17 @@ async function addItem(u){
     it.huntedFrom=HUNT_SEED.id; it.huntedVia=HUNT_SEED.term;
     const seed=items.find(x=>x.id===HUNT_SEED.id); if(seed){seed.spawned=(seed.spawned||[]);seed.spawned.push(it.id)}
   }
+  // Stance is read from the retrieved text, before the reference check, so an item can be
+  // both primary and counter-speech (an antifascist account on Bluesky is not a news org).
+  try{
+    const st=stanceOf([it.text,it.title,it.snippet,it.reasoning].filter(Boolean).join(' '), it.cbHits||[]);
+    it.stance=st.stance; it.stanceWhy=st.why;
+    if(st.stance==='opposing'){
+      it.tier='COUNTER-SPEECH';
+      it.recommendation='no_action';
+      it.breakdown=[{l:'🛡 Stance: '+st.why+' ('+st.opposing+' counter-speech signal(s) vs '+st.promoting+' promotional). Held out of the takedown export and never used to seed the crawler.',d:0},...(it.breakdown||[])];
+    }
+  }catch(e){}
   if(it.sourceKind==='reference'){
     it.tier='REFERENCE';
     it.recommendation='no_action';
