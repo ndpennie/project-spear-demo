@@ -1170,8 +1170,70 @@ const GRADES=['Observed','Corroborated','Inferred','Predicted','Disputed','Unver
 const CONN=['linguistic resemblance','narrative similarity','audience overlap','commercial/social interaction','operational coordination'];
 const TIERS=['CRITICAL','HIGH','MEDIUM','LOW','MINIMAL'];
 const TIERCOLOR={CRITICAL:'#B42318',HIGH:'#D9480F',MEDIUM:'#B7791F',LOW:'#2F855A',MINIMAL:'#5A6472'};
+// ---------- Source type: content OF the movement vs content ABOUT it ----------
+// A hashtag match alone cannot tell the two apart. A researcher documenting a symbol
+// and the account selling that symbol both use the tag. Reporting the researcher to a
+// platform is wrong, it gets the whole report thrown out, and it burns the analyst's
+// credibility. So we mark the source and hold reference material out of the takedown export.
+const REFERENCE_SOURCES=[
+  // counter-extremism research, monitoring and registries
+  'adl.org','globalextremism.org','symbols.globalextremism.org','counterextremism.com','splcenter.org',
+  'isdglobal.org','gnet-research.org','start.umd.edu','icct.nl','swansea.ac.uk','ctc.westpoint.edu',
+  'memri.org','memri.de','sitemultimedia.com','siteintelgroup.com','bellingcat.com','gwu.edu',
+  'extremism.gwu.edu','politicalresearch.org','hopenothate.org.uk','antifascistnetwork.org',
+  'canadianantihate.ca','moonshotteam.com','techagainstterrorism.org','radicalisationresearch.org',
+  // mainstream news and wire services
+  'nytimes.com','washingtonpost.com','wsj.com','reuters.com','apnews.com','bbc.com','bbc.co.uk',
+  'theguardian.com','npr.org','pbs.org','cnn.com','nbcnews.com','abcnews.go.com','cbsnews.com',
+  'rollingstone.com','vice.com','wired.com','theatlantic.com','propublica.org','motherjones.com',
+  'thedailybeast.com','newsweek.com','time.com','usatoday.com','latimes.com','politico.com','axios.com',
+  'ctvnews.ca','cbc.ca','globalnews.ca','thestar.com','nationalpost.com',
+  // government, courts, academic
+  'justice.gov','fbi.gov','dhs.gov','state.gov','treasury.gov','congress.gov','gao.gov','courtlistener.com',
+  'wikipedia.org','jstor.org','tandfonline.com','springer.com'
+];
+function sourceKind(u){
+  let h='';try{h=new URL(String(u||'').split(' ')[0]).hostname.replace(/^www\./,'').toLowerCase()}catch(e){return 'primary'}
+  if(!h) return 'primary';
+  if(REFERENCE_SOURCES.some(d=>h===d||h.endsWith('.'+d))) return 'reference';
+  if(/\.(gov|edu)$/.test(h)) return 'reference';
+  return 'primary';
+}
+function sourceKindLabel(k){
+  return k==='reference'
+    ? 'REFERENCE — about the movement, not of it. Do NOT report.'
+    : 'Primary — stance NOT verified. Read the post before reporting.';
+}
 function tierOf(s){return s>=9?'CRITICAL':s>=7?'HIGH':s>=5?'MEDIUM':s>=3?'LOW':'MINIMAL'}
 function recOf(s){return s>=9?'take_down':s>=6?'flag_for_review':s>=3?'monitor':'no_action'}
+// Real poster, derived from the real URL. Never invented.
+// An attribution that goes to Meta in a takedown report must come from the link itself.
+// When the link does not identify a poster, we say so — we do not guess and we do not fill in a name.
+function posterFromUrl(u){
+  const raw=String(u||'').split(' ')[0].trim();
+  if(!raw) return 'Unknown — not established';
+  let h='',seg=[];
+  try{const x=new URL(raw);h=x.hostname.replace(/^www\./,'').toLowerCase();seg=x.pathname.split('/').filter(Boolean);}catch(e){return 'Unknown — not established'}
+  const dec=v=>{try{return decodeURIComponent(v)}catch(e){return v}};
+  // Bluesky: /profile/<handle>/post/<id>
+  if(h==='bsky.app'&&seg[0]==='profile'&&seg[1]) return dec(seg[1]);
+  // Mastodon and other fediverse: /@user/<id>  ->  @user@instance
+  if(seg[0]&&seg[0].charAt(0)==='@') return dec(seg[0])+'@'+h;
+  // X / Twitter: /<handle> or /<handle>/status/<id>
+  if((h==='x.com'||h==='twitter.com')&&seg[0]&&!/^(i|home|search|hashtag|explore)$/i.test(seg[0])) return '@'+dec(seg[0]);
+  // Telegram: t.me/<chan>, t.me/s/<chan>, t.me/<chan>/<id>
+  if(h==='t.me'||h==='telegram.me'){const c=(seg[0]==='s')?seg[1]:seg[0];if(c)return 't.me/'+dec(c);}
+  // Reddit: /r/<sub>  (subreddit, not an author — labelled as such)
+  if(h.endsWith('reddit.com')&&seg[0]==='r'&&seg[1]) return 'r/'+dec(seg[1]);
+  // YouTube: /@handle or /channel/<id>
+  if(h.endsWith('youtube.com')){if(seg[0]&&seg[0].charAt(0)==='@')return dec(seg[0]);if(seg[0]==='channel'&&seg[1])return 'youtube.com/channel/'+dec(seg[1]);}
+  // TikTok: /@handle
+  if(h.endsWith('tiktok.com')&&seg[0]&&seg[0].charAt(0)==='@') return dec(seg[0]);
+  // Instagram / Facebook: /<handle> (not a landing page)
+  if((h==='instagram.com'||h==='facebook.com')&&seg[0]&&!/^(p|reel|explore|groups|watch|share)$/i.test(seg[0])) return '@'+dec(seg[0]);
+  // Anything else: the site is the source. That is true and checkable.
+  return h ? (h+' (site — poster not identified)') : 'Unknown — not established';
+}
 function platformOf(u){try{const h=new URL(u).hostname.replace(/^www\./,'');if(h.includes('facebook'))return'Facebook';if(h.includes('instagram'))return'Instagram';if(h.includes('t.me')||h.includes('telegram'))return'Telegram';if(h.includes('x.com')||h.includes('twitter'))return'X';if(h.includes('tiktok'))return'TikTok';if(h.includes('youtube')||h.includes('youtu.be'))return'YouTube';if(h.includes('reddit'))return'Reddit';return h}catch(e){return'unknown'}}
 
 // ---------- demo analyzer (deterministic, keyword-driven; stands in for the LLM stage) ----------
@@ -3412,23 +3474,44 @@ async function exportHashtagXLSX(preRows,tagArg){
  if(!rows.length){setSt('No captured content matches '+tag+' yet — paste/capture real links, or 🔌 Connect live AI. <span class="note" style="margin:0">(Or turn off “Real links only” to build a demo spreadsheet.)</span>');toast('Nothing real to export for '+tag+' yet');return}
  setSt('Identified '+rows.length+' accounts for '+tag+' — writing spreadsheet…');
  const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet((tag.replace(/[^A-Za-z0-9]/g,'')||'Hashtag').slice(0,28));
- ws.columns=[{header:'Image',width:22},{header:'Platform',width:12},{header:'Account / post',width:24},{header:'URL',width:40},{header:'Hashtag',width:14},{header:'Category',width:18},{header:'Risk',width:7},{header:'Tier',width:10},{header:'Signals matched',width:34},{header:'What it shows',width:38},{header:'What it means / why it is a danger',width:50},{header:'Source',width:11}];
+ ws.columns=[{header:'Image',width:22},{header:'Platform',width:12},{header:'Account / post',width:24},{header:'URL',width:40},{header:'Hashtag',width:14},{header:'Category',width:18},{header:'Risk',width:7},{header:'Tier',width:10},{header:'Signals matched',width:34},{header:'What it shows',width:38},{header:'What it means / why it is a danger',width:50},{header:'Source',width:11},{header:'Source type',width:14},{header:'Before you report',width:46}];
  const hr=ws.getRow(1);hr.font={bold:true,color:{argb:'FFFFFFFF'}};hr.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF152A4E'}};hr.alignment={vertical:'middle',wrapText:true};
- ws.autoFilter='A1:L1';ws.views=[{state:'frozen',ySplit:1}];
- for(const r of rows){
+ ws.autoFilter='A1:N1';ws.views=[{state:'frozen',ySplit:1}];
+ const _kind=r=>r.sourceKind||(typeof sourceKind==='function'?sourceKind(r.url||r.text||''):'primary');
+ const reportable=rows.filter(r=>_kind(r)!=='reference');
+ const reference=rows.filter(r=>_kind(r)==='reference');
+ for(const r of reportable){
    const means=(HARM[r.category]||'').replace(/\s+/g,' ');
    const shows=`${metaPlatform(r.platform)} account "${r.poster}" using ${(r.hits&&r.hits.length)?r.hits.slice(0,3).join(', '):tag}`;
    const row=ws.addRow(['',metaPlatform(r.platform),r.poster,r.url||r.text||'',tag,(r.category||'').replace(/_/g,' '),r.score!=null?r.score+'/10':'',r.tier||'',(r.hits||[]).join(', '),shows,means,r.real?'captured (live link)':'representative (demo)']);
+   row.getCell(13).value='Primary';
+   row.getCell(14).value='Stance NOT verified by the system — open the link and confirm the poster is promoting this, not documenting or opposing it, before you report it.';
+   row.getCell(14).font={color:{argb:'FF8A5A00'}};
    row.height=r.thumb?84:32;row.alignment={wrapText:true,vertical:'top'};
    const url=r.url||r.text;if(url&&/^https?:/.test(url)){row.getCell(4).value={text:url,hyperlink:url};row.getCell(4).font={color:{argb:'FF1D4ED8'},underline:true}}
    if(r.thumb&&r.category!=='child_safety'){try{const m=r.thumb.match(/^data:image\/(\w+);base64,(.+)$/);if(m){const id=wb.addImage({base64:m[2],extension:m[1]==='jpeg'?'jpeg':(m[1]==='png'?'png':'jpeg')});ws.addImage(id,{tl:{col:0.12,row:row.number-1+0.08},ext:{width:150,height:82}})}}catch(e){}}
    else if(r.category==='child_safety'){row.getCell(1).value='WITHHELD → NCMEC';row.getCell(1).font={color:{argb:'FFB42318'},bold:true}}
    else row.getCell(1).value='(link only)';
  }
+ // Reference material goes on its own sheet, clearly labelled, so it is never mistaken for a finding.
+ if(reference.length){
+   const rs=wb.addWorksheet('REFERENCE - do not report');
+   rs.columns=[{header:'Source',width:30},{header:'URL',width:56},{header:'Why it matched',width:30},{header:'Status',width:52}];
+   const rhr=rs.getRow(1);rhr.font={bold:true,color:{argb:'FFFFFFFF'}};rhr.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0B5D3B'}};rhr.alignment={vertical:'middle',wrapText:true};
+   rs.views=[{state:'frozen',ySplit:1}];
+   const note=rs.addRow(['These are research, news, government and academic sources that mention the hashtag. They are reporting ABOUT the movement, not content OF it. Do not submit them to a platform.','','','']);
+   note.getCell(1).font={bold:true,italic:true,color:{argb:'FF0B5D3B'}};rs.mergeCells('A2:D2');note.alignment={wrapText:true};
+   for(const r of reference){
+     const u=r.url||r.text||'';
+     const rr=rs.addRow([r.poster||'',u,(r.hits||[]).join(', ')||tag,'Reporting ABOUT the movement, not content OF it. Do not submit this to a platform.']);
+     rr.alignment={wrapText:true,vertical:'top'};
+     if(u&&/^https?:/.test(u)){rr.getCell(2).value={text:u,hyperlink:u};rr.getCell(2).font={color:{argb:'FF1D4ED8'},underline:true}}
+   }
+ }
  const buf=await wb.xlsx.writeBuffer();const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
  const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='Hashtag_'+tag.replace(/[^A-Za-z0-9]/g,'')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);
- setSt('<b>Spreadsheet built</b> — '+rows.length+' items connected to '+tag+' (opens in Excel/Sheets).');
- toast(rows.length+' items exported for '+tag+' (.xlsx)');
+ setSt('<b>Spreadsheet built</b> — <b>'+reportable.length+'</b> reportable item(s) for '+tag+(reference.length?(' · <b>'+reference.length+'</b> research/news source(s) moved to a separate “REFERENCE — do not report” sheet'):'')+' (opens in Excel/Sheets).');
+ toast(reportable.length+' reportable + '+reference.length+' reference exported for '+tag+' (.xlsx)');
 }
 // ---- Assisted LIVE hashtag capture: jump to each platform's real hashtag page, capture the real posts,
 //      then build a live report/spreadsheet whose links all resolve (works on free — no crawling/API). ----
@@ -3893,7 +3976,9 @@ async function loadCaseSamples(){try{const r=await fetch('samples/samples.json')
   toast('Case example loaded from samples/')}catch(e){}}
 // ---------- state (in memory only) ----------
 let items=[],selId=null,sortKey='score',sortDir=-1,audit=[],idc=1;
-const POSTERS=['Northgate Patriots','J. Doe (acct. 3f9c)','Sunbelt Active Club','anon-relay-7','Freedom Signal Media','citizen_watch_tx','Iron Front Supply','Reclaim Now Podcast'];
+// DEMO-ONLY poster names. Used only by loadSamples() for the invented layout examples.
+// Real captures derive the poster from the real URL via posterFromUrl(). Never use this for a real item.
+const POSTERS=['DEMO — invented example 1','DEMO — invented example 2','DEMO — invented example 3','DEMO — invented example 4','DEMO — invented example 5','DEMO — invented example 6','DEMO — invented example 7','DEMO — invented example 8'];
 function setBusy(on,msg){let el=document.getElementById('busyBar');
   if(on){if(!el){el=document.createElement('div');el.id='busyBar';document.body.appendChild(el);}el.innerHTML='<span class="spin"></span> '+(msg||'Working…');el.style.display='block';}
   else if(el){el.style.display='none';}}
@@ -4796,10 +4881,53 @@ function _metaLeads(list){
   return {handles:[...handles.values()].slice(0,40),domains:[...domains.values()].slice(0,20),
           tags:[...tags.values()].sort((a,b)=>b.n-a.n).slice(0,20)};
 }
+// ---------- Adjacent tags & accounts: track them the moment they surface ----------
+// A movement's reach shows in what it is posted NEXT TO. Every search mines the adjacent
+// hashtags and handles out of the retrieved content and puts them under watch automatically,
+// so the next sweep covers ground this one only glimpsed. Tracking is not flagging: an
+// adjacent tag is a place to look, never a finding, and nothing here scores anyone.
+let ADJ_LAST={tags:[],handles:[]};
+function trackAdjacent(L,tag){
+  const added={tags:[],handles:[]};
+  const base=String(tag||'').replace(/^#/,'').toLowerCase();
+  for(const t of (L.tags||[])){
+    const k='#'+String(t.tag||'').toLowerCase();
+    if(!k||k==='#'+base) continue;
+    if(!HUNTSEEDS.hashtags.has(k)){HUNTSEEDS.hashtags.add(k);added.tags.push('#'+t.tag);}
+    if(typeof WATCH!=='undefined'&&!WATCH.some(w=>w.term.toLowerCase()===k)){
+      WATCH.push({term:'#'+t.tag,note:'adjacent to '+(tag||'search')+' — auto-tracked',added:new Date().toLocaleString(),firstSeen:null});
+    }
+  }
+  for(const h of (L.handles||[])){
+    const k=String(h.handle||'').toLowerCase();
+    if(!k) continue;
+    if(!HUNTSEEDS.accounts.has(k)){HUNTSEEDS.accounts.add(k);added.handles.push('@'+h.handle);}
+  }
+  for(const d of (L.domains||[])){
+    const k=String(d.domain||'').toLowerCase();
+    if(k&&!HUNTSEEDS.domains.has(k))HUNTSEEDS.domains.add(k);
+  }
+  ADJ_LAST=added;
+  try{followSave()}catch(e){}
+  try{renderWatch()}catch(e){}
+  try{const el=document.getElementById('followStat');if(el&&typeof followLoad==='function'){/* stat refreshes on next load */}}catch(e){}
+  return added;
+}
+// Run the next untouched adjacent tag. Sequential and visible — the analyst sees each one.
+function sweepAdjacent(){
+  const tags=[...HUNTSEEDS.hashtags].filter(t=>!(window.__adjDone||new Set()).has(t));
+  if(!tags.length){toast('No untouched adjacent tags left');return}
+  window.__adjDone=window.__adjDone||new Set();
+  const next=tags[0];window.__adjDone.add(next);
+  const box=document.getElementById('tagQ');if(box)box.value=next;
+  toast('Searching adjacent tag '+next);
+  try{runSystemSearch()}catch(e){}
+}
 function renderMetaLeads(list){
   const box=document.getElementById('metaLeads'); if(!box) return;
   const L=_metaLeads(list);
   if(!L.handles.length&&!L.domains.length&&!L.tags.length){box.style.display='none';box.innerHTML='';return;}
+  let _adj={tags:[],handles:[]};try{_adj=trackAdjacent(L,window.__liveTag||'')}catch(e){}
   const esc=x=>String(x||'').replace(/</g,'&lt;');
   const rows=L.handles.map(h=>`<tr>
       <td><b>@${esc(h.handle)}</b><br><span class="note" style="margin:0">seen on ${esc((h.from||'').replace(/^https?:\/\//,'').slice(0,40))}</span></td>
@@ -4812,6 +4940,12 @@ function renderMetaLeads(list){
       <div class="note" style="margin:0 0 8px">Meta posts are not crawlable, so these are the handles, storefronts and tags that leaked into content that <i>is</i>. Open one to check whether the same identity exists on Meta. <b>Unverified leads, not findings</b> — nothing here is scored until you capture a real link.</div>
       ${L.handles.length?`<table><thead><tr><th>Handle</th><th>Check Instagram</th><th>Check Facebook</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:''}
       ${L.domains.length?`<div style="margin-top:10px"><b>Storefronts / sites</b> <span class="note" style="margin:0">— these usually link their own social accounts</span><br>${L.domains.map(d=>`<a href="https://${esc(d.domain)}" target="_blank" rel="noopener noreferrer" style="color:#1D4ED8;text-decoration:underline;margin-right:12px">${esc(d.domain)} ↗</a>`).join('')}</div>`:''}
+      <div class="note" style="margin:10px 0 0;padding:9px 11px;background:#eef6ff;border:1px solid #bcd9f7;border-radius:8px">
+        <b>📌 Now tracking:</b> ${_adj.tags.length} new adjacent tag(s) and ${_adj.handles.length} new account(s) added to the watchlist this search
+        — <b>${HUNTSEEDS.hashtags.size}</b> tag(s) and <b>${HUNTSEEDS.accounts.size}</b> account(s) under watch in total.
+        Tracking is not flagging: these are places to look next, not findings, and no one is scored for appearing here.
+        <button class="btn sec" style="padding:3px 10px;margin-left:8px" onclick="sweepAdjacent()">▶ Search the next adjacent tag</button>
+      </div>
       ${L.tags.length?`<div style="margin-top:10px"><b>Adjacent tags</b> <span class="note" style="margin:0">— click to hunt one</span><br>${L.tags.map(t=>`<a href="#" onclick="document.getElementById('tagQ').value='#${esc(t.tag)}';runSystemSearch();return false" style="color:#1D4ED8;text-decoration:underline;margin-right:12px">#${esc(t.tag)}${t.n>1?' ('+t.n+')':''}</a>`).join('')}</div>`:''}
     </div></details>`;
   box.style.display='';
@@ -4900,10 +5034,18 @@ async function addItem(u){
   if(SAFEBROWSING_KEY){const sb=await safeBrowsingCheck((u||'').split(' ')[0]);
     if(sb){a.breakdown=[{l:'🛑 Google Safe Browsing: known '+sb.join(' / ')+' URL',d:1},...(a.breakdown||[])];a.score=Math.min(10,(a.score||1)+1);a.tier=tierOf(a.score);}}
   a.libctx=libRetrieve(u+' '+(a.cbHits||[]).map(x=>x.term).join(' '));
-  const it={id:idc++,url:u,platform:platformOf(u),poster:POSTERS[h%POSTERS.length],captured:new Date(Date.now()-(h%720)*60000).toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],shared:sharedOf(u),...a};
+  const it={id:idc++,url:u,platform:platformOf(u),poster:posterFromUrl(u),sourceKind:sourceKind(u),captured:new Date(Date.now()-(h%720)*60000).toISOString().slice(0,16).replace('T',' '),status:'Pending',notes:'',reviewers:[],shared:sharedOf(u),...a};
   if(HUNT_SEED&&Date.now()-HUNT_SEED.ts<90*60*1000&&items.some(x=>x.id===HUNT_SEED.id)){
     it.huntedFrom=HUNT_SEED.id; it.huntedVia=HUNT_SEED.term;
     const seed=items.find(x=>x.id===HUNT_SEED.id); if(seed){seed.spawned=(seed.spawned||[]);seed.spawned.push(it.id)}
+  }
+  if(it.sourceKind==='reference'){
+    it.tier='REFERENCE';
+    it.recommendation='no_action';
+    it.stanceNote=sourceKindLabel('reference');
+    it.breakdown=[{l:'📚 Source type: research / news / government domain — this is reporting ABOUT the movement. Held out of the takedown export.',d:0},...(it.breakdown||[])];
+  } else {
+    it.stanceNote=sourceKindLabel('primary');
   }
   noteRuleHit(it);items.unshift(it);log(it,'ingested & analyzed',`${it.category} · ${it.score}/10 · ${it.grade}${it.huntedFrom?' · hunted from #'+it.huntedFrom+' via '+it.huntedVia:''}${API_BASE?' · backend':' · demo'}`);render();
 }
