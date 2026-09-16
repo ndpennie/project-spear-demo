@@ -30,12 +30,12 @@ jobs:
 
       - name: Commit sweep.json if it changed
         run: |
-          if git diff --quiet -- sweep.json; then
-            echo "No change — nothing new this run."
-            exit 0
-          fi
           git config user.name  "project-spear-sweep"
           git config user.email "noreply@users.noreply.github.com"
           git add sweep.json
-          git commit -m "Scheduled sweep"
+          if git diff --cached --quiet -- sweep.json; then
+            echo "No change — nothing new this run."
+            exit 0
+          fi
+          git commit -m "Scheduled sweep: $(python -c 'import json;print(json.load(open(\"sweep.json\"))[\"count\"])') lead(s)"
           git push
