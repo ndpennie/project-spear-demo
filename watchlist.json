@@ -1,0 +1,25 @@
+{
+  "_comment": "What the scheduled sweep searches. Edit this file to change what the system watches. Tags are searched one at a time; terms narrow each search to the nefarious end of the tag; channels are Telegram channels read directly.",
+  "tags": [
+    "Will2Rise",
+    "ActiveClub",
+    "Diagalon",
+    "SecondSons",
+    "NS13"
+  ],
+  "terms": [
+    "active club",
+    "fight night",
+    "nationalist fight",
+    "defend your heritage",
+    "blood and soil",
+    "kampf der nibelungen",
+    "white power",
+    "rise above movement"
+  ],
+  "channels": [
+    "WILL2RISECLOTHING",
+    "Will2Rise"
+  ],
+  "platforms": ["bluesky", "mastodon", "telegram", "reddit", "web", "x"]
+}
