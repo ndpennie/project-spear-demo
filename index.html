@@ -836,6 +836,10 @@ summary{padding:3px 0}
           <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="saveVisionKey()">Save key</button>
           <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="testVisionKey()" title="Run a real test image through Vision AI and show exactly what Google says">🔍 Test</button>
           <span class="note" id="gStat" style="margin:0;flex-basis:100%">Free key from Google AI Studio (aistudio.google.com/apikey). Stored only in this browser. Powers image + text + translation.</span>
+          <span style="font-size:12.5px;font-weight:700;color:var(--navy);flex-basis:100%;margin-top:7px;padding-top:7px;border-top:1px solid var(--line)">🔐 Server key</span>
+          <input id="spearKey" type="password" placeholder="The SPEAR_API_KEY set on your backend…" style="flex:1;min-width:180px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px">
+          <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="saveSpearKey()">Save</button>
+          <span class="note" id="spearKeyStat" style="margin:0;flex-basis:100%">Required for the backend to answer. Without it the server refuses anything that costs money, so nobody who finds the URL can spend your inference budget.</span>
         </div>
         <details class="adv" style="margin:2px 0 0"><summary class="note" style="cursor:pointer;font-weight:700;color:var(--navy)">⚙ More free integrations (optional)</summary>
           <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 2px">
@@ -1462,6 +1466,28 @@ function explain(it){
 let API_BASE=(function(){let a=(new URLSearchParams(location.search).get('api')||'').replace(/\/$/,'');
   try{if(a){localStorage.setItem('spear_api',a);}else{a=(localStorage.getItem('spear_api')||'').replace(/\/$/,'');}}catch(e){}
   return a;})();  // remembers the backend so the installed app + share-target stay connected (runtime-settable via Connect)
+// ---------- backend credential ----------
+// The backend refuses every /api route without this header. It is YOUR key to YOUR server,
+// so the browser is the right place for it: it never travels anywhere except to your own
+// backend. Set the same value as SPEAR_API_KEY in the server environment.
+let SPEAR_KEY='';
+try{SPEAR_KEY=localStorage.getItem('spear_key')||''}catch(e){}
+function spearHeaders(extra){
+  const h=Object.assign({},extra||{});
+  if(SPEAR_KEY)h['X-Spear-Key']=SPEAR_KEY;
+  return h;
+}
+function saveSpearKey(){
+  const el=document.getElementById('spearKey'); const v=((el&&el.value)||'').trim();
+  SPEAR_KEY=v;
+  try{v?localStorage.setItem('spear_key',v):localStorage.removeItem('spear_key')}catch(e){}
+  const st=document.getElementById('spearKeyStat');
+  if(st)st.textContent = v ? 'Saved in this browser. Sent only to your own backend.'
+                           : 'Cleared. The backend will refuse paid routes until a key is set.';
+  try{checkBackendVision()}catch(e){}
+  toast(v?'Server key saved':'Server key cleared');
+}
+
 async function analyzeRemote(url){
   if(!API_BASE)return null;
   try{const id='url_'+btoa(unescape(encodeURIComponent(url))).replace(/[^a-z0-9]/gi,'').slice(0,24);
@@ -3111,6 +3137,7 @@ function videoFramesHTML(it){if(!it.frames||!it.frames.length)return '';
 // ================= VISION AI: let the system SEE images (like Gemini) via the Gemini API =================
 let GEMINI_KEY='', GEMINI_MODEL='gemini-3.7-flash';
 try{GEMINI_KEY=localStorage.getItem('spear_gemini')||''}catch(e){}
+try{const _sk=document.getElementById('spearKey'); if(_sk&&SPEAR_KEY)_sk.value=SPEAR_KEY;}catch(e){}
 try{GEMINI_MODEL=localStorage.getItem('spear_gmodel')||'gemini-3.7-flash'}catch(e){}
 async function saveVisionKey(){const v=(document.getElementById('gKey').value||'').trim();GEMINI_KEY=v;GEMINI_WORKING_MODEL='';GEMINI_MODEL_LIST=[];
   try{v?localStorage.setItem('spear_gemini',v):localStorage.removeItem('spear_gemini');localStorage.removeItem('spear_gmodel')}catch(e){}
@@ -3212,7 +3239,7 @@ async function checkBackendVision(){
   // isn't the thing that pays the 50-second wake cost.
 
   const base=API_BASE||BACKEND_DEFAULT;
-  try{const r=await fetch(base+'/api/vision-health',{cache:'no-store'});BACKEND_VISION=r.ok&&!!((await r.json()).configured);}catch(e){BACKEND_VISION=false;}
+  try{const r=await fetch(base+'/api/vision-health',{cache:'no-store',headers:spearHeaders()});BACKEND_VISION=r.ok&&!!((await r.json()).configured);}catch(e){BACKEND_VISION=false;}
   const gs=document.getElementById('gStat');
   if(BACKEND_VISION&&gs)gs.innerHTML='<b style="color:#2F855A">👁 Vision AI is ON (server)</b> — the key is held on your server; nothing to paste here. Images, text &amp; translation run automatically.';
   return BACKEND_VISION;
@@ -3228,7 +3255,7 @@ async function backendVision(dataUrl,context){
   let lastErr='';
   for(let attempt=0;attempt<4;attempt++){
     try{
-      const r=await fetch(base+'/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl,context:context||''})});
+      const r=await fetch(base+'/api/vision',{method:'POST',headers:spearHeaders({'Content-Type':'application/json'}),body:JSON.stringify({image:dataUrl,context:context||''})});
       if(r.ok){const j=await r.json();return j.analysis||{__error:'empty server response'};}
       let d='';try{d=(await r.json()).detail||''}catch(e){}
       lastErr=/high demand|UNAVAILABLE|overloaded|RESOURCE_EXHAUSTED/i.test(d)
@@ -3256,12 +3283,12 @@ async function _wakeBackend(attempt){
   const base=API_BASE||BACKEND_DEFAULT;
   const st=document.getElementById('heroStat')||document.getElementById('ocrStatus');
   if(st)st.textContent='⏳ Waking the server (free plan sleeps — about 30 seconds)…';
-  try{await fetch(base+'/api/search-health',{cache:'no-store'})}catch(e){}
+  try{await fetch(base+'/api/search-health',{cache:'no-store',headers:spearHeaders()})}catch(e){}
   await new Promise(r=>setTimeout(r,attempt===0?12000:20000));
 }
 async function backendVisionText(text){
   const base=API_BASE||BACKEND_DEFAULT;
-  try{const r=await _withTimeout(fetch(base+'/api/vision-text',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})}),20000,null);
+  try{const r=await _withTimeout(fetch(base+'/api/vision-text',{method:'POST',headers:spearHeaders({'Content-Type':'application/json'}),body:JSON.stringify({text})}),20000,null);
     if(!r)return null;
     if(!r.ok)return null;const j=await r.json();return j.analysis||null;
   }catch(e){return null;}
@@ -5126,7 +5153,7 @@ async function serverSearch(tag,terms){
       .map(x=>x.replace(/^https?:\/\/t\.me\/(s\/)?/,'').replace(/^@/,'').split(/[/?]/)[0])
       .filter(Boolean).slice(0,6);}catch(e){}
   try{
-    const r=await fetch(base+'/api/search',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch(base+'/api/search',{method:'POST',headers:spearHeaders({'Content-Type':'application/json'}),
       body:JSON.stringify({tag:tag||'',terms:(terms||[]).slice(0,12),channels:chans})});
     if(!r.ok)return null;
     const j=await r.json();
