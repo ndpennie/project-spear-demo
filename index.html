@@ -836,10 +836,15 @@ summary{padding:3px 0}
           <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="saveVisionKey()">Save key</button>
           <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="testVisionKey()" title="Run a real test image through Vision AI and show exactly what Google says">🔍 Test</button>
           <span class="note" id="gStat" style="margin:0;flex-basis:100%">Free key from Google AI Studio (aistudio.google.com/apikey). Stored only in this browser. Powers image + text + translation.</span>
-          <span style="font-size:12.5px;font-weight:700;color:var(--navy);flex-basis:100%;margin-top:7px;padding-top:7px;border-top:1px solid var(--line)">🔐 Server key</span>
+        </div>
+        <!-- Server key. NOT marked .adv: Simple mode is the default, and a hidden key box
+             would mean the analyst sees nothing but errors with no way to fix them. The row
+             hides itself once a key is saved, and forces itself back open on any 401. -->
+        <div id="spearKeyRow" class="row" style="display:none;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 2px;background:#FDECEA;border:1px solid #e0a3a0;border-radius:7px;padding:7px 9px">
+          <span style="font-size:12.5px;font-weight:700;color:var(--navy)">🔐 Server key</span>
           <input id="spearKey" type="password" placeholder="The SPEAR_API_KEY set on your backend…" style="flex:1;min-width:180px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px">
           <button class="btn sec" style="padding:4px 10px;font-size:12px" onclick="saveSpearKey()">Save</button>
-          <span class="note" id="spearKeyStat" style="margin:0;flex-basis:100%">Required for the backend to answer. Without it the server refuses anything that costs money, so nobody who finds the URL can spend your inference budget.</span>
+          <span class="note" id="spearKeyStat" style="margin:0;flex-basis:100%">This device has not been set up yet. Open the setup link from the system owner, or paste the server key here once — it is remembered from then on.</span>
         </div>
         <details class="adv" style="margin:2px 0 0"><summary class="note" style="cursor:pointer;font-weight:700;color:var(--navy)">⚙ More free integrations (optional)</summary>
           <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 2px">
@@ -1470,20 +1475,52 @@ let API_BASE=(function(){let a=(new URLSearchParams(location.search).get('api')|
 // The backend refuses every /api route without this header. It is YOUR key to YOUR server,
 // so the browser is the right place for it: it never travels anywhere except to your own
 // backend. Set the same value as SPEAR_API_KEY in the server environment.
+// The analyst never types this. It arrives once, in a setup link the owner sends
+// (…/?api=<backend>&key=<value>), is written to this browser, and is immediately stripped
+// from the address bar so it does not sit in history, bookmarks or a screenshot.
 let SPEAR_KEY='';
-try{SPEAR_KEY=localStorage.getItem('spear_key')||''}catch(e){}
+try{
+  const _u=new URLSearchParams(location.search), _k=(_u.get('key')||'').trim();
+  if(_k){
+    localStorage.setItem('spear_key',_k);
+    _u.delete('key');
+    const _q=_u.toString();
+    history.replaceState(null,'',location.pathname+(_q?'?'+_q:'')+location.hash);
+  }
+  SPEAR_KEY=localStorage.getItem('spear_key')||'';
+}catch(e){}
 function spearHeaders(extra){
   const h=Object.assign({},extra||{});
   if(SPEAR_KEY)h['X-Spear-Key']=SPEAR_KEY;
   return h;
 }
+// The row appears only when it is needed: no key saved yet, or the server has just
+// refused a call. Otherwise it stays out of the way, which is the whole design rule.
+let SPEAR_KEY_REFUSED=false;
+function updateSpearKeyRow(){
+  const row=document.getElementById('spearKeyRow'); if(!row)return;
+  row.style.display=(!SPEAR_KEY||SPEAR_KEY_REFUSED)?'':'none';
+}
+// Called whenever a backend call comes back 401 — the one state the analyst must be able to fix.
+function spearKeyRefused(){
+  if(SPEAR_KEY_REFUSED)return;
+  SPEAR_KEY_REFUSED=true;
+  updateSpearKeyRow();
+  const st=document.getElementById('spearKeyStat');
+  if(st)st.innerHTML='<b style="color:#B42318">The server refused this key.</b> Paste the value set as SPEAR_API_KEY on the backend and press Save.';
+  try{document.getElementById('spearKeyRow').scrollIntoView({behavior:'smooth',block:'center'})}catch(e){}
+  try{toast('Server key needed — see the red box')}catch(e){}
+}
+
 function saveSpearKey(){
   const el=document.getElementById('spearKey'); const v=((el&&el.value)||'').trim();
   SPEAR_KEY=v;
   try{v?localStorage.setItem('spear_key',v):localStorage.removeItem('spear_key')}catch(e){}
+  SPEAR_KEY_REFUSED=false;
   const st=document.getElementById('spearKeyStat');
   if(st)st.textContent = v ? 'Saved in this browser. Sent only to your own backend.'
                            : 'Cleared. The backend will refuse paid routes until a key is set.';
+  updateSpearKeyRow();
   try{checkBackendVision()}catch(e){}
   toast(v?'Server key saved':'Server key cleared');
 }
@@ -3239,7 +3276,7 @@ async function checkBackendVision(){
   // isn't the thing that pays the 50-second wake cost.
 
   const base=API_BASE||BACKEND_DEFAULT;
-  try{const r=await fetch(base+'/api/vision-health',{cache:'no-store',headers:spearHeaders()});BACKEND_VISION=r.ok&&!!((await r.json()).configured);}catch(e){BACKEND_VISION=false;}
+  try{const r=await fetch(base+'/api/vision-health',{cache:'no-store',headers:spearHeaders()});if(r.status===401)spearKeyRefused();BACKEND_VISION=r.ok&&!!((await r.json()).configured);}catch(e){BACKEND_VISION=false;}
   const gs=document.getElementById('gStat');
   if(BACKEND_VISION&&gs)gs.innerHTML='<b style="color:#2F855A">👁 Vision AI is ON (server)</b> — the key is held on your server; nothing to paste here. Images, text &amp; translation run automatically.';
   return BACKEND_VISION;
@@ -3256,6 +3293,7 @@ async function backendVision(dataUrl,context){
   for(let attempt=0;attempt<4;attempt++){
     try{
       const r=await fetch(base+'/api/vision',{method:'POST',headers:spearHeaders({'Content-Type':'application/json'}),body:JSON.stringify({image:dataUrl,context:context||''})});
+      if(r.status===401){spearKeyRefused();return {__error:'server key needed'};}
       if(r.ok){const j=await r.json();return j.analysis||{__error:'empty server response'};}
       let d='';try{d=(await r.json()).detail||''}catch(e){}
       lastErr=/high demand|UNAVAILABLE|overloaded|RESOURCE_EXHAUSTED/i.test(d)
@@ -3290,6 +3328,7 @@ async function backendVisionText(text){
   const base=API_BASE||BACKEND_DEFAULT;
   try{const r=await _withTimeout(fetch(base+'/api/vision-text',{method:'POST',headers:spearHeaders({'Content-Type':'application/json'}),body:JSON.stringify({text})}),20000,null);
     if(!r)return null;
+    if(r.status===401){spearKeyRefused();return null;}
     if(!r.ok)return null;const j=await r.json();return j.analysis||null;
   }catch(e){return null;}
 }
@@ -4753,6 +4792,7 @@ function _advLabel(){
   b.textContent=document.body.classList.contains('simple')?'⚙ Advanced tools':'✕ Hide advanced tools';
 }
 function initSimple(){
+  try{updateSpearKeyRow()}catch(e){}
   let simple=true;
   try{const v=localStorage.getItem('spear_simple'); if(v==='0')simple=false;}catch(e){}
   document.body.classList.toggle('simple',simple);
@@ -5155,6 +5195,7 @@ async function serverSearch(tag,terms){
   try{
     const r=await fetch(base+'/api/search',{method:'POST',headers:spearHeaders({'Content-Type':'application/json'}),
       body:JSON.stringify({tag:tag||'',terms:(terms||[]).slice(0,12),channels:chans})});
+    if(r.status===401){spearKeyRefused();return null;}
     if(!r.ok)return null;
     const j=await r.json();
     if(!j||!j.results)return null;
