@@ -654,6 +654,7 @@ summary{padding:3px 0}
     </div>
   </div>
   <div class="right">
+    <a href="ops.html" title="Operational dashboard — queue health, SLA timers, one-click decisions and case reports" style="align-self:center;text-decoration:none;font:700 12px/1 system-ui,sans-serif;color:#fff;background:#1f5fd6;border-radius:8px;padding:9px 12px;white-space:nowrap">▦ Operational view</a>
     <div class="tally" id="tally" title="Running tally of everything the system has found and is tracking — review-queue items, live-hunt findings and brand-safety incidents. Updates live as the self-expanding hunt keeps compiling.">
       <div><span class="live"></span><span class="tallyn" id="tally-n">0</span></div>
       <div class="tallylbl">items found</div>
@@ -1494,6 +1495,23 @@ function spearHeaders(extra){
   if(SPEAR_KEY)h['X-Spear-Key']=SPEAR_KEY;
   return h;
 }
+// Every call to OUR backend carries the key, including the older call sites written before the
+// backend was locked down (analysis, learning-library feedback, library uploads). Calls to any
+// other host (Gemini, Mastodon, etc.) are left untouched.
+(function(){
+  const _f=window.fetch.bind(window);
+  window.fetch=function(u,o){
+    try{
+      const url=typeof u==='string'?u:((u&&u.url)||'');
+      let base='';try{base=(API_BASE||BACKEND_DEFAULT||'')}catch(e){try{base=API_BASE||''}catch(_){}}
+      if(SPEAR_KEY&&((base&&url.indexOf(base)===0)||/project-spear-backend\.onrender\.com/.test(url))){
+        o=Object.assign({},o||{});const hh=new Headers(o.headers||{});
+        if(!hh.has('X-Spear-Key'))hh.set('X-Spear-Key',SPEAR_KEY);o.headers=hh;
+      }
+    }catch(e){}
+    return _f(u,o);
+  };
+})();
 // The row appears only when it is needed: no key saved yet, or the server has just
 // refused a call. Otherwise it stays out of the way, which is the whole design rule.
 let SPEAR_KEY_REFUSED=false;
@@ -5710,7 +5728,7 @@ Be concrete. Do not just restate the description.`;
 
 function act(status){const it=items.find(i=>i.id===selId);if(!it)return;
   if(status==='Escalated'&&it.tier==='CRITICAL'&&it.reviewers.length<1){it.reviewers.push('Strategic');log(it,'first confirmation recorded','CRITICAL requires a second analyst before escalation');render();return}
-  it.status=status;log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}${API_BASE?' · feedback → library':' · feedback recorded (demo)'}`);sendFeedback(it,status);
+  it.status=status;it.decidedAt=new Date().toISOString();log(it,status,`rec: ${it.recommendation}; grade: ${it.grade}${API_BASE?' · feedback → library':' · feedback recorded (demo)'}`);sendFeedback(it,status);
   // The reference library builds ITSELF from the analyst's rulings. Every image Eric confirms
   // becomes a fingerprint that every future capture is checked against — so the corpus grows
   // as he works, with no separate curation step, and it encodes his judgement rather than a
