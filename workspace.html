@@ -1525,9 +1525,9 @@ function spearKeyRefused(){
   SPEAR_KEY_REFUSED=true;
   updateSpearKeyRow();
   const st=document.getElementById('spearKeyStat');
-  if(st)st.innerHTML='<b style="color:#B42318">The server refused this key.</b> Paste the value set as SPEAR_API_KEY on the backend and press Save.';
+  if(st)st.innerHTML='<b style="color:#B42318">This browser is not connected to the Project Spear server.</b> Open your Project Spear setup link once on this computer — it connects this browser for good.';
   try{document.getElementById('spearKeyRow').scrollIntoView({behavior:'smooth',block:'center'})}catch(e){}
-  try{toast('Server key needed — see the red box')}catch(e){}
+  try{toast('This browser is not connected yet — open your Project Spear setup link once')}catch(e){}
 }
 
 function saveSpearKey(){
@@ -3311,7 +3311,7 @@ async function backendVision(dataUrl,context){
   for(let attempt=0;attempt<4;attempt++){
     try{
       const r=await fetch(base+'/api/vision',{method:'POST',headers:spearHeaders({'Content-Type':'application/json'}),body:JSON.stringify({image:dataUrl,context:context||''})});
-      if(r.status===401){spearKeyRefused();return {__error:'server key needed'};}
+      if(r.status===401){spearKeyRefused();return {__error:'this browser is not connected to the Project Spear server yet — open your Project Spear setup link once on this computer, then press Try again'};}
       if(r.ok){const j=await r.json();return j.analysis||{__error:'empty server response'};}
       let d='';try{d=(await r.json()).detail||''}catch(e){}
       lastErr=/high demand|UNAVAILABLE|overloaded|RESOURCE_EXHAUSTED/i.test(d)
