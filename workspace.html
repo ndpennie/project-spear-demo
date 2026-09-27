@@ -3413,6 +3413,10 @@ async function addPhoto(dataUrl,o){
   st.textContent='Matching codebook…';
   let remote=null;if(API_BASE){try{const fd=new FormData();fd.append('file',await (await fetch(dataUrl)).blob(),o.name||'image.jpg');fd.append('caption',o.caption||'');fd.append('poster',o.poster||'');fd.append('source_url',o.source_url||'');fd.append('labels',(o.labels||[]).join(','));
       const r=await fetch(`${API_BASE}/api/analyze-image`,{method:'POST',body:fd});if(r.ok)remote=await r.json()}catch(e){toast('Backend unavailable — demo analyzer')}}
+  // /api/analyze-image fuses with a self-hosted model that is not deployed on Render; when it is
+  // missing the server hands back a codebook-only guess. Never let that guess stand in for a real
+  // look at the picture - drop it so the Vision AI below always sees the image.
+  if(remote&&remote.analysis&&((remote.vision&&remote.vision.available===false)||/fusion unavailable|codebook prior|codebook_fallback/i.test(String(remote.analysis.reasoning||'')+' '+String(remote.analysis.engine||''))))remote.analysis=null;
   const vlmLabels=remote&&remote.vision&&remote.vision.labels?remote.vision.labels:[];const visible=remote&&remote.vision&&remote.vision.visible_text?remote.vision.visible_text:ocr;
   const refs=libRefImages(dh);const labels=[...new Set([...(o.labels||[]),...vlmLabels,...refs.map(r=>r.label)])];
   const text=[visible,o.caption,o.poster,o.source_url].filter(Boolean).join(' \n ');
