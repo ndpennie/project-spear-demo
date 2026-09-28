@@ -155,7 +155,7 @@ async function write(force){
     indicators:[...new Set([...(IT.indicators||[]),...(IT.labels||[])])].slice(0,30),
     analyst_notes:IT.notes||'',author:author()};
   let lastErr='';
-  for(let attempt=0;attempt<3;attempt++){
+  for(let attempt=0;attempt<5;attempt++){
     try{
       const r=await fetch(API+'/api/brief',{method:'POST',headers:{'Content-Type':'application/json','X-Spear-Key':KEY},body:JSON.stringify(body)});
       if(r.status===401){lastErr='This browser’s connection key was refused — open your Project Spear setup link again.';break}
@@ -164,7 +164,8 @@ async function write(force){
       lastErr='The AI did not finish ('+r.status+(d?': '+String(d).slice(0,160):'')+').';
       if(r.status===404){lastErr='The brief writer is not on the server yet (it is being deployed). Try again in a few minutes.';break}
     }catch(e){lastErr='Could not reach the Project Spear server — it may be waking up.';}
-    await new Promise(res=>setTimeout(res,[4000,10000][attempt]||10000));
+    if(/high demand|UNAVAILABLE|overloaded|503/i.test(lastErr))$('root').innerHTML='<div class="msg"><span class="spin"></span>Google’s AI is busy right now — trying again (attempt '+(attempt+2)+' of 5)…</div>';
+    await new Promise(res=>setTimeout(res,[5000,12000,20000,30000][attempt]||30000));
   }
   if(b0){render(b0);$('st').textContent=lastErr;return}
   $('root').innerHTML='<div class="msg"><b>'+esc(lastErr)+'</b><br><br><button onclick="write(true)" style="font:600 13px Helvetica;padding:9px 14px;border-radius:7px;border:0;background:#1f5fd6;color:#fff;cursor:pointer">Try again</button></div>';
