@@ -657,7 +657,7 @@ summary{padding:3px 0}
   </div>
   <div class="right">
     <a href="ops.html" title="Operational dashboard — queue health, SLA timers, one-click decisions and case reports" style="align-self:center;text-decoration:none;font:700 12px/1 system-ui,sans-serif;color:#fff;background:#1f5fd6;border-radius:8px;padding:9px 12px;white-space:nowrap">▦ Operational view</a>
-    <button id="autoPullBtn" onclick="toggleAutoPull()" title="ON: every image you analyze also searches Telegram, Bluesky, Mastodon, Odysee and the open web for related posts. OFF: no automatic searching." style="align-self:center;font:700 12px/1 system-ui,sans-serif;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:9px 12px;white-space:nowrap;cursor:pointer">🌐 Auto-pull: ON</button>
+    <button id="autoPullBtn" onclick="toggleAutoPull()" title="Open-source scraping. ON: every image you analyze also searches public open sources (Telegram, Bluesky, Mastodon, Odysee and the open web) for related posts. It never logs in to Facebook or Instagram. OFF: no automatic searching." style="align-self:center;font:700 12px/1 system-ui,sans-serif;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:9px 12px;white-space:nowrap;cursor:pointer">🌐 Open-source scraping: ON</button>
     <button id="advBtn" onclick="toggleAdvanced()" style="align-self:center;font:700 12px/1 system-ui,sans-serif;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:9px 12px;white-space:nowrap;cursor:pointer">⚙ Advanced tools</button>
     <div class="tally" id="tally" title="Running tally of everything the system has found and is tracking — review-queue items, live-hunt findings and brand-safety incidents. Updates live as the self-expanding hunt keeps compiling.">
       <div><span class="live"></span><span class="tallyn" id="tally-n">0</span></div>
@@ -690,7 +690,7 @@ summary{padding:3px 0}
   <div class="cmdacts">
     <button class="btn" onclick="exportMetaXLSX()" style="background:#1877F2;border-color:#1877F2">📄 Get report</button>
     <button class="btn pushbtn" id="pushBtn" onclick="togglePush()">🔔 Watch: OFF</button>
-    <button class="btn sec" onclick="toggleAutoPull()" title="Pull real posts from Telegram, Bluesky, Mastodon, Odysee and the open web on every image, automatically">🌐 Auto-pull: ON</button>
+    <button class="btn sec" onclick="toggleAutoPull()" title="Pull real posts from Telegram, Bluesky, Mastodon, Odysee and the open web on every image, automatically">🌐 Open-source scraping: ON</button>
         <button class="btn sec" onclick="checkSweep(true)" title="Check the server sweep for anything new right now">Check now</button>
     <button class="btn advbtn" onclick="toggleAdvanced()">⚙ Advanced tools</button>
   </div>
@@ -2481,8 +2481,8 @@ function huntTeach(id){
 // beyond Meta, and it has to run without anyone pressing anything.
 let AUTO_PULL=true; try{AUTO_PULL=localStorage.getItem('spear_autopull')!=='0'}catch(e){}
 function toggleAutoPull(){AUTO_PULL=!AUTO_PULL;try{localStorage.setItem('spear_autopull',AUTO_PULL?'1':'0')}catch(e){}
-  const b=document.getElementById('autoPullBtn');if(b)b.textContent=AUTO_PULL?'🌐 Auto-pull: ON':'🌐 Auto-pull: OFF';
-  toast(AUTO_PULL?'The system will pull from other platforms on every image':'Auto-pull off — use “Search here” on a hunt term instead');}
+  const b=document.getElementById('autoPullBtn');if(b)b.textContent=AUTO_PULL?'🌐 Open-source scraping: ON':'🌐 Open-source scraping: OFF';
+  toast(AUTO_PULL?'Open-source scraping ON — every image also searches public open sources':'Open-source scraping OFF — use Hashtag search to look things up yourself');}
 
 async function autoPull(id){
   if(!AUTO_PULL)return;
@@ -4771,7 +4771,7 @@ function sweepDismiss(){
   document.getElementById('pushPanel').innerHTML=''; toast('Marked as seen');
 }
 function initPush(){
-  const ab=document.getElementById('autoPullBtn'); if(ab)ab.textContent=AUTO_PULL?'🌐 Auto-pull: ON':'🌐 Auto-pull: OFF';
+  const ab=document.getElementById('autoPullBtn'); if(ab)ab.textContent=AUTO_PULL?'🌐 Open-source scraping: ON':'🌐 Open-source scraping: OFF';
   try{PUSH_ON=localStorage.getItem('spear_push')==='1'}catch(e){}
   _pushLabel();
   if(PUSH_ON){checkSweep(false);PUSH_TIMER=setInterval(()=>checkSweep(false),10*60*1000);}
