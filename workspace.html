@@ -3461,7 +3461,7 @@ async function addPhoto(dataUrl,o){
       } else { toast('👁 Vision AI did NOT run: '+v.__error); }
     } else if(v){visionDesc=v.description||'';visionRaw=v;
       const vcat=CATS.includes(v.category)?v.category:cat;const vscore=Math.max(0,Math.min(10,Math.round(Number(v.risk_score)||0)));
-      if(vscore>score){score=vscore;cat=vcat;} else if(cat==='benign'&&vcat!=='benign'){cat=vcat;score=Math.max(score,vscore);}
+      if(vscore>score||(vscore===score&&vcat!=='benign')){score=vscore;cat=vcat;} else if(cat==='benign'&&vcat!=='benign'){cat=vcat;score=Math.max(score,vscore);}
       (v.indicators||[]).forEach(x=>{if(x&&!labels.includes(x))labels.push(x);});
       if(vcat==='child_safety'){cat='child_safety';score=Math.max(score,8);}
       reasoning='👁 Vision AI: '+(v.threat||v.description||'').replace(/\s+/g,' ')+(reasoning?(' · Codebook: '+reasoning):'');

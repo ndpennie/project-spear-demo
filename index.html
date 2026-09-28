@@ -362,6 +362,7 @@ const TERROR=['isis_terrorism','recruitment','glorification','incitement','finan
 function typeOf(it){
   const c=it.category||'benign', txt=((it.indicators||[]).join(' ')+' '+(it.reasoning||'')).toLowerCase();
   if(/samidoun|designated (org|entity)/.test(txt))return 'Dangerous Orgs';
+  if(c!=='isis_terrorism'&&/antisemit|happy merchant|\bjew(s|ish)?\b|jewmaxx|\bgoy|holocaust|holohoax|\bzog\b|synagogue of satan/.test(txt+' '+String(it.visionDesc||'').toLowerCase()))return 'Hate Speech';
   if(TERROR.includes(c))return 'Terrorism';
   if(c==='antisemitism'||c==='propaganda')return 'Hate Speech';
   if(c==='domestic_terrorism')return 'Extremism';
