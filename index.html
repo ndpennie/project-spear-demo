@@ -484,7 +484,7 @@ function renderQueue(){
     return `<tr class="x-${tierFor(it)}"><td class="mono">${caseId(it)}</td><td class="mono">${esc(d)}</td><td><span class="pill ${typeCls(t)}">${esc(t)}</span></td>
       <td class="plat"><i style="background:${PCOL[p]||'#9aa3b2'}"></i>${esc(p)}</td><td class="rec">${esc(recText(it))}</td>
       <td class="conf">${tierPill(it)}</td><td>${slaHtml(it)}</td><td>${decide}</td>
-      <td><div class="dec"><button class="btn lnk" data-d="${it.id}">View Details</button><button class="btn lnk" data-r="${it.id}">Case Report</button><a class="btn lnk" style="text-decoration:none" href="brief.html?id=${encodeURIComponent(it.id)}" target="_blank">Brief</a></div></td></tr>`}).join('');
+      <td><div class="dec"><button class="btn lnk" data-d="${it.id}">View Details</button><button class="btn lnk" data-r="${it.id}">Case Report</button><a class="btn lnk" style="text-decoration:none" href="brief.html?id=${encodeURIComponent(it.id)}" target="_blank">Reports</a></div></td></tr>`}).join('');
   const em=$('qempty');
   if(!r.length){em.style.display='';
     em.innerHTML=ITEMS.length?'<b>Nothing here.</b><br>No cases match this view and filter.'
@@ -537,7 +537,7 @@ function openDetails(id){
   const open=isOpen(it);
   const foot=(open?`<button class="btn b-ok" onclick="decide('${it.id}','Confirmed')">Approve</button><button class="btn b-no" onclick="decide('${it.id}','Dismissed')">Reject</button><button class="btn b-esc" onclick="decide('${it.id}','Escalated')">Escalate</button>`
     :`<button class="btn ghost" onclick="decide('${it.id}','Pending')">Reopen</button>`)+
-    `<button class="btn ghost" onclick="saveNotes('${it.id}')">Save notes</button><button class="btn pri" onclick="openReport('${it.id}')">Case Report</button><a class="btn pri" style="text-decoration:none;background:#0f2a5c" href="brief.html?id=${encodeURIComponent(it.id)}" target="_blank">📑 Intelligence brief</a><a class="btn ghost" href="workspace.html" style="text-decoration:none">Open in Agent analysis</a>`;
+    `<button class="btn ghost" onclick="saveNotes('${it.id}')">Save notes</button><button class="btn pri" onclick="openReport('${it.id}')">Case Report</button><a class="btn pri" style="text-decoration:none;background:#0f2a5c" href="brief.html?id=${encodeURIComponent(it.id)}" target="_blank">📑 Reports (PDF)</a><a class="btn ghost" href="workspace.html" style="text-decoration:none">Open in Agent analysis</a>`;
   openDrawer(caseId(it)+' — case details',body,foot);
 }
 function saveNotes(id){const v=$('dnotes').value;mutate(id,x=>{x.notes=v});ITEMS=loadItems();toast('Notes saved')}
@@ -560,7 +560,7 @@ function openReport(id){
   const body=`<div class="report"><h2>Case Report — ${caseId(it)}</h2><div class="rsub">Project Spear / GIPEC AI² · prepared ${new Date().toLocaleString()}</div>
     <table>${reportRows(it).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
     <div class="note">© 2026 Eric Feinberg and Demetrick Pennie (GIPEC AI²). Patent Pending. Confidential.</div></div>`;
-  const foot=`<a class="btn pri" style="text-decoration:none;background:#0f2a5c" href="brief.html?id=${encodeURIComponent(it.id)}" target="_blank">📑 Intelligence brief</a><button class="btn pri" onclick="window.print()">Print / Save PDF</button><button class="btn ghost" onclick="copyReport('${it.id}')">Copy text</button>`+
+  const foot=`<a class="btn pri" style="text-decoration:none;background:#0f2a5c" href="brief.html?id=${encodeURIComponent(it.id)}" target="_blank">📑 Reports (PDF)</a><button class="btn pri" onclick="window.print()">Print / Save PDF</button><button class="btn ghost" onclick="copyReport('${it.id}')">Copy text</button>`+
     (it.reportedAt?`<button class="btn ghost" onclick="markReported('${it.id}',false)">Unmark reported</button>`:`<button class="btn ghost" onclick="markReported('${it.id}',true)">Mark reported to Meta</button>`);
   openDrawer('Case Report',body,foot);
 }

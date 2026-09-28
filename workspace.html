@@ -2939,7 +2939,7 @@ function renderVisionCard(it){
       <button class="btn findmore" onclick="corroborate(${it.id})">🔎 Find more like this</button>
       ${(it.visionRaw&&((it.visionRaw.entities||[]).length||it.visionRaw.place))?`<button class="btn btn-ctx" onclick="getContext(${it.id})" title="Search current reporting on the people and places named here, and read the post against it">🌐 What's going on around this?</button>`:''}
       <button class="btn btn-decide" onclick="select(${it.id});showTab('queue');document.getElementById('queuePane').scrollIntoView({behavior:'smooth',block:'center'})">📄 Open full report</button>
-      <button class="btn" style="background:#0f2a5c;border-color:#0f2a5c;color:#fff" onclick="openBrief(${it.id})" title="Executive Intelligence Brief in the senior analyst's report format - printable, editable">📑 Intelligence brief</button>
+      <button class="btn" style="background:#0f2a5c;border-color:#0f2a5c;color:#fff" onclick="openBrief(${it.id})" title="Executive Intelligence Brief in the senior analyst's report format - printable, editable">📑 Reports (PDF)</button>
       <button class="btn sec" onclick="this.closest('.vcard').remove()">Dismiss</button>
       <span class="note" style="margin:0">Saved to the review queue. <b>Find more like this</b> searches for other posts carrying the same signals.</span>
     </div></div>
@@ -5837,7 +5837,7 @@ function renderDetail(){
      <button class="btn ok" onclick="act('Confirmed')">Confirm</button>
      <button class="btn btn-decide" onclick="act('Escalated')">🚩 Report to platform</button>
      <button class="btn mute" onclick="act('Dismissed')">Dismiss (FP)</button>
-     <button class="btn" style="background:#0f2a5c;border-color:#0f2a5c;color:#fff" onclick="openBrief(${it.id})" title="Executive Intelligence Brief in the senior analyst's report format - printable, editable">📑 Intelligence brief</button>
+     <button class="btn" style="background:#0f2a5c;border-color:#0f2a5c;color:#fff" onclick="openBrief(${it.id})" title="Executive Intelligence Brief in the senior analyst's report format - printable, editable">📑 Reports (PDF)</button>
       <button class="btn btn-ask" onclick="discussIncident(${it.id},'why')" title="Ask the analyst AI why this is happening and what to do about it">💬 Ask the AI about this</button>
    </div>
    ${it.tier==='CRITICAL'?`<div class="twoman">CRITICAL tier: escalation requires two-analyst confirmation (${it.reviewers.length}/2 recorded).</div>`:''}
