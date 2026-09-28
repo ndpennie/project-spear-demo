@@ -91,6 +91,11 @@ tbody tr.x-CRITICAL:hover{background:#ffeeec}tbody tr.x-HIGH:hover{background:#f
 .tleg button i{width:10px;height:10px;border-radius:2px;display:inline-block}
 .tleg button.on{border-color:#1a4fb8;box-shadow:0 0 0 2px rgba(26,79,184,.15)}
 .nav.ext .ic{opacity:.9}
+.upl{font:700 13px Inter,sans-serif;text-decoration:none;color:#0b2560;background:#fff;border-radius:9px;padding:10px 14px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.upl:hover{background:#eef3ff}
+.upl.ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);box-shadow:none}
+.upl.ghost:hover{background:rgba(255,255,255,.22)}
+.tr-UNCHECKED{background:#8a94a6}
 .nav .go{margin-left:auto;font-size:11px;color:#9aa3b2}
 .plat{white-space:nowrap}
 .plat i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}
@@ -222,6 +227,8 @@ tbody tr.x-CRITICAL:hover{background:#ffeeec}tbody tr.x-HIGH:hover{background:#f
         <p id="vsub">For reviewers &amp; T&amp;S ops — queue health, throughput, pipeline status</p>
       </div>
       <div class="sp"></div>
+      <a class="upl" href="workspace.html#capture">📷 Upload a photo</a>
+      <a class="upl ghost" href="workspace.html#capture">🔗 Paste a link</a>
       <span class="chip live"><span class="dot" id="livedot"></span><span id="livetxt">Connecting…</span></span>
       <span class="chip">Last 24 hours</span>
     </div>
@@ -369,7 +376,7 @@ function tierOf(s){return s>=9?'CRITICAL':s>=7?'HIGH':s>=5?'MEDIUM':s>=3?'LOW':'
 const TIERS=['CRITICAL','HIGH','MEDIUM','LOW','MINIMAL'];
 const TIERHEX={CRITICAL:'#B42318',HIGH:'#D9480F',MEDIUM:'#B7791F',LOW:'#2F855A',MINIMAL:'#5A6472'};
 function tierFor(it){const t=String(it.tier||'').toUpperCase();return TIERHEX[t]?t:tierOf(it.score||0)}
-function tierPill(it){const t=tierFor(it);return `<span class="tier tr-${t}"><b>${it.score||0}/10</b>${t}</span>`}
+function tierPill(it){if(it.visionFailed)return '<span class="tier tr-UNCHECKED" title="The AI never saw this picture — open it in Agent analysis and press Try again">NOT CHECKED</span>';const t=tierFor(it);return `<span class="tier tr-${t}"><b>${it.score||0}/10</b>${t}</span>`}
 function renderTiers(){
   const V=VIEWS[VIEW];const set=V&&V.f?ITEMS.filter(V.f):ITEMS.filter(isOpen);const tot=set.length;const fr=$('ftier').value;
   const c={};TIERS.forEach(t=>c[t]=0);set.forEach(it=>c[tierFor(it)]++);
@@ -405,7 +412,7 @@ const inDay=(iso,offset)=>{if(!iso)return false;const t=new Date(iso).getTime(),
 /* ---------- views ---------- */
 let VIEW='ops';
 const VIEWS={
-  ops:{t:'Operational dashboard',s:'For reviewers & T&S ops — queue health, throughput, pipeline status',sec:'v-ops',q:'HITL review queue',f:it=>isOpen(it)&&(it.score||0)>=3},
+  ops:{t:'Operational dashboard',s:'For reviewers & T&S ops — queue health, throughput, pipeline status',sec:'v-ops',q:'HITL review queue',f:it=>isOpen(it)&&((it.score||0)>=3||!!it.visionFailed)},
   all:{t:'All open cases',s:'Everything waiting on a human decision, worst first',sec:'v-ops',q:'All open cases',f:it=>isOpen(it)},
   approved:{t:'Human approved',s:'Violations an analyst confirmed — ready for a policy-mapped report',sec:'v-ops',q:'Human approved',f:it=>it.status==='Confirmed'},
   specialist:{t:'Specialist queue',s:'Escalated by an analyst for specialist review',sec:'v-ops',q:'Specialist queue',f:it=>it.status==='Escalated'||/NCMEC/.test(it.status||'')},

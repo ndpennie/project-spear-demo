@@ -1492,6 +1492,7 @@ try{
 }catch(e){}
 function spearHeaders(extra){
   const h=Object.assign({},extra||{});
+  if(!SPEAR_KEY){try{SPEAR_KEY=localStorage.getItem('spear_key')||''}catch(e){}}
   if(SPEAR_KEY)h['X-Spear-Key']=SPEAR_KEY;
   return h;
 }
@@ -5884,6 +5885,15 @@ async function handleSharedContent(){
   }catch(e){}
 }
 handleSharedContent();
+window.addEventListener('storage',function(e){if(e.key==='spear_key'&&e.newValue){SPEAR_KEY=e.newValue;SPEAR_KEY_REFUSED=false;try{checkBackendVision().then(function(ok){if(ok)recheckUnseen()})}catch(_){}}});
+async function recheckUnseen(){
+  var todo=items.filter(function(i){return i.visionFailed&&(i.media||i.thumb)}).slice(0,10);
+  for(var k=0;k<todo.length;k++){
+    try{var ok=await _runVisionOn(todo[k]);if(ok){_refreshCard(todo[k],null);toast('👁 Re-checked image #'+todo[k].id+': '+String(todo[k].category).replace(/_/g,' ')+' '+todo[k].score+'/10')}}catch(e){}
+  }
+  if(todo.length){try{itemsSave()}catch(e){}try{render()}catch(e){}}
+}
+setTimeout(function(){try{checkBackendVision().then(function(ok){if(ok)recheckUnseen()})}catch(e){}},1500);
 /* Deep links from the dashboard sidebar: workspace.html#tab=hunt, #tab=cb, ... and #capture */
 (function(){
   function go(){
