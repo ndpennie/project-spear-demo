@@ -657,6 +657,7 @@ summary{padding:3px 0}
   </div>
   <div class="right">
     <a href="ops.html" title="Operational dashboard — queue health, SLA timers, one-click decisions and case reports" style="align-self:center;text-decoration:none;font:700 12px/1 system-ui,sans-serif;color:#fff;background:#1f5fd6;border-radius:8px;padding:9px 12px;white-space:nowrap">▦ Operational view</a>
+    <button id="autoPullBtn" onclick="toggleAutoPull()" title="ON: every image you analyze also searches Telegram, Bluesky, Mastodon, Odysee and the open web for related posts. OFF: no automatic searching." style="align-self:center;font:700 12px/1 system-ui,sans-serif;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:9px 12px;white-space:nowrap;cursor:pointer">🌐 Auto-pull: ON</button>
     <button id="advBtn" onclick="toggleAdvanced()" style="align-self:center;font:700 12px/1 system-ui,sans-serif;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:9px 12px;white-space:nowrap;cursor:pointer">⚙ Advanced tools</button>
     <div class="tally" id="tally" title="Running tally of everything the system has found and is tracking — review-queue items, live-hunt findings and brand-safety incidents. Updates live as the self-expanding hunt keeps compiling.">
       <div><span class="live"></span><span class="tallyn" id="tally-n">0</span></div>
@@ -689,7 +690,7 @@ summary{padding:3px 0}
   <div class="cmdacts">
     <button class="btn" onclick="exportMetaXLSX()" style="background:#1877F2;border-color:#1877F2">📄 Get report</button>
     <button class="btn pushbtn" id="pushBtn" onclick="togglePush()">🔔 Watch: OFF</button>
-    <button class="btn sec" id="autoPullBtn" onclick="toggleAutoPull()" title="Pull real posts from Telegram, Bluesky, Mastodon, Odysee and the open web on every image, automatically">🌐 Auto-pull: ON</button>
+    <button class="btn sec" onclick="toggleAutoPull()" title="Pull real posts from Telegram, Bluesky, Mastodon, Odysee and the open web on every image, automatically">🌐 Auto-pull: ON</button>
         <button class="btn sec" onclick="checkSweep(true)" title="Check the server sweep for anything new right now">Check now</button>
     <button class="btn advbtn" onclick="toggleAdvanced()">⚙ Advanced tools</button>
   </div>
