@@ -2867,7 +2867,7 @@ function renderVisionCard(it){
   // never ran, the app has looked at no pixels — the harm in most of this material is
   // visual, so "no violation detected" would be a false all-clear on exactly the images
   // that matter. When it did not run, say so and make him re-run it.
-  const notChecked = !!it.visionFailed && score<4;
+  const notChecked = (!!it.visionFailed || ((it.type==='image'||it.type==='video') && !it.visionRaw && !it.visionDesc && !(it.textFallback&&it.textFallback.description))) && score<4;
   // Some content is lawful speech that still matters operationally. Scoring it as a
   // violation gets the report rejected and costs Eric standing with the platform;
   // scoring it benign loses a real signal. It gets its own lane.
@@ -3363,11 +3363,25 @@ async function backendVisionText(text){
     if(!r.ok)return null;const j=await r.json();return j.analysis||null;
   }catch(e){return null;}
 }
+// The free server sleeps; its first answer after a nap is an error page. That used to switch
+// Vision AI off for the whole session, and every picture after it was read as text only.
+async function ensureVision(st){
+  if(BACKEND_VISION||GEMINI_KEY)return true;
+  for(let i=0;i<6;i++){
+    try{await checkBackendVision()}catch(e){}
+    if(BACKEND_VISION)return true;
+    if(st)st.textContent='⏳ Waking the Project Spear server so the AI can look at the picture… (attempt '+(i+2)+' of 7)';
+    await new Promise(r=>setTimeout(r,8000));
+  }
+  try{await checkBackendVision()}catch(e){}
+  return !!BACKEND_VISION;
+}
 async function visionAnalyze(dataUrl,context){
   // images AND audio (Gemini reads both); audio comes from the video scanner
   const m=(dataUrl||'').match(/^data:((?:image|audio)\/[\w+.-]+);base64,(.+)$/);
   if(!m)return {__error:'unsupported media format'};
   // 1) server first (no browser key needed)  2) browser key as fallback
+  if(!BACKEND_VISION&&!GEMINI_KEY){try{await ensureVision(document.getElementById('heroStat'))}catch(e){}}
   if(BACKEND_VISION){const s=await backendVision(dataUrl,context);if(s&&!s.__error)return s;if(!GEMINI_KEY)return s;}
   if(!GEMINI_KEY)return {__error:'no Vision AI available — set GEMINI_API_KEY on the server, or paste a key here'};
   const isAudio=/^audio\//.test(m[1]);
@@ -3441,7 +3455,8 @@ async function addPhoto(dataUrl,o){
   if(!ocr&&!o.caption&&!labels.length){bd.push({l:'No readable text, caption or visible-element labels — pixels not interpreted (needs vision model)',d:0});conf=0.3}
   // VISION AI: if a Gemini key is set (and no backend vision), let the model SEE the image and describe/flag it
   let visionDesc='',visionRaw=null,visionFailed='',textFallback=null;
-  if(!GEMINI_KEY&&!BACKEND_VISION){bd.push({l:'👁 Vision AI is OFF — set GEMINI_API_KEY on the server (or paste a key) to have the system SEE the image. This result is text/OCR only, so a picture with no readable text reads benign.',d:0});}
+  if(!GEMINI_KEY&&!BACKEND_VISION){try{await ensureVision(document.getElementById('heroStat')||st)}catch(e){}}
+  if(!GEMINI_KEY&&!BACKEND_VISION){visionFailed='the Project Spear server could not be reached';bd.push({l:'👁 Vision AI is OFF — set GEMINI_API_KEY on the server (or paste a key) to have the system SEE the image. This result is text/OCR only, so a picture with no readable text reads benign.',d:0});}
   else if(!(remote&&remote.analysis)){
     st.textContent='👁 Looking at the image with Vision AI…';
     const v=await visionAnalyze(dataUrl,'If any text in this image is not English, transcribe it AND give the English translation inside the description. '+(o.poster||'')+' '+(o.caption||'')+HUNT_CTX);
