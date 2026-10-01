@@ -308,7 +308,7 @@ tbody tr.x-CRITICAL:hover{background:#ffeeec}tbody tr.x-HIGH:hover{background:#f
       </div>
     </section>
 
-    <div class="foot2"><span>Confidential — Project Spear / GIPEC AI²</span><span>© 2026 Eric Feinberg and Demetrick Pennie (GIPEC AI²). Patent Pending.</span></div>
+    <div class="foot2"><span>Confidential — Project Spear / GIPEC AI²</span><span>© 2026 GIPEC AI². Patent Pending.</span></div>
   </main>
 </div>
 
@@ -559,7 +559,7 @@ function openReport(id){
   const it=ITEMS.find(x=>String(x.id)===String(id));if(!it)return;DRAWER_ID=id;
   const body=`<div class="report"><h2>Case Report — ${caseId(it)}</h2><div class="rsub">Project Spear / GIPEC AI² · prepared ${new Date().toLocaleString()}</div>
     <table>${reportRows(it).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
-    <div class="note">© 2026 Eric Feinberg and Demetrick Pennie (GIPEC AI²). Patent Pending. Confidential.</div></div>`;
+    <div class="note">© 2026 GIPEC AI². Patent Pending. Confidential.</div></div>`;
   const foot=`<a class="btn pri" style="text-decoration:none;background:#0f2a5c" href="brief.html?id=${encodeURIComponent(it.id)}" target="_blank">📑 Reports (PDF)</a><button class="btn pri" onclick="window.print()">Print / Save PDF</button><button class="btn ghost" onclick="copyReport('${it.id}')">Copy text</button>`+
     (it.reportedAt?`<button class="btn ghost" onclick="markReported('${it.id}',false)">Unmark reported</button>`:`<button class="btn ghost" onclick="markReported('${it.id}',true)">Mark reported to Meta</button>`);
   openDrawer('Case Report',body,foot);
